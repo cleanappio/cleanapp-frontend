@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
-import { MapPin, User, LogOut, CreditCard, BarChart3 } from 'lucide-react';
+import { User, LogOut, CreditCard, BarChart3 } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -20,8 +21,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex justify-between h-16">
             <div className="flex">
               <Link href="/" className="flex items-center">
-                <MapPin className="h-8 w-8 text-green-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">CleanApp</span>
+                <Image 
+                  src="/cleanapp-logo.png" 
+                  alt="CleanApp Logo" 
+                  width={200} 
+                  height={60}
+                  className="h-12 w-auto"
+                  priority
+                />
               </Link>
               
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

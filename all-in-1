@@ -211,9 +211,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 // ===== FILE: components/Layout.tsx =====
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
-import { MapPin, User, LogOut, CreditCard, BarChart3 } from 'lucide-react';
+import { User, LogOut, CreditCard, BarChart3 } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -231,8 +232,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex justify-between h-16">
             <div className="flex">
               <Link href="/" className="flex items-center">
-                <MapPin className="h-8 w-8 text-green-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">CleanApp</span>
+                <Image 
+                  src="/cleanapp-logo.png" 
+                  alt="CleanApp Logo" 
+                  width={200} 
+                  height={60}
+                  className="h-12 w-auto"
+                  priority
+                />
               </Link>
               
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -325,6 +332,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
 // ===== FILE: pages/index.tsx =====
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { MapPin, Sparkles, BarChart3, Shield } from 'lucide-react';
 
 export default function Home() {
@@ -336,6 +344,15 @@ export default function Home() {
       <div className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
+            <div className="flex justify-center mb-8">
+              <Image 
+                src="/cleanapp-logo.png" 
+                alt="CleanApp" 
+                width={300} 
+                height={90}
+                priority
+              />
+            </div>
             <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
               <span className="block">Keep Your City Clean</span>
               <span className="block text-green-600">With AI-Powered Monitoring</span>
@@ -1140,6 +1157,17 @@ module.exports = {
 // ===== FILE: postcss.config.js =====
 module.exports = {
   plugins: {
+    'tailwindcss/nesting': {},
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+// ===== FILE: postcss.config.mjs =====
+// Alternative: Use this if you prefer ES modules
+export default {
+  plugins: {
+    'tailwindcss/nesting': {},
     tailwindcss: {},
     autoprefixer: {},
   },
@@ -1149,9 +1177,33 @@ module.exports = {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    domains: ['localhost'], // Add your domain here if needed
+  },
 }
 
 module.exports = nextConfig
+
+// ===== FILE: pages/_document.tsx =====
+import { Html, Head, Main, NextScript } from 'next/document'
+
+export default function Document() {
+  return (
+    <Html lang="en">
+      <Head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#16a34a" />
+      </Head>
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  )
+}
 
 // ===== FILE: tsconfig.json =====
 {

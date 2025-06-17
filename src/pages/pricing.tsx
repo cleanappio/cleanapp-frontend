@@ -30,7 +30,7 @@ export default function PricingPage() {
       price: 'Free',
       priceAmount: 0,
       features: ['web access to CleanAppMap'],
-      imageSrc: '/api/placeholder/400/300'
+      imageSrc: '/free.png'
     },
     {
       id: 'lite',
@@ -43,7 +43,7 @@ export default function PricingPage() {
         'AI analytics (material composition, brand analysis, urgency ratings) for 1 location (geoquadrant) -or- 1 brand (eg, Redbull, Starbucks)',
         'access to CleanApp responder app'
       ],
-      imageSrc: '/api/placeholder/400/300'
+      imageSrc: '/lite.png'
     },
     {
       id: 'enterprise',
@@ -58,7 +58,7 @@ export default function PricingPage() {
         'integration support for firmware',
         'custom web dashboard'
       ],
-      imageSrc: '/api/placeholder/400/300'
+      imageSrc: '/enterprise.png'
     },
     {
       id: 'civic',
@@ -70,7 +70,7 @@ export default function PricingPage() {
         'enterprise tier, plus:',
         'support for integration with existing smart-city incident reporting platforms (eg, Open311)'
       ],
-      imageSrc: '/api/placeholder/400/300'
+      imageSrc: '/civic.png'
     }
   ];
 
