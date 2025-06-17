@@ -14,6 +14,7 @@ interface SubscriptionPlan {
   apiPlanType?: 'base' | 'advanced' | 'exclusive';
   popular?: boolean;
   customPricing?: boolean;
+  imageSrc?: string;
 }
 
 export default function PricingPage() {
@@ -28,7 +29,8 @@ export default function PricingPage() {
       name: 'forever free',
       price: 'Free',
       priceAmount: 0,
-      features: ['web access to CleanAppMap']
+      features: ['web access to CleanAppMap'],
+      imageSrc: '/api/placeholder/400/300'
     },
     {
       id: 'lite',
@@ -40,7 +42,8 @@ export default function PricingPage() {
         'real time data subscription',
         'AI analytics (material composition, brand analysis, urgency ratings) for 1 location (geoquadrant) -or- 1 brand (eg, Redbull, Starbucks)',
         'access to CleanApp responder app'
-      ]
+      ],
+      imageSrc: '/api/placeholder/400/300'
     },
     {
       id: 'enterprise',
@@ -54,7 +57,8 @@ export default function PricingPage() {
         'priority access to AI hotspot mapping & predictive analytics for up to 5 locations -or- 5 brands',
         'integration support for firmware',
         'custom web dashboard'
-      ]
+      ],
+      imageSrc: '/api/placeholder/400/300'
     },
     {
       id: 'civic',
@@ -65,7 +69,8 @@ export default function PricingPage() {
       features: [
         'enterprise tier, plus:',
         'support for integration with existing smart-city incident reporting platforms (eg, Open311)'
-      ]
+      ],
+      imageSrc: '/api/placeholder/400/300'
     }
   ];
 
@@ -95,28 +100,24 @@ export default function PricingPage() {
     });
   };
 
-  const getPlanIcon = (planId: string) => {
-    switch (planId) {
-      case 'free':
-        return <MapPin className="w-6 h-6" />;
-      case 'lite':
-        return <Sparkles className="w-6 h-6" />;
-      case 'enterprise':
-        return <BarChart3 className="w-6 h-6" />;
-      case 'civic':
-        return <Building2 className="w-6 h-6" />;
-      default:
-        return null;
-    }
-  };
-
   const getMonthlyPrice = (plan: SubscriptionPlan) => {
     if (!plan.priceAmount || plan.priceAmount === 0) return 0;
     return billingCycle === 'annual' ? Math.round(plan.priceAmount * 0.8) : plan.priceAmount;
   };
 
+  const getPriceDisplay = (plan: SubscriptionPlan) => {
+    if (plan.customPricing) {
+      return plan.price;
+    }
+    if (plan.priceAmount === 0) {
+      return 'forever free';
+    }
+    const monthlyPrice = getMonthlyPrice(plan);
+    return `${monthlyPrice}/mo`;
+  };
+
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8">
+    <div className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -128,8 +129,8 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center mb-8">
+        {/* Billing Toggle - Only show if there are paid plans */}
+        <div className="flex justify-center mb-12">
           <div className="bg-white rounded-lg shadow-sm p-1 inline-flex">
             <button
               onClick={() => setBillingCycle('monthly')}
@@ -159,56 +160,46 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="relative bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 hover:shadow-xl"
+              className="relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg"
+              style={{ backgroundColor: '#EBF1E8' }}
             >
-              {plan.popular && (
-                <div className="absolute top-0 right-0 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-bl-lg">
-                  Popular
-                </div>
-              )}
-
-              {/* Plan Header with Icon */}
-              <div className="p-6 bg-gradient-to-br from-green-50 to-green-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-green-600 text-white rounded-lg">
-                    {getPlanIcon(plan.id)}
+              {/* Plan Image */}
+              <div className="h-40 relative overflow-hidden">
+                <img
+                  src={plan.imageSrc}
+                  alt={`${plan.name} plan`}
+                  className="w-full h-full object-cover"
+                />
+                {plan.popular && (
+                  <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full">
+                    Popular
                   </div>
-                </div>
-                <h3 className="text-2xl font-bold text-green-700">
-                  {plan.name}
-                </h3>
+                )}
               </div>
 
               {/* Plan Details */}
               <div className="p-6">
-                <div className="mb-6">
-                  <span className="text-3xl font-bold text-gray-900">
-                    {plan.customPricing ? (
-                      <span className="text-xl">Contact us</span>
-                    ) : plan.priceAmount === 0 ? (
-                      'Free'
-                    ) : (
-                      <>
-                        ${getMonthlyPrice(plan)}
-                        <span className="text-base font-normal text-gray-600">
-                          /mo
-                        </span>
-                      </>
-                    )}
-                  </span>
+                {/* Plan Name and Price */}
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-green-700 mb-2">
+                    {plan.name}
+                  </h3>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {getPriceDisplay(plan)}
+                  </p>
                   {billingCycle === 'annual' && plan.priceAmount && plan.priceAmount > 0 && (
                     <p className="text-sm text-gray-600 mt-1">
-                      ${plan.priceAmount * 12 * 0.8}/year
+                      ${Math.round(plan.priceAmount * 12 * 0.8)}/year
                     </p>
                   )}
                 </div>
 
                 {/* Features */}
-                <ul className="space-y-3 mb-6">
+                <ul className="space-y-3 mb-6 min-h-[200px]">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start">
                       <Check className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">{feature}</span>
+                      <span className="text-sm text-gray-700 leading-tight">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -217,9 +208,9 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleSelectPlan(plan)}
                   disabled={isLoading}
-                  className={`w-full py-3 px-4 rounded-md font-semibold transition-colors flex items-center justify-center ${
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${
                     plan.id === 'free'
-                      ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                      ? 'bg-white text-green-700 hover:bg-gray-50 border border-green-600'
                       : plan.customPricing
                       ? 'bg-gray-800 text-white hover:bg-gray-900'
                       : 'bg-green-600 text-white hover:bg-green-700'
@@ -243,37 +234,56 @@ export default function PricingPage() {
 
         {/* Additional Information */}
         <div className="mt-16 text-center">
-          <div className="bg-white rounded-lg shadow-md p-8 max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="bg-white rounded-2xl shadow-md p-8 max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
               All plans include
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Real-time Updates
-                </h3>
-                <p className="text-gray-600 text-sm">
+                <div className="flex items-center mb-2">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <MapPin className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Real-time Updates</h3>
+                </div>
+                <p className="text-gray-600 text-sm ml-13">
                   Get instant notifications about litter incidents in your monitored areas
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  API Access
-                </h3>
-                <p className="text-gray-600 text-sm">
+                <div className="flex items-center mb-2">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <BarChart3 className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">API Access</h3>
+                </div>
+                <p className="text-gray-600 text-sm ml-13">
                   Integrate CleanApp data into your existing systems
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  24/7 Support
-                </h3>
-                <p className="text-gray-600 text-sm">
+                <div className="flex items-center mb-2">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <Sparkles className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">24/7 Support</h3>
+                </div>
+                <p className="text-gray-600 text-sm ml-13">
                   Our team is here to help you make the most of CleanApp
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* FAQ or Contact Section */}
+        <div className="mt-12 text-center">
+          <p className="text-gray-600">
+            Questions about our plans?{' '}
+            <a href="#" className="text-green-600 font-semibold hover:underline">
+              Contact our sales team
+            </a>
+          </p>
         </div>
       </div>
     </div>
