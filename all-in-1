@@ -1,0 +1,1110 @@
+// ===== FILE: package.json =====
+{
+  "name": "cleanapp-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^2.1.0",
+    "@stripe/react-stripe-js": "^2.3.0",
+    "axios": "^1.5.0",
+    "lucide-react": "^0.263.1",
+    "next": "14.0.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hook-form": "^7.45.0",
+    "react-hot-toast": "^2.4.1",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.0",
+    "postcss": "^8",
+    "tailwindcss": "^3",
+    "typescript": "^5"
+  }
+}
+
+// ===== FILE: lib/api-client.ts =====
+// This would be your API client implementation from the provided files
+// I'm including a simplified version here
+
+import axios, { AxiosInstance } from 'axios';
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subscription {
+  id: number;
+  customer_id: string;
+  plan_type: 'base' | 'advanced' | 'exclusive';
+  billing_cycle: 'monthly' | 'annual';
+  status: 'active' | 'suspended' | 'cancelled';
+  start_date: string;
+  next_billing_date: string;
+}
+
+export interface PaymentMethod {
+  id: number;
+  customer_id: string;
+  stripe_payment_method_id: string;
+  last_four: string;
+  brand: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
+
+class ApiClient {
+  private axios: AxiosInstance;
+  private token: string | null = null;
+
+  constructor() {
+    this.axios = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    this.axios.interceptors.request.use((config) => {
+      if (this.token) {
+        config.headers.Authorization = `Bearer ${this.token}`;
+      }
+      return config;
+    });
+  }
+
+  setAuthToken(token: string | null) {
+    this.token = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('auth_token', token);
+      } else {
+        localStorage.removeItem('auth_token');
+      }
+    }
+  }
+
+  async login(email: string, password: string) {
+    const { data } = await this.axios.post('/api/v3/login', { email, password });
+    this.setAuthToken(data.token);
+    return data;
+  }
+
+  async signup(name: string, email: string, password: string, area_ids: number[]) {
+    const { data } = await this.axios.post('/api/v3/customers', {
+      name,
+      email,
+      password,
+      area_ids
+    });
+    return data;
+  }
+
+  async getCurrentCustomer() {
+    const { data } = await this.axios.get<Customer>('/api/v3/customers/me');
+    return data;
+  }
+
+  async getCurrentSubscription() {
+    const { data } = await this.axios.get<Subscription>('/api/v3/subscriptions/me');
+    return data;
+  }
+
+  async createSubscription(plan_type: string, billing_cycle: 'monthly' | 'annual', payment_method_id: string) {
+    const { data } = await this.axios.post('/api/v3/subscriptions', {
+      plan_type,
+      billing_cycle,
+      stripe_payment_method_id: payment_method_id
+    });
+    return data;
+  }
+
+  async cancelSubscription() {
+    const { data } = await this.axios.delete('/api/v3/subscriptions/me');
+    return data;
+  }
+
+  async getPaymentMethods() {
+    const { data } = await this.axios.get<PaymentMethod[]>('/api/v3/payment-methods');
+    return data;
+  }
+
+  async addPaymentMethod(stripe_payment_method_id: string, is_default = false) {
+    const { data } = await this.axios.post('/api/v3/payment-methods', {
+      stripe_payment_method_id,
+      is_default
+    });
+    return data;
+  }
+}
+
+export const apiClient = new ApiClient();
+
+// ===== FILE: lib/auth-store.ts =====
+import { create } from 'zustand';
+import { apiClient, Customer } from './api-client';
+
+interface AuthState {
+  user: Customer | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
+  logout: () => void;
+  checkAuth: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+
+  login: async (email, password) => {
+    const response = await apiClient.login(email, password);
+    const user = await apiClient.getCurrentCustomer();
+    set({ user, isAuthenticated: true });
+  },
+
+  signup: async (name, email, password) => {
+    const customer = await apiClient.signup(name, email, password, [1]); // Default area
+    const loginResponse = await apiClient.login(email, password);
+    set({ user: customer, isAuthenticated: true });
+  },
+
+  logout: () => {
+    apiClient.setAuthToken(null);
+    set({ user: null, isAuthenticated: false });
+  },
+
+  checkAuth: async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    if (token) {
+      apiClient.setAuthToken(token);
+      try {
+        const user = await apiClient.getCurrentCustomer();
+        set({ user, isAuthenticated: true, isLoading: false });
+      } catch {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      }
+    } else {
+      set({ isLoading: false });
+    }
+  }
+}));
+
+// ===== FILE: components/Layout.tsx =====
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useAuthStore } from '@/lib/auth-store';
+import { MapPin, User, LogOut, CreditCard, BarChart3 } from 'lucide-react';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <Link href="/" className="flex items-center">
+                <MapPin className="h-8 w-8 text-green-600" />
+                <span className="ml-2 text-xl font-bold text-gray-900">CleanApp</span>
+              </Link>
+              
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+                <Link
+                  href="/pricing"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Pricing
+                </Link>
+                {isAuthenticated && (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/billing"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    >
+                      Billing
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-700">{user?.email}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-x-4">
+                  <Link
+                    href="/login"
+                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Get started
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      <main>{children}</main>
+    </div>
+  );
+}
+
+// ===== FILE: pages/_app.tsx =====
+import '@/styles/globals.css';
+import type { AppProps } from 'next/app';
+import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
+import { useAuthStore } from '@/lib/auth-store';
+import Layout from '@/components/Layout';
+
+export default function App({ Component, pageProps }: AppProps) {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  return (
+    <>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+      <Toaster position="top-right" />
+    </>
+  );
+}
+
+// ===== FILE: pages/index.tsx =====
+import { useRouter } from 'next/router';
+import { MapPin, Sparkles, BarChart3, Shield } from 'lucide-react';
+
+export default function Home() {
+  const router = useRouter();
+
+  return (
+    <div className="relative">
+      {/* Hero Section */}
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center">
+            <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+              <span className="block">Keep Your City Clean</span>
+              <span className="block text-green-600">With AI-Powered Monitoring</span>
+            </h1>
+            <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+              CleanApp uses advanced AI to monitor litter in real-time, helping cities and organizations maintain cleaner environments.
+            </p>
+            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+              <div className="rounded-md shadow">
+                <button
+                  onClick={() => router.push('/signup')}
+                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10"
+                >
+                  Get started for free
+                </button>
+              </div>
+              <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-green-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
+                >
+                  View pricing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="py-12 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="lg:text-center">
+            <h2 className="text-base text-green-600 font-semibold tracking-wide uppercase">Features</h2>
+            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              Everything you need to monitor litter
+            </p>
+          </div>
+
+          <div className="mt-10">
+            <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
+              <div className="relative">
+                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-green-600 text-white">
+                  <MapPin className="h-6 w-6" />
+                </div>
+                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Real-time Mapping</p>
+                <p className="mt-2 ml-16 text-base text-gray-500">
+                  Track litter incidents as they happen with our interactive CleanAppMap.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-green-600 text-white">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">AI Analytics</p>
+                <p className="mt-2 ml-16 text-base text-gray-500">
+                  Advanced AI identifies material composition, brands, and urgency ratings.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-green-600 text-white">
+                  <BarChart3 className="h-6 w-6" />
+                </div>
+                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Predictive Insights</p>
+                <p className="mt-2 ml-16 text-base text-gray-500">
+                  Anticipate hotspots and optimize cleanup resources with predictive analytics.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-green-600 text-white">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Smart City Integration</p>
+                <p className="mt-2 ml-16 text-base text-gray-500">
+                  Seamlessly integrate with existing smart city platforms like Open311.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== FILE: pages/pricing.tsx =====
+import React, { useState } from 'react';
+import { useRouter } from 'next/router';
+import { ChevronRight, Check, MapPin, BarChart3, Building2, Sparkles } from 'lucide-react';
+import { useAuthStore } from '@/lib/auth-store';
+import toast from 'react-hot-toast';
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  price: string;
+  priceAmount?: number;
+  billingCycle?: 'monthly' | 'annual';
+  features: string[];
+  apiPlanType?: 'base' | 'advanced' | 'exclusive';
+  popular?: boolean;
+  customPricing?: boolean;
+}
+
+export default function PricingPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const plans: SubscriptionPlan[] = [
+    {
+      id: 'free',
+      name: 'forever free',
+      price: 'Free',
+      priceAmount: 0,
+      features: ['web access to CleanAppMap']
+    },
+    {
+      id: 'lite',
+      name: 'lite',
+      price: '$100/mo',
+      priceAmount: 100,
+      apiPlanType: 'base',
+      features: [
+        'real time data subscription',
+        'AI analytics (material composition, brand analysis, urgency ratings) for 1 location (geoquadrant) -or- 1 brand (eg, Redbull, Starbucks)',
+        'access to CleanApp responder app'
+      ]
+    },
+    {
+      id: 'enterprise',
+      name: 'enterprise',
+      price: '$500/mo',
+      priceAmount: 500,
+      apiPlanType: 'advanced',
+      popular: true,
+      features: [
+        'lite tier, plus:',
+        'priority access to AI hotspot mapping & predictive analytics for up to 5 locations -or- 5 brands',
+        'integration support for firmware',
+        'custom web dashboard'
+      ]
+    },
+    {
+      id: 'civic',
+      name: 'civic',
+      price: 'case-by-case',
+      apiPlanType: 'exclusive',
+      customPricing: true,
+      features: [
+        'enterprise tier, plus:',
+        'support for integration with existing smart-city incident reporting platforms (eg, Open311)'
+      ]
+    }
+  ];
+
+  const handleSelectPlan = async (plan: SubscriptionPlan) => {
+    if (!isAuthenticated) {
+      router.push('/signup');
+      return;
+    }
+
+    if (plan.id === 'free') {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (plan.customPricing) {
+      toast.success('Please contact our sales team for custom pricing');
+      return;
+    }
+
+    // Navigate to checkout with plan details
+    router.push({
+      pathname: '/checkout',
+      query: {
+        plan: plan.apiPlanType,
+        billing: billingCycle
+      }
+    });
+  };
+
+  const getPlanIcon = (planId: string) => {
+    switch (planId) {
+      case 'free':
+        return <MapPin className="w-6 h-6" />;
+      case 'lite':
+        return <Sparkles className="w-6 h-6" />;
+      case 'enterprise':
+        return <BarChart3 className="w-6 h-6" />;
+      case 'civic':
+        return <Building2 className="w-6 h-6" />;
+      default:
+        return null;
+    }
+  };
+
+  const getMonthlyPrice = (plan: SubscriptionPlan) => {
+    if (!plan.priceAmount || plan.priceAmount === 0) return 0;
+    return billingCycle === 'annual' ? Math.round(plan.priceAmount * 0.8) : plan.priceAmount;
+  };
+
+  return (
+    <div className="py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Choose Your CleanApp Plan
+          </h1>
+          <p className="text-xl text-gray-600">
+            Select the perfect plan for your litter monitoring needs
+          </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-1 inline-flex">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                billingCycle === 'monthly'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('annual')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                billingCycle === 'annual'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Annual <span className="text-sm">(Save 20%)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className="relative bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 hover:shadow-xl"
+            >
+              {plan.popular && (
+                <div className="absolute top-0 right-0 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-bl-lg">
+                  Popular
+                </div>
+              )}
+
+              {/* Plan Header with Icon */}
+              <div className="p-6 bg-gradient-to-br from-green-50 to-green-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-green-600 text-white rounded-lg">
+                    {getPlanIcon(plan.id)}
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-green-700">
+                  {plan.name}
+                </h3>
+              </div>
+
+              {/* Plan Details */}
+              <div className="p-6">
+                <div className="mb-6">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {plan.customPricing ? (
+                      <span className="text-xl">Contact us</span>
+                    ) : plan.priceAmount === 0 ? (
+                      'Free'
+                    ) : (
+                      <>
+                        ${getMonthlyPrice(plan)}
+                        <span className="text-base font-normal text-gray-600">
+                          /mo
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  {billingCycle === 'annual' && plan.priceAmount && plan.priceAmount > 0 && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      ${plan.priceAmount * 12 * 0.8}/year
+                    </p>
+                  )}
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <Check className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA Button */}
+                <button
+                  onClick={() => handleSelectPlan(plan)}
+                  disabled={isLoading}
+                  className={`w-full py-3 px-4 rounded-md font-semibold transition-colors flex items-center justify-center ${
+                    plan.id === 'free'
+                      ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                      : plan.customPricing
+                      ? 'bg-gray-800 text-white hover:bg-gray-900'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {plan.id === 'free' ? (
+                    'Get Started'
+                  ) : plan.customPricing ? (
+                    'Contact Sales'
+                  ) : (
+                    <>
+                      Subscribe Now
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Additional Information */}
+        <div className="mt-16 text-center">
+          <div className="bg-white rounded-lg shadow-md p-8 max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              All plans include
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Real-time Updates
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Get instant notifications about litter incidents in your monitored areas
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  API Access
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Integrate CleanApp data into your existing systems
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  24/7 Support
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Our team is here to help you make the most of CleanApp
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== FILE: pages/login.tsx =====
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { useAuthStore } from '@/lib/auth-store';
+import toast from 'react-hot-toast';
+
+interface LoginForm {
+  email: string;
+  password: string;
+}
+
+export default function LoginPage() {
+  const router = useRouter();
+  const login = useAuthStore((state) => state.login);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+
+  const onSubmit = async (data: LoginForm) => {
+    setIsLoading(true);
+    try {
+      await login(data.email, data.password);
+      toast.success('Welcome back!');
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Invalid credentials');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{' '}
+            <Link href="/signup" className="font-medium text-green-600 hover:text-green-500">
+              start your free trial
+            </Link>
+          </p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
+                {...register('email', { 
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^\S+@\S+$/i,
+                    message: 'Invalid email address'
+                  }
+                })}
+                type="email"
+                autoComplete="email"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                {...register('password', { required: 'Password is required' })}
+                type="password"
+                autoComplete="current-password"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ===== FILE: pages/signup.tsx =====
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { useAuthStore } from '@/lib/auth-store';
+import toast from 'react-hot-toast';
+
+interface SignupForm {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export default function SignupPage() {
+  const router = useRouter();
+  const signup = useAuthStore((state) => state.signup);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>();
+  const password = watch('password');
+
+  const onSubmit = async (data: SignupForm) => {
+    setIsLoading(true);
+    try {
+      await signup(data.name, data.email, data.password);
+      toast.success('Account created successfully!');
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to create account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{' '}
+            <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
+              sign in to your existing account
+            </Link>
+          </p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                {...register('name', { required: 'Name is required' })}
+                type="text"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="John Doe"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <input
+                {...register('email', { 
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^\S+@\S+$/i,
+                    message: 'Invalid email address'
+                  }
+                })}
+                type="email"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="john@example.com"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                {...register('password', { 
+                  required: 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters'
+                  }
+                })}
+                type="password"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="••••••••"
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <input
+                {...register('confirmPassword', { 
+                  required: 'Please confirm your password',
+                  validate: value => value === password || 'Passwords do not match'
+                })}
+                type="password"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Creating account...' : 'Create account'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ===== FILE: pages/dashboard.tsx =====
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { useAuthStore } from '@/lib/auth-store';
+import { apiClient, Subscription } from '@/lib/api-client';
+import { MapPin, BarChart3, CreditCard, TrendingUp } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    fetchSubscription();
+  }, [isAuthenticated]);
+
+  const fetchSubscription = async () => {
+    try {
+      const sub = await apiClient.getCurrentSubscription();
+      setSubscription(sub);
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        toast.error('Failed to load subscription');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatPlanName = (planType: string) => {
+    return planType.charAt(0).toUpperCase() + planType.slice(1);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Welcome back, {user?.name}!</p>
+      </div>
+
+      {/* Subscription Status */}
+      <div className="bg-white rounded-lg shadow mb-8 p-6">
+        <h2 className="text-xl font-semibold mb-4">Your Subscription</h2>
+        {subscription ? (
+          <div className="space-y-2">
+            <p className="text-gray-600">
+              Plan: <span className="font-semibold text-gray-900">{formatPlanName(subscription.plan_type)}</span>
+            </p>
+            <p className="text-gray-600">
+              Status: <span className="font-semibold text-green-600">{subscription.status}</span>
+            </p>
+            <p className="text-gray-600">
+              Billing: <span className="font-semibold text-gray-900">{subscription.billing_cycle}</span>
+            </p>
+            <p className="text-gray-600">
+              Next billing date: <span className="font-semibold text-gray-900">
+                {new Date(subscription.next_billing_date).toLocaleDateString()}
+              </span>
+            </p>
+            <div className="mt-4">
+              <button
+                onClick={() => router.push('/billing')}
+                className="text-green-600 hover:text-green-700 font-medium"
+              >
+                Manage subscription →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-gray-600 mb-4">You don't have an active subscription.</p>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+            >
+              View Plans
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Active Locations</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {subscription ? (subscription.plan_type === 'base' ? '1' : '5') : '0'}
+              </p>
+            </div>
+            <MapPin className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Reports This Month</p>
+              <p className="text-2xl font-bold text-gray-900">0</p>
+            </div>
+            <BarChart3 className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">AI Credits Used</p>
+              <p className="text-2xl font-bold text-gray-900">0</p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Payment Methods</p>
+              <p className="text-2xl font-bold text-gray-900">0</p>
+            </div>
+            <CreditCard className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Map Preview */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">CleanApp Map</h2>
+        <div className="bg-gray-100 h-96 rounded-lg flex items-center justify-center">
+          <p className="text-gray-500">Map integration coming soon</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== FILE: styles/globals.css =====
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
