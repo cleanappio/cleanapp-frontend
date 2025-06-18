@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { ChevronRight, Check, MapPin, BarChart3, Building2, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
@@ -165,10 +166,13 @@ export default function PricingPage() {
             >
               {/* Plan Image */}
               <div className="h-40 relative overflow-hidden">
-                <img
-                  src={plan.imageSrc}
+                <Image
+                  src={plan.imageSrc || '/api/placeholder/400/300'}
                   alt={`${plan.name} plan`}
+                  width={400}
+                  height={160}
                   className="w-full h-full object-cover"
+                  priority={plan.popular}
                 />
                 {plan.popular && (
                   <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full">
