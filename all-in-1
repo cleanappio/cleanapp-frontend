@@ -1345,15 +1345,19 @@ export default function BillingPage() {
     try {
       const [sub, methods, history] = await Promise.all([
         apiClient.getCurrentSubscription().catch(() => null),
-        apiClient.getPaymentMethods(),
-        apiClient.getBillingHistory({ limit: 10 })
+        apiClient.getPaymentMethods().catch(() => []),
+        apiClient.getBillingHistory({ limit: 10 }).catch(() => ({ data: [], pagination: { page: 1, limit: 10 } }))
       ]);
 
       setSubscription(sub);
-      setPaymentMethods(methods);
-      setBillingHistory(history.data);
+      setPaymentMethods(methods || []);
+      setBillingHistory(history?.data || []);
     } catch (error) {
+      console.error('Billing data error:', error);
       toast.error('Failed to load billing information');
+      // Ensure we have default values even on error
+      setPaymentMethods([]);
+      setBillingHistory([]);
     } finally {
       setLoading(false);
     }
@@ -1508,7 +1512,7 @@ export default function BillingPage() {
           </button>
         </div>
         
-        {paymentMethods.length > 0 ? (
+        {paymentMethods && paymentMethods.length > 0 ? (
           <div className="space-y-3">
             {paymentMethods.map((method) => (
               <div key={method.id} className="border rounded-lg p-4 flex items-center justify-between">
@@ -1555,7 +1559,7 @@ export default function BillingPage() {
       {/* Billing History */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Billing History</h2>
-        {billingHistory.length > 0 ? (
+        {billingHistory && billingHistory.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
