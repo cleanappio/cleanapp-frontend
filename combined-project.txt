@@ -1,5 +1,13 @@
-// File: ./tailwind.config.js
+# Fixed CleanApp Frontend Project Files
 
+## Bug Fix Summary
+Fixed missing API client methods: `deletePaymentMethod` and `setDefaultPaymentMethod` that were being called in the billing page but not implemented in the API client.
+
+---
+
+## File: ./tailwind.config.js
+
+```javascript
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -17,21 +25,25 @@ module.exports = {
   },
   plugins: [],
 }
+```
 
-// ----------------
+---
 
-// File: ./next-env.d.ts
+## File: ./next-env.d.ts
 
+```typescript
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
 // NOTE: This file should not be edited
 // see https://nextjs.org/docs/pages/api-reference/config/typescript for more information.
+```
 
-// ----------------
+---
 
-// File: ./README.md
+## File: ./README.md
 
+```markdown
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -68,11 +80,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
 
-// ----------------
+---
 
-// File: ./package.json
+## File: ./package.json
 
+```json
 {
   "name": "cleanapp-frontend",
   "version": "0.1.0",
@@ -109,11 +123,13 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
     "typescript": "^5"
   }
 }
+```
 
-// ----------------
+---
 
-// File: ./tsconfig.json
+## File: ./tsconfig.json
 
+```json
 {
   "compilerOptions": {
     "target": "ES2017",
@@ -142,11 +158,13 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
+```
 
-// ----------------
+---
 
-// File: ./postcss.config.js
+## File: ./postcss.config.js
 
+```javascript
 module.exports = {
   plugins: {
     'tailwindcss/nesting': {},
@@ -154,11 +172,13 @@ module.exports = {
     autoprefixer: {},
   },
 }
+```
 
-// ----------------
+---
 
-// File: ./next.config.ts
+## File: ./next.config.ts
 
+```typescript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -168,18 +188,23 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
+```
 
-// ----------------
+---
 
-// File: ./src/styles/globals.css
+## File: ./src/styles/globals.css
 
+```css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-// ----------------
+```
 
-// File: ./src/components/Layout.tsx
+---
 
+## File: ./src/components/Layout.tsx
+
+```typescript
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -275,11 +300,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/lib/api-client.ts
+## File: ./src/lib/api-client.ts (FIXED)
 
+```typescript
 // This would be your API client implementation from the provided files
 // I'm including a simplified version here
 
@@ -479,14 +506,30 @@ export class ApiClient {
     });
     return data;
   }
+
+  // FIX: Add the missing deletePaymentMethod method
+  async deletePaymentMethod(id: number): Promise<MessageResponse> {
+    const { data } = await this.axios.delete<MessageResponse>(`/api/v3/payment-methods/${id}`);
+    return data;
+  }
+
+  // FIX: Add the missing setDefaultPaymentMethod method
+  async setDefaultPaymentMethod(id: number): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>(`/api/v3/payment-methods/${id}`, {
+      is_default: true
+    });
+    return data;
+  }
 }
 
 export const apiClient = new ApiClient();
+```
 
-// ----------------
+---
 
-// File: ./src/lib/auth-store.ts
+## File: ./src/lib/auth-store.ts
 
+```typescript
 import { create } from 'zustand';
 import { apiClient, Customer } from './api-client';
 
@@ -537,11 +580,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   }
 }));
+```
 
-// ----------------
+---
 
-// File: ./src/pages/index.tsx
+## File: ./src/pages/index.tsx
 
+```typescript
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { MapPin, Sparkles, BarChart3, Shield } from 'lucide-react';
@@ -651,11 +696,13 @@ export default function Home() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/pricing.tsx
+## File: ./src/pages/pricing.tsx
 
+```typescript
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
@@ -772,7 +819,7 @@ export default function PricingPage() {
       return 'forever free';
     }
     const monthlyPrice = getMonthlyPrice(plan);
-    return `${monthlyPrice}/mo`;
+    return `$${monthlyPrice}/mo`;
   };
 
   return (
@@ -951,11 +998,13 @@ export default function PricingPage() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/login.tsx
+## File: ./src/pages/login.tsx
 
+```typescript
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -1056,11 +1105,13 @@ export default function LoginPage() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/dashboard.tsx
+## File: ./src/pages/dashboard.tsx
 
+```typescript
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
@@ -1305,11 +1356,13 @@ export default function DashboardPage() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/checkout.tsx
+## File: ./src/pages/checkout.tsx
 
+```typescript
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { loadStripe } from '@stripe/stripe-js';
@@ -1374,7 +1427,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
     return {
       ...plan,
       price,
-      displayPrice: billingCycle === 'annual' ? `${price}/year` : `${monthlyPrice}/month`
+      displayPrice: billingCycle === 'annual' ? `$${price}/year` : `$${monthlyPrice}/month`
     };
   };
 
@@ -1581,10 +1634,13 @@ export default function CheckoutPage() {
     </div>
   );
 }
-// ----------------
+```
 
-// File: ./src/pages/_document.tsx
+---
 
+## File: ./src/pages/_document.tsx
+
+```typescript
 import { Html, Head, Main, NextScript } from 'next/document'
 
 export default function Document() {
@@ -1604,11 +1660,13 @@ export default function Document() {
     </Html>
   )
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/signup.tsx
+## File: ./src/pages/signup.tsx
 
+```typescript
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -1750,11 +1808,13 @@ export default function SignupPage() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/billing.tsx
+## File: ./src/pages/billing.tsx (FIXED)
 
+```typescript
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
@@ -2054,11 +2114,13 @@ export default function BillingPage() {
     </div>
   );
 }
+```
 
-// ----------------
+---
 
-// File: ./src/pages/_app.tsx
+## File: ./src/pages/_app.tsx
 
+```typescript
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
@@ -2082,6 +2144,15 @@ export default function App({ Component, pageProps }: AppProps) {
     </>
   );
 }
+```
 
-// ----------------
+---
 
+## Summary of Changes
+
+The main fix was adding the two missing methods to the `ApiClient` class in `./src/lib/api-client.ts`:
+
+1. **`deletePaymentMethod(id: number)`**: Sends a DELETE request to remove a payment method
+2. **`setDefaultPaymentMethod(id: number)`**: Sends a PUT request to set a payment method as default
+
+These methods were being called in the billing page but were not implemented in the API client, causing runtime errors. The fix ensures proper communication with the backend API for payment method management.

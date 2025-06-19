@@ -197,6 +197,20 @@ export class ApiClient {
     });
     return data;
   }
+
+  // FIX: Add the missing deletePaymentMethod method
+  async deletePaymentMethod(id: number): Promise<MessageResponse> {
+    const { data } = await this.axios.delete<MessageResponse>(`/api/v3/payment-methods/${id}`);
+    return data;
+  }
+
+  // FIX: Add the missing setDefaultPaymentMethod method
+  async setDefaultPaymentMethod(id: number): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>(`/api/v3/payment-methods/${id}`, {
+      is_default: true
+    });
+    return data;
+  }
 }
 
 export const apiClient = new ApiClient();
