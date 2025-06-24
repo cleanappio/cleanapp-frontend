@@ -16,7 +16,7 @@ export interface Subscription {
   customer_id: string;
   plan_type: 'base' | 'advanced' | 'exclusive';
   billing_cycle: 'monthly' | 'annual';
-  status: 'active' | 'suspended' | 'cancelled';
+  status: 'active' | 'suspended' | 'canceled';
   start_date: string;
   next_billing_date: string;
   current_period_end?: string;

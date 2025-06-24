@@ -53,7 +53,7 @@ export default function BillingPage() {
     setCancelling(true);
     try {
       await apiClient.cancelSubscription();
-      toast.success('Subscription cancelled successfully');
+      toast.success('Subscription canceled successfully');
       setSubscription(null);
     } catch (error) {
       toast.error('Failed to cancel subscription');
