@@ -2,7 +2,7 @@
 echo "// Combined Project Code" > combined-project.txt
 echo "" >> combined-project.txt
 find . -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.css" -o -name "*.md" | \
-grep -v node_modules | \
+grep -v node_modules | grep -v .next | \
 while read file; do
     echo "// File: $file" >> combined-project.txt
     echo "" >> combined-project.txt

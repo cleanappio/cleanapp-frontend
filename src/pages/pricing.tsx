@@ -36,8 +36,8 @@ export default function PricingPage() {
     {
       id: 'lite',
       name: 'lite',
-      price: '$100/mo',
-      priceAmount: 100,
+      price: '$99.99/mo',
+      priceAmount: 99.99,
       apiPlanType: 'base',
       features: [
         'real time data subscription',
@@ -49,8 +49,8 @@ export default function PricingPage() {
     {
       id: 'enterprise',
       name: 'enterprise',
-      price: '$500/mo',
-      priceAmount: 500,
+      price: '$499.99/mo',
+      priceAmount: 499.99,
       apiPlanType: 'advanced',
       popular: true,
       features: [
