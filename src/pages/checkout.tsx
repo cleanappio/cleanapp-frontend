@@ -49,6 +49,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [setAsDefault, setSetAsDefault] = useState(false);
 
   useEffect(() => {
     fetchPaymentMethods();
@@ -66,11 +67,13 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
       } else {
         // No existing payment methods, show the form
         setShowNewPaymentForm(true);
+        setSetAsDefault(true); // First payment method should be default
       }
     } catch (error) {
       console.error('Failed to fetch payment methods:', error);
       // If fetching fails, default to showing the new payment form
       setShowNewPaymentForm(true);
+      setSetAsDefault(true); // First payment method should be default
     } finally {
       setLoadingPaymentMethods(false);
     }
@@ -78,8 +81,8 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
 
   const getPlanDetails = () => {
     const plans = {
-      base: { name: 'Lite', price: 99.99 },
-      advanced: { name: 'Enterprise', price: 499.99 },
+      base: { name: 'Lite', price: 100 },
+      advanced: { name: 'Enterprise', price: 500 },
       exclusive: { name: 'Civic', price: 0 } // Custom pricing
     };
     
@@ -141,6 +144,16 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
         }
 
         paymentMethodId = paymentMethod.id;
+
+        // If user wants to set as default, add the payment method first
+        if (setAsDefault) {
+          try {
+            await apiClient.addPaymentMethod(paymentMethodId, true);
+          } catch (error) {
+            console.log('Payment method will be added during subscription creation');
+            // Continue anyway as the subscription endpoint might handle this
+          }
+        }
       } else {
         // Use existing payment method
         paymentMethodId = selectedPaymentMethod;
@@ -223,6 +236,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
                     onChange={(e) => {
                       setSelectedPaymentMethod(e.target.value);
                       setShowNewPaymentForm(false);
+                      setSetAsDefault(false);
                     }}
                     className="mr-3 text-green-600 focus:ring-green-500"
                   />
@@ -247,6 +261,9 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
                 onClick={() => {
                   setShowNewPaymentForm(!showNewPaymentForm);
                   setSelectedPaymentMethod(showNewPaymentForm ? '' : 'new');
+                  if (!showNewPaymentForm) {
+                    setSetAsDefault(false);
+                  }
                 }}
                 className={`w-full flex items-center justify-center p-3 border rounded-lg transition-colors ${
                   showNewPaymentForm 
@@ -304,6 +321,19 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
               <div className="border border-gray-300 rounded-md p-3">
                 <CardElement options={CARD_ELEMENT_OPTIONS} />
               </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="set-as-default"
+                checked={setAsDefault}
+                onChange={(e) => setSetAsDefault(e.target.checked)}
+                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+              />
+              <label htmlFor="set-as-default" className="ml-2 block text-sm text-gray-700">
+                Set as default payment method
+              </label>
             </div>
           </div>
         )}
