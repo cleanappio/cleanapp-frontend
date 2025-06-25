@@ -90,8 +90,8 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
 
   const getPlanDetails = () => {
     const plans = {
-      base: { name: 'Lite', price: 100 },
-      advanced: { name: 'Enterprise', price: 500 },
+      base: { name: 'Lite', price: 99.99 },
+      advanced: { name: 'Enterprise', price: 499.99 },
       exclusive: { name: 'Civic', price: 0 } // Custom pricing
     };
     
