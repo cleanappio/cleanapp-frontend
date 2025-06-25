@@ -1,37 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient, Subscription } from '@/lib/api-client';
 import { MapPin, BarChart3, CreditCard, TrendingUp, Activity, Users, Clock, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, subscription, billingLoading } = useAuthStore();
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
-      return;
     }
-
-    fetchSubscription();
-  }, [isAuthenticated]);
-
-  const fetchSubscription = async () => {
-    try {
-      const sub = await apiClient.getCurrentSubscription();
-      setSubscription(sub);
-    } catch (error: any) {
-      if (error.response?.status !== 404) {
-        toast.error('Failed to load subscription');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isAuthenticated, router]);
 
   const formatPlanName = (planType: string) => {
     const names: Record<string, string> = {
@@ -52,7 +32,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (billingLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>

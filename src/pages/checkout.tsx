@@ -8,7 +8,7 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient, PaymentMethod } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -41,29 +41,27 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, paymentMethods, fetchPaymentMethods, createSubscription, addPaymentMethod } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
   const [email, setEmail] = useState(user?.email || '');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [setAsDefault, setSetAsDefault] = useState(false);
 
   useEffect(() => {
-    fetchPaymentMethods();
+    fetchPaymentMethodsData();
   }, []);
 
-  const fetchPaymentMethods = async () => {
+  const fetchPaymentMethodsData = async () => {
     try {
-      const methods = await apiClient.getPaymentMethods();
-      setPaymentMethods(methods || []);
+      await fetchPaymentMethods();
       
       // If there are existing payment methods, select the default one or the first one
-      if (methods && methods.length > 0) {
-        const defaultMethod = methods.find(m => m.is_default);
-        setSelectedPaymentMethod(defaultMethod ? defaultMethod.stripe_payment_method_id : methods[0].stripe_payment_method_id);
+      if (paymentMethods && paymentMethods.length > 0) {
+        const defaultMethod = paymentMethods.find(m => m.is_default);
+        setSelectedPaymentMethod(defaultMethod ? defaultMethod.stripe_payment_method_id : paymentMethods[0].stripe_payment_method_id);
       } else {
         // No existing payment methods, show the form
         setShowNewPaymentForm(true);
@@ -78,6 +76,17 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
       setLoadingPaymentMethods(false);
     }
   };
+
+  // Watch for changes to paymentMethods from the store
+  useEffect(() => {
+    if (paymentMethods && paymentMethods.length > 0 && !selectedPaymentMethod) {
+      const defaultMethod = paymentMethods.find(m => m.is_default);
+      setSelectedPaymentMethod(defaultMethod ? defaultMethod.stripe_payment_method_id : paymentMethods[0].stripe_payment_method_id);
+    } else if (paymentMethods.length === 0) {
+      setShowNewPaymentForm(true);
+      setSetAsDefault(true);
+    }
+  }, [paymentMethods]);
 
   const getPlanDetails = () => {
     const plans = {
@@ -148,7 +157,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
         // If user wants to set as default, add the payment method first
         if (setAsDefault) {
           try {
-            await apiClient.addPaymentMethod(paymentMethodId, true);
+            await addPaymentMethod(paymentMethodId, true);
           } catch (error) {
             console.log('Payment method will be added during subscription creation');
             // Continue anyway as the subscription endpoint might handle this
@@ -159,12 +168,8 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
         paymentMethodId = selectedPaymentMethod;
       }
 
-      // Create subscription via API
-      await apiClient.createSubscription(
-        planType,
-        billingCycle,
-        paymentMethodId
-      );
+      // Create subscription via store
+      await createSubscription(planType, billingCycle, paymentMethodId);
 
       toast.success('Subscription created successfully!');
       router.push('/dashboard');

@@ -20,7 +20,7 @@ interface SubscriptionPlan {
 
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, subscription } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -75,14 +75,30 @@ export default function PricingPage() {
     }
   ];
 
+  const isCurrentPlan = (plan: SubscriptionPlan) => {
+    if (!subscription) {
+      // If no subscription, user is on free plan
+      return plan.id === 'free';
+    }
+    // Match the plan by apiPlanType
+    return plan.apiPlanType === subscription.plan_type;
+  };
+
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     if (!isAuthenticated) {
       router.push('/signup');
       return;
     }
 
-    if (plan.id === 'free') {
-      router.push('/dashboard');
+    // If it's the current plan, do nothing
+    if (isCurrentPlan(plan)) {
+      return;
+    }
+
+    if (plan.id === 'free' && subscription) {
+      // Downgrading to free means cancelling subscription
+      router.push('/billing');
+      toast('To downgrade to free, please cancel your subscription from the billing page');
       return;
     }
 
@@ -115,6 +131,48 @@ export default function PricingPage() {
     }
     const monthlyPrice = getMonthlyPrice(plan);
     return `${monthlyPrice}/mo`;
+  };
+
+  const getButtonText = (plan: SubscriptionPlan) => {
+    if (isCurrentPlan(plan)) {
+      return 'Current';
+    }
+    
+    if (!subscription && plan.id === 'free') {
+      return 'Current';
+    }
+
+    if (plan.id === 'free') {
+      return 'Downgrade';
+    }
+
+    if (plan.customPricing) {
+      return 'Contact Sales';
+    }
+
+    // If user has any subscription, show "Change now" for other plans
+    if (subscription) {
+      return 'Change now';
+    }
+
+    // If no subscription (on free plan), show different text
+    return 'Subscribe Now';
+  };
+
+  const getButtonStyle = (plan: SubscriptionPlan) => {
+    if (isCurrentPlan(plan)) {
+      return 'bg-gray-300 text-gray-600 cursor-not-allowed';
+    }
+
+    if (plan.id === 'free') {
+      return 'bg-white text-green-700 hover:bg-gray-50 border border-green-600';
+    }
+
+    if (plan.customPricing) {
+      return 'bg-gray-800 text-white hover:bg-gray-900';
+    }
+
+    return 'bg-green-600 text-white hover:bg-green-700';
   };
 
   return (
@@ -161,9 +219,18 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg"
+              className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg ${
+                isCurrentPlan(plan) ? 'ring-2 ring-green-600 shadow-lg' : ''
+              }`}
               style={{ backgroundColor: '#EBF1E8' }}
             >
+              {/* Current Plan Badge */}
+              {isCurrentPlan(plan) && (
+                <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full z-10">
+                  Current Plan
+                </div>
+              )}
+              
               {/* Plan Image */}
               <div className="h-40 relative overflow-hidden">
                 <Image
@@ -174,7 +241,7 @@ export default function PricingPage() {
                   className="w-full h-full object-cover"
                   priority={plan.popular}
                 />
-                {plan.popular && (
+                {plan.popular && !isCurrentPlan(plan) && (
                   <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full">
                     Popular
                   </div>
@@ -211,24 +278,14 @@ export default function PricingPage() {
                 {/* CTA Button */}
                 <button
                   onClick={() => handleSelectPlan(plan)}
-                  disabled={isLoading}
+                  disabled={isLoading || isCurrentPlan(plan)}
                   className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${
-                    plan.id === 'free'
-                      ? 'bg-white text-green-700 hover:bg-gray-50 border border-green-600'
-                      : plan.customPricing
-                      ? 'bg-gray-800 text-white hover:bg-gray-900'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    getButtonStyle(plan)
+                  } ${(isLoading || isCurrentPlan(plan)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {plan.id === 'free' ? (
-                    'Get Started'
-                  ) : plan.customPricing ? (
-                    'Contact Sales'
-                  ) : (
-                    <>
-                      Subscribe Now
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </>
+                  {getButtonText(plan)}
+                  {!isCurrentPlan(plan) && !plan.customPricing && plan.id !== 'free' && (
+                    <ChevronRight className="w-4 h-4 ml-2" />
                   )}
                 </button>
               </div>

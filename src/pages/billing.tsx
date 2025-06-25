@@ -8,7 +8,6 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient, Subscription, PaymentMethod, BillingHistory } from '@/lib/api-client';
 import { CreditCard, Calendar, Download, Plus, Trash2, Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -40,7 +39,7 @@ interface PaymentMethodFormProps {
 function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
   const stripe = useStripe();
   const elements = useElements();
-  const { user } = useAuthStore();
+  const { user, addPaymentMethod } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
   const [email, setEmail] = useState(user?.email || '');
@@ -83,8 +82,8 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
         return;
       }
 
-      // Add payment method via API
-      await apiClient.addPaymentMethod(paymentMethod.id, setAsDefault);
+      // Add payment method via store
+      await addPaymentMethod(paymentMethod.id, setAsDefault);
       
       toast.success('Payment method added successfully!');
       onSuccess();
@@ -191,11 +190,18 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
 function BillingPageContent() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [billingHistory, setBillingHistory] = useState<BillingHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    isAuthenticated, 
+    subscription, 
+    paymentMethods, 
+    billingHistory,
+    billingLoading,
+    fetchBillingData,
+    cancelSubscription,
+    deletePaymentMethod,
+    setDefaultPaymentMethod
+  } = useAuthStore();
+  
   const [cancelling, setCancelling] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
 
@@ -205,30 +211,10 @@ function BillingPageContent() {
       return;
     }
 
+    // Fetch billing data when component mounts
+    // The store will handle caching, so this is safe to call
     fetchBillingData();
-  }, [isAuthenticated]);
-
-  const fetchBillingData = async () => {
-    try {
-      const [sub, methods, history] = await Promise.all([
-        apiClient.getCurrentSubscription().catch(() => null),
-        apiClient.getPaymentMethods().catch(() => []),
-        apiClient.getBillingHistory({ limit: 10 }).catch(() => ({ data: [], pagination: { page: 1, limit: 10 } }))
-      ]);
-
-      setSubscription(sub);
-      setPaymentMethods(methods || []);
-      setBillingHistory(history?.data || []);
-    } catch (error) {
-      console.error('Billing data error:', error);
-      toast.error('Failed to load billing information');
-      // Ensure we have default values even on error
-      setPaymentMethods([]);
-      setBillingHistory([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isAuthenticated, fetchBillingData]);
 
   const handleCancelSubscription = async () => {
     if (!confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
@@ -237,9 +223,8 @@ function BillingPageContent() {
 
     setCancelling(true);
     try {
-      await apiClient.cancelSubscription();
+      await cancelSubscription();
       toast.success('Subscription canceled successfully');
-      setSubscription(null);
     } catch (error) {
       toast.error('Failed to cancel subscription');
     } finally {
@@ -253,8 +238,7 @@ function BillingPageContent() {
     }
 
     try {
-      await apiClient.deletePaymentMethod(id);
-      setPaymentMethods(methods => methods.filter(m => m.id !== id));
+      await deletePaymentMethod(id);
       toast.success('Payment method removed');
     } catch (error) {
       toast.error('Failed to remove payment method');
@@ -263,8 +247,7 @@ function BillingPageContent() {
 
   const handleSetDefaultPaymentMethod = async (id: number) => {
     try {
-      await apiClient.setDefaultPaymentMethod(id);
-      await fetchBillingData();
+      await setDefaultPaymentMethod(id);
       toast.success('Default payment method updated');
     } catch (error) {
       toast.error('Failed to update default payment method');
@@ -273,7 +256,6 @@ function BillingPageContent() {
 
   const handlePaymentMethodAdded = async () => {
     setShowAddPaymentForm(false);
-    await fetchBillingData();
   };
 
   const formatPlanName = (planType: string) => {
@@ -300,7 +282,7 @@ function BillingPageContent() {
     }).format(amount);
   };
 
-  if (loading) {
+  if (billingLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
