@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
-import { ChevronRight, Check, MapPin, BarChart3, Building2, Sparkles } from 'lucide-react';
+import { ChevronRight, Check, MapPin, BarChart3, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 
@@ -22,7 +22,6 @@ export default function PricingPage() {
   const router = useRouter();
   const { isAuthenticated, subscription } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [isLoading, setIsLoading] = useState(false);
 
   const plans: SubscriptionPlan[] = [
     {
@@ -278,10 +277,10 @@ export default function PricingPage() {
                 {/* CTA Button */}
                 <button
                   onClick={() => handleSelectPlan(plan)}
-                  disabled={isLoading || isCurrentPlan(plan)}
+                  disabled={isCurrentPlan(plan)}
                   className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${
                     getButtonStyle(plan)
-                  } ${(isLoading || isCurrentPlan(plan)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${(isCurrentPlan(plan)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {getButtonText(plan)}
                   {!isCurrentPlan(plan) && !plan.customPricing && plan.id !== 'free' && (

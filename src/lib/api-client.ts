@@ -383,11 +383,6 @@ export class ApiClient {
     const { data } = await this.axios.get<{ status: string; timestamp: string }>('/health');
     return data;
   }
-
-  async getAreas(): Promise<Array<{ id: number; name: string; coordinates?: any }>> {
-    const { data } = await this.axios.get<Array<{ id: number; name: string }>>('/api/v3/areas');
-    return data;
-  }
 }
 
 // Export singleton instance

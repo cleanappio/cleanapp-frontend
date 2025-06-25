@@ -8,7 +8,6 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -158,7 +157,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
         if (setAsDefault) {
           try {
             await addPaymentMethod(paymentMethodId, true);
-          } catch (error) {
+          } catch {
             console.log('Payment method will be added during subscription creation');
             // Continue anyway as the subscription endpoint might handle this
           }
@@ -175,7 +174,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Subscription error:', error);
-      toast.error(error.response?.data?.error || 'Failed to create subscription');
+      toast.error(error.message || 'Failed to create subscription');
     } finally {
       setIsProcessing(false);
     }

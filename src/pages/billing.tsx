@@ -8,7 +8,7 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
-import { CreditCard, Calendar, Download, Plus, Trash2, Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { CreditCard, Download, Plus, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
@@ -225,7 +225,7 @@ function BillingPageContent() {
     try {
       await cancelSubscription();
       toast.success('Subscription canceled successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to cancel subscription');
     } finally {
       setCancelling(false);
@@ -240,7 +240,7 @@ function BillingPageContent() {
     try {
       await deletePaymentMethod(id);
       toast.success('Payment method removed');
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove payment method');
     }
   };
@@ -249,7 +249,7 @@ function BillingPageContent() {
     try {
       await setDefaultPaymentMethod(id);
       toast.success('Default payment method updated');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update default payment method');
     }
   };
@@ -342,7 +342,7 @@ function BillingPageContent() {
           </div>
         ) : (
           <div>
-            <p className="text-gray-600 mb-4">You don't have an active subscription.</p>
+            <p className="text-gray-600 mb-4">You don&apos;t have an active subscription.</p>
             <button
               onClick={() => router.push('/pricing')}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"

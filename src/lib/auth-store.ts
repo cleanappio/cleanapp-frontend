@@ -151,7 +151,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = await apiClient.getCurrentCustomer();
         set({ user, isAuthenticated: true, isLoading: false });
         get().fetchBillingData();
-      } catch (error) {
+      } catch {
         // Token might be expired, try to refresh
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
-import { MapPin, BarChart3, CreditCard, TrendingUp, Activity, Users, Clock, AlertCircle } from 'lucide-react';
+import { MapPin, BarChart3, CreditCard, TrendingUp, Activity, Users, AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export default function DashboardPage() {
             <AlertCircle className="h-5 w-5 text-yellow-400" />
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                You're currently on the free tier. 
+                You&apos;re currently on the free tier. 
                 <button 
                   onClick={() => router.push('/pricing')}
                   className="font-medium underline text-yellow-700 hover:text-yellow-600 ml-2"
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div>
-              <p className="text-gray-600 mb-4">You're on the free tier with limited features.</p>
+              <p className="text-gray-600 mb-4">You&apos;re on the free tier with limited features.</p>
               <button
                 onClick={() => router.push('/pricing')}
                 className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full"
