@@ -1,11 +1,195 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
 import { apiClient, Subscription, PaymentMethod, BillingHistory } from '@/lib/api-client';
-import { CreditCard, Calendar, Download, Plus, Trash2, Check } from 'lucide-react';
+import { CreditCard, Calendar, Download, Plus, Trash2, Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function BillingPage() {
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      color: '#32325d',
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: 'antialiased',
+      fontSize: '16px',
+      '::placeholder': {
+        color: '#aab7c4'
+      }
+    },
+    invalid: {
+      color: '#fa755a',
+      iconColor: '#fa755a'
+    }
+  }
+};
+
+interface PaymentMethodFormProps {
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { user } = useAuthStore();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [cardholderName, setCardholderName] = useState('');
+  const [email, setEmail] = useState(user?.email || '');
+  const [setAsDefault, setSetAsDefault] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Create payment method
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: cardholderName,
+          email: email,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || 'Payment method creation failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!paymentMethod) {
+        toast.error('Payment method creation failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Add payment method via API
+      await apiClient.addPaymentMethod(paymentMethod.id, setAsDefault);
+      
+      toast.success('Payment method added successfully!');
+      onSuccess();
+    } catch (error: any) {
+      console.error('Add payment method error:', error);
+      toast.error(error.response?.data?.error || 'Failed to add payment method');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-gray-50 rounded-lg p-4 mt-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Add New Payment Method</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-700 mb-1">
+            Cardholder Name
+          </label>
+          <input
+            type="text"
+            id="cardholder-name"
+            value={cardholderName}
+            onChange={(e) => setCardholderName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Card Information
+          </label>
+          <div className="border border-gray-300 rounded-md p-3 bg-white">
+            <CardElement options={CARD_ELEMENT_OPTIONS} />
+          </div>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="set-as-default-billing"
+            checked={setAsDefault}
+            onChange={(e) => setSetAsDefault(e.target.checked)}
+            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+          />
+          <label htmlFor="set-as-default-billing" className="ml-2 block text-sm text-gray-700">
+            Set as default payment method
+          </label>
+        </div>
+      </div>
+
+      <div className="flex gap-3 mt-6">
+        <button
+          type="submit"
+          disabled={!stripe || isProcessing}
+          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {isProcessing ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Adding...
+            </>
+          ) : (
+            'Add Payment Method'
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isProcessing}
+          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function BillingPageContent() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -13,6 +197,7 @@ export default function BillingPage() {
   const [billingHistory, setBillingHistory] = useState<BillingHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -84,6 +269,11 @@ export default function BillingPage() {
     } catch (error) {
       toast.error('Failed to update default payment method');
     }
+  };
+
+  const handlePaymentMethodAdded = async () => {
+    setShowAddPaymentForm(false);
+    await fetchBillingData();
   };
 
   const formatPlanName = (planType: string) => {
@@ -186,13 +376,25 @@ export default function BillingPage() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Payment Methods</h2>
           <button
-            onClick={() => router.push('/add-payment-method')}
+            onClick={() => setShowAddPaymentForm(!showAddPaymentForm)}
             className="flex items-center text-green-600 hover:text-green-700 font-medium"
           >
             <Plus className="w-4 h-4 mr-1" />
             Add New
+            {showAddPaymentForm ? (
+              <ChevronUp className="w-4 h-4 ml-1" />
+            ) : (
+              <ChevronDown className="w-4 h-4 ml-1" />
+            )}
           </button>
         </div>
+        
+        {showAddPaymentForm && (
+          <PaymentMethodForm
+            onSuccess={handlePaymentMethodAdded}
+            onCancel={() => setShowAddPaymentForm(false)}
+          />
+        )}
         
         {paymentMethods && paymentMethods.length > 0 ? (
           <div className="space-y-3">
@@ -295,5 +497,13 @@ export default function BillingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Elements stripe={stripePromise}>
+      <BillingPageContent />
+    </Elements>
   );
 }
