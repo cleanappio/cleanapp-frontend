@@ -23,7 +23,7 @@ if [ -z "${OPT}" ]; then
     case ${OPT} in
       "dev")
           echo "Using dev environment"
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51RaMT5FLn0iSzOa6GNIe0xjM5Ctk9uBEH3heU21p5bpxo0phaGNZgAdHXXRIyPvACiwm2w3IGMd5tbYZxX5dG8at00RlPC4qqN"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51ReIGOFW3SknKzLcSITZxoZi8fySW11iQNY1SAe1dpzVOcHS2U05GlMZ6aQCcSdxILX0r6cm8Lx6yz4U8TR8l6HH00ihXdefVs"
           NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
           break
           ;;
@@ -57,7 +57,6 @@ echo "Running docker build for version ${BUILD_VERSION}"
 set -e
 
 ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
-
 cat Dockerfile.template | sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" > Dockerfile
 
 CLOUD_REGION="us-central1"
