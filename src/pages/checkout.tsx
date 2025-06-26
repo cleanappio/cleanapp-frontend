@@ -151,6 +151,8 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
           return;
         }
 
+        console.log('New payment method created:', paymentMethod);
+
         paymentMethodId = paymentMethod.id;
 
         // If user wants to set as default, add the payment method first
