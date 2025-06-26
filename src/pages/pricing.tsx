@@ -27,13 +27,13 @@ export default function PricingPage() {
   const { isAuthenticated, subscription, prices, fetchPrices } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
-  useEffect(() => {
-    fetchPricesData();
-  }, []);
-
   const fetchPricesData = async () => {
     await fetchPrices();
   }
+
+  useEffect(() => {
+    fetchPricesData();
+  }, []);
 
   const getPricesForPlan = (planId: string) => {
     const pr = prices.filter(price => price.product === planId) || {};

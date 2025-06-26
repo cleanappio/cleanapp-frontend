@@ -50,10 +50,6 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [setAsDefault, setSetAsDefault] = useState(false);
 
-  useEffect(() => {
-    fetchPaymentMethodsData();
-  }, []);
-
   const fetchPaymentMethodsData = async () => {
     try {
       await fetchPaymentMethods();
@@ -77,6 +73,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     }
   };
 
+  useEffect(() => {
+    fetchPaymentMethodsData();
+  }, []);
+
   // Watch for changes to paymentMethods from the store
   useEffect(() => {
     if (paymentMethods && paymentMethods.length > 0 && !selectedPaymentMethod) {
@@ -87,7 +87,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       setSelectedPaymentMethod('new');
       setSetAsDefault(true);
     }
-  }, [paymentMethods]);
+  }, [paymentMethods, selectedPaymentMethod]);
 
   const getPlanDetails = () => {
     return {

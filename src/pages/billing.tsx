@@ -214,7 +214,7 @@ function BillingPageContent() {
     // Fetch billing data when component mounts
     // The store will handle caching, so this is safe to call
     fetchBillingData();
-  }, [isAuthenticated, fetchBillingData]);
+  }, [isAuthenticated, fetchBillingData, router]);
 
   const handleCancelSubscription = async () => {
     if (!confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
