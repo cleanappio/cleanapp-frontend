@@ -80,3 +80,5 @@ fi
 
 echo "Tagging Docker image as current ${OPT}..."
 gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
+
+test -f Dockerfile && rm Dockerfile

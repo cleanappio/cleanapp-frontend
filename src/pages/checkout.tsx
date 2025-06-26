@@ -83,6 +83,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
       setSelectedPaymentMethod(defaultMethod ? defaultMethod.stripe_payment_method_id : paymentMethods[0].stripe_payment_method_id);
     } else if (paymentMethods.length === 0) {
       setShowNewPaymentForm(true);
+      setSelectedPaymentMethod('new');
       setSetAsDefault(true);
     }
   }, [paymentMethods]);
