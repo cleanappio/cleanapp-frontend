@@ -23,10 +23,14 @@ if [ -z "${OPT}" ]; then
     case ${OPT} in
       "dev")
           echo "Using dev environment"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51RaMT5FLn0iSzOa6GNIe0xjM5Ctk9uBEH3heU21p5bpxo0phaGNZgAdHXXRIyPvACiwm2w3IGMd5tbYZxX5dG8at00RlPC4qqN"
+          NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
           break
           ;;
       "prod")
           echo "Using prod environment"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
+          NEXT_PUBLIC_API_URL=""
           break
           ;;
       "quit")
@@ -36,8 +40,6 @@ if [ -z "${OPT}" ]; then
     esac
   done
 fi
-
-test -d target && rm -rf target
 
 . .version
 
@@ -53,6 +55,10 @@ fi
 echo "Running docker build for version ${BUILD_VERSION}"
 
 set -e
+
+ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
+
+cat Dockerfile.template | sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" > Dockerfile
 
 CLOUD_REGION="us-central1"
 PROJECT_NAME="cleanup-mysql-v2"

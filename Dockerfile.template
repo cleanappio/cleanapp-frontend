@@ -5,8 +5,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Set environment variables
-ENV NEXT_PUBLIC_API_URL=https://devapi.cleanapp.io
-ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51RaMT5FLn0iSzOa6GNIe0xjM5Ctk9uBEH3heU21p5bpxo0phaGNZgAdHXXRIyPvACiwm2w3IGMd5tbYZxX5dG8at00RlPC4qqN
+ENV NEXT_PUBLIC_API_URL={{NEXT_PUBLIC_API_URL}}
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY={{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}
 
 # Install dependencies
 COPY package.json package-lock.json* ./

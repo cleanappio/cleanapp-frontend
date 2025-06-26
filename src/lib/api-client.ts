@@ -144,6 +144,9 @@ export class ApiClient {
   private token: string | null = null;
 
   constructor() {
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      throw 'NEXT_PUBLIC_API_URL is not set.';
+    }
     this.axios = axios.create({
       baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
       headers: {
