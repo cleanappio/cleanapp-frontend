@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { ChevronRight, Check, MapPin, BarChart3, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 
+interface BillingCycle {
+  type: string;
+  price: number;
+  currency: string;
+}
+
 interface SubscriptionPlan {
   id: string;
   name: string;
-  price: string;
-  priceAmount?: number;
-  billingCycle?: 'monthly' | 'annual';
+  billingCycles?: BillingCycle[];
   features: string[];
   apiPlanType?: 'base' | 'advanced' | 'exclusive';
   popular?: boolean;
@@ -20,24 +24,42 @@ interface SubscriptionPlan {
 
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated, subscription } = useAuthStore();
+  const { isAuthenticated, subscription, prices, fetchPrices } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  useEffect(() => {
+    fetchPricesData();
+  }, []);
+
+  const fetchPricesData = async () => {
+    await fetchPrices();
+  }
+
+  const getPricesForPlan = (planId: string) => {
+    const pr = prices.filter(price => price.product === planId) || {};
+    return pr.map(price => ({
+      type: price.period,
+      price: price.amount / 100, // Convert cents to dollars
+      currency: price.currency.toUpperCase()
+    }));
+  };
 
   const plans: SubscriptionPlan[] = [
     {
       id: 'free',
       name: 'forever free',
-      price: 'Free',
-      priceAmount: 0,
+      billingCycles: [
+        { type: 'monthly', price: 0, currency: 'USD' },
+        { type: 'annual', price: 0, currency: 'USD' }
+      ],
       features: ['web access to CleanAppMap'],
       imageSrc: '/free.png'
     },
     {
       id: 'lite',
       name: 'lite',
-      price: '$99.99/mo',
-      priceAmount: 99.99,
       apiPlanType: 'base',
+      billingCycles: getPricesForPlan('base'),
       features: [
         'real time data subscription',
         'AI analytics (material composition, brand analysis, urgency ratings) for 1 location (geoquadrant) -or- 1 brand (eg, Redbull, Starbucks)',
@@ -48,9 +70,8 @@ export default function PricingPage() {
     {
       id: 'enterprise',
       name: 'enterprise',
-      price: '$499.99/mo',
-      priceAmount: 499.99,
       apiPlanType: 'advanced',
+      billingCycles: getPricesForPlan('advanced'),
       popular: true,
       features: [
         'lite tier, plus:',
@@ -60,18 +81,6 @@ export default function PricingPage() {
       ],
       imageSrc: '/enterprise.png'
     },
-    {
-      id: 'civic',
-      name: 'civic',
-      price: 'case-by-case',
-      apiPlanType: 'exclusive',
-      customPricing: true,
-      features: [
-        'enterprise tier, plus:',
-        'support for integration with existing smart-city incident reporting platforms (eg, Open311)'
-      ],
-      imageSrc: '/civic.png'
-    }
   ];
 
   const isCurrentPlan = (plan: SubscriptionPlan) => {
@@ -80,7 +89,7 @@ export default function PricingPage() {
       return plan.id === 'free';
     }
     // Match the plan by apiPlanType
-    return plan.apiPlanType === subscription.plan_type;
+    return plan.apiPlanType === subscription.plan_type && billingCycle === subscription.billing_cycle;
   };
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
@@ -107,29 +116,36 @@ export default function PricingPage() {
     }
 
     // Navigate to checkout with plan details
+    const display = getPriceDisplay(plan);
+    const displayPrice = billingCycle === 'annual' ? display.annual : display.monthly;
     router.push({
       pathname: '/checkout',
       query: {
         plan: plan.apiPlanType,
-        billing: billingCycle
+        billing: billingCycle,
+        displayPrice: displayPrice,
       }
     });
   };
 
-  const getMonthlyPrice = (plan: SubscriptionPlan) => {
-    if (!plan.priceAmount || plan.priceAmount === 0) return 0;
-    return billingCycle === 'annual' ? Math.round(plan.priceAmount * 0.8) : plan.priceAmount;
-  };
-
   const getPriceDisplay = (plan: SubscriptionPlan) => {
-    if (plan.customPricing) {
-      return plan.price;
+    const price = plan.billingCycles?.find(bc => bc.type === billingCycle);
+    if (!price) {
+      return {
+        monthly: 'Contact Sales',
+        annual: null,
+      };
     }
-    if (plan.priceAmount === 0) {
-      return 'forever free';
+    if (billingCycle === 'annual' && price) {
+      return {
+        monthly: `${price.price / 12} ${price.currency}/mo`,
+        annual: `${price.price} ${price.currency}/yr`
+      };
     }
-    const monthlyPrice = getMonthlyPrice(plan);
-    return `${monthlyPrice}/mo`;
+    return {
+      monthly: `${price.price} ${price.currency}/mo`,
+      annual: null
+    };
   };
 
   const getButtonText = (plan: SubscriptionPlan) => {
@@ -208,13 +224,13 @@ export default function PricingPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Annual <span className="text-sm">(Save 20%)</span>
+              Annual <span className="text-sm">(Discount)</span>
             </button>
           </div>
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((plan) => (
             <div
               key={plan.id}
@@ -255,11 +271,11 @@ export default function PricingPage() {
                     {plan.name}
                   </h3>
                   <p className="text-3xl font-bold text-gray-900">
-                    {getPriceDisplay(plan)}
+                    {getPriceDisplay(plan).monthly}
                   </p>
-                  {billingCycle === 'annual' && plan.priceAmount && plan.priceAmount > 0 && (
+                  {billingCycle === 'annual' && (
                     <p className="text-sm text-gray-600 mt-1">
-                      ${Math.round(plan.priceAmount * 12 * 0.8)}/year
+                      {getPriceDisplay(plan).annual}
                     </p>
                   )}
                 </div>

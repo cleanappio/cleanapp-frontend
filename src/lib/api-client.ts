@@ -84,6 +84,17 @@ export interface TokenResponse {
   refresh_token?: string;
 }
 
+export interface Price {
+  product: string;
+  period: string;
+  amount: number;
+  currency: string;
+}
+
+export interface PricesResponse {
+  prices: Price[];
+}
+
 // OAuth interfaces (for future backend implementation)
 export interface OAuthLoginRequest {
   provider: 'google' | 'facebook' | 'apple';
@@ -384,6 +395,12 @@ export class ApiClient {
 
   async checkHealth(): Promise<{ status: string; timestamp: string }> {
     const { data } = await this.axios.get<{ status: string; timestamp: string }>('/health');
+    return data;
+  }
+
+  async getPrices(): Promise<PricesResponse> {
+    const { data } = await this.axios.get<PricesResponse>('/api/v3/prices');
+    console.log('Fetched prices:', data);
     return data;
   }
 }

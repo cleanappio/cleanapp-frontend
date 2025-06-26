@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiClient, Customer, Subscription, PaymentMethod, BillingHistory } from './api-client';
+import { apiClient, Customer, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
 
 interface AuthState {
   // User state
@@ -12,6 +12,7 @@ interface AuthState {
   paymentMethods: PaymentMethod[];
   billingHistory: BillingHistory[];
   billingLoading: boolean;
+  prices: Price[];
   
   // Auth actions
   login: (email: string, password: string) => Promise<void>;
@@ -39,6 +40,9 @@ interface AuthState {
   addPaymentMethod: (stripePaymentMethodId: string, isDefault?: boolean) => Promise<PaymentMethod>;
   setDefaultPaymentMethod: (id: number) => Promise<void>;
   deletePaymentMethod: (id: number) => Promise<void>;
+
+  // Pricing actions
+  fetchPrices: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -50,6 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   paymentMethods: [],
   billingHistory: [],
   billingLoading: false,
+  prices: [],
 
   // Auth actions
   login: async (email, password) => {
@@ -279,5 +284,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set(state => ({
       paymentMethods: state.paymentMethods.filter(m => m.id !== id)
     }));
+  },
+
+  fetchPrices: async () => {
+    try {
+      const resp = await apiClient.getPrices();
+      set({ prices: resp.prices || [] });
+    } catch (error) {
+      console.error('Error fetching prices:', error);
+      set({ prices: [] });
+      throw error;
+    }
   }
 }));

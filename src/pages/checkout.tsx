@@ -34,9 +34,10 @@ const CARD_ELEMENT_OPTIONS = {
 interface CheckoutFormProps {
   planType: string;
   billingCycle: 'monthly' | 'annual';
+  displayPrice: string;
 }
 
-function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
+function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -89,22 +90,9 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
   }, [paymentMethods]);
 
   const getPlanDetails = () => {
-    const plans = {
-      base: { name: 'Lite', price: 99.99 },
-      advanced: { name: 'Enterprise', price: 499.99 },
-      exclusive: { name: 'Civic', price: 0 } // Custom pricing
-    };
-    
-    const plan = plans[planType as keyof typeof plans];
-    if (!plan) return null;
-    
-    const monthlyPrice = plan.price;
-    const price = billingCycle === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
-    
     return {
-      ...plan,
-      price,
-      displayPrice: billingCycle === 'annual' ? `$${price}/year` : `$${monthlyPrice}/month`
+      name: planType,
+      displayPrice: displayPrice
     };
   };
 
@@ -374,7 +362,7 @@ function CheckoutForm({ planType, billingCycle }: CheckoutFormProps) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { plan, billing } = router.query;
+  const { plan, billing, displayPrice } = router.query;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -417,6 +405,7 @@ export default function CheckoutPage() {
           <CheckoutForm 
             planType={plan as string} 
             billingCycle={billing as 'monthly' | 'annual'} 
+            displayPrice={displayPrice as string}
           />
         </Elements>
       </div>
