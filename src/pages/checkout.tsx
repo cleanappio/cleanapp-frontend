@@ -28,7 +28,8 @@ const CARD_ELEMENT_OPTIONS = {
       color: '#fa755a',
       iconColor: '#fa755a'
     }
-  }
+  },
+  hidePostalCode: true
 };
 
 interface CheckoutFormProps {
@@ -49,6 +50,14 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [setAsDefault, setSetAsDefault] = useState(false);
+  
+  // Billing address fields
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [country, setCountry] = useState('US');
 
   const fetchPaymentMethodsData = async () => {
     try {
@@ -125,6 +134,14 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           billing_details: {
             name: cardholderName,
             email: email,
+            address: {
+              line1: addressLine1,
+              line2: addressLine2 || undefined,
+              city: city,
+              state: state,
+              postal_code: postalCode,
+              country: country,
+            },
           },
         });
 
@@ -315,6 +332,111 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               </label>
               <div className="border border-gray-300 rounded-md p-3">
                 <CardElement options={CARD_ELEMENT_OPTIONS} />
+              </div>
+            </div>
+
+            {/* Billing Address Section */}
+            <div className="border-t pt-4">
+              <h4 className="text-md font-medium text-gray-900 mb-3">Billing Address</h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="checkout-address-line1" className="block text-sm font-medium text-gray-700 mb-1">
+                    Address Line 1
+                  </label>
+                  <input
+                    type="text"
+                    id="checkout-address-line1"
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required={showNewPaymentForm}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="checkout-address-line2" className="block text-sm font-medium text-gray-700 mb-1">
+                    Address Line 2 (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="checkout-address-line2"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Apartment, suite, etc."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="checkout-city" className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      id="checkout-city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required={showNewPaymentForm}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="checkout-state" className="block text-sm font-medium text-gray-700 mb-1">
+                      State/Province
+                    </label>
+                    <input
+                      type="text"
+                      id="checkout-state"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required={showNewPaymentForm}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="checkout-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      id="checkout-postal-code"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required={showNewPaymentForm}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="checkout-country" className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
+                    </label>
+                    <select
+                      id="checkout-country"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required={showNewPaymentForm}
+                    >
+                      <option value="US">United States</option>
+                      <option value="CA">Canada</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="AU">Australia</option>
+                      <option value="DE">Germany</option>
+                      <option value="FR">France</option>
+                      <option value="JP">Japan</option>
+                      <option value="IN">India</option>
+                      <option value="BR">Brazil</option>
+                      <option value="MX">Mexico</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
