@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { COUNTRIES } from '@/constants/countries';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -424,16 +425,9 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       required={showNewPaymentForm}
                     >
-                      <option value="US">United States</option>
-                      <option value="CA">Canada</option>
-                      <option value="GB">United Kingdom</option>
-                      <option value="AU">Australia</option>
-                      <option value="DE">Germany</option>
-                      <option value="FR">France</option>
-                      <option value="JP">Japan</option>
-                      <option value="IN">India</option>
-                      <option value="BR">Brazil</option>
-                      <option value="MX">Mexico</option>
+                      {COUNTRIES.map((country) => (
+                        <option key={country.code} value={country.code}>{country.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
