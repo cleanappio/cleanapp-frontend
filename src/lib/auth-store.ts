@@ -41,6 +41,9 @@ interface AuthState {
   setDefaultPaymentMethod: (id: number) => Promise<void>;
   deletePaymentMethod: (id: number) => Promise<void>;
 
+  // Billing actions
+  downloadInvoice: (billingHistoryId: number) => Promise<void>;
+
   // Pricing actions
   fetchPrices: () => Promise<void>;
 }
@@ -284,6 +287,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set(state => ({
       paymentMethods: state.paymentMethods.filter(m => m.id !== id)
     }));
+  },
+
+  // Billing actions
+  downloadInvoice: async (billingHistoryId) => {
+    try {
+      // Find the billing history record
+      const billingRecord = get().billingHistory.find(record => record.id === billingHistoryId);
+      if (!billingRecord) {
+        throw new Error('Billing record not found');
+      }
+
+      // Get customer and subscription data
+      const customer = get().user;
+      const subscription = get().subscription;
+      
+      if (!customer) {
+        throw new Error('Customer information not found');
+      }
+
+      // Generate PDF using the invoice generator
+      const { generateInvoicePDF } = await import('./invoice-generator');
+      const blob = await generateInvoicePDF(billingRecord, customer, subscription || undefined);
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${billingHistoryId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download invoice error:', error);
+      throw error;
+    }
   },
 
   fetchPrices: async () => {
