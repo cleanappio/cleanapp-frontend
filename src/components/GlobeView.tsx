@@ -6,9 +6,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
+import { useRouter } from "next/router";
 
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+
+  const router = useRouter();
 
   const [selectedTab, setSelectedTab] = useState<"physical" | "digital">(
     "physical"
@@ -44,7 +47,7 @@ export default function GlobeView() {
       </main>
 
       {/* Logo */}
-      <div className="absolute top-0 left-0 p-2">
+      <div className="absolute top-2 left-2 p-2">
         <Link href="/" className="flex items-center">
           <Image
             src="/cleanapp-logo.png"
@@ -58,7 +61,7 @@ export default function GlobeView() {
       </div>
 
       {/* Right side menu */}
-      <div className="absolute top-2 right-2 flex flex-col items-end">
+      <div className="absolute top-4 right-4 flex flex-col items-end">
         <button
           className="p-3 bg-gray-800 rounded-md"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -119,7 +122,7 @@ export default function GlobeView() {
       </div>
 
       {/* Latest Reports */}
-      <div className="absolute left-0 bottom-20 p-2">
+      <div className="absolute left-4 bottom-20 p-2">
         {/* Create translucent div with a gradient */}
         <div className="w-full h-full bg-gradient-to-b from-[#333333] to-black text-white px-3 py-2 border border-slate-400 rounded-lg text-center">
           <p className="text-slate-300">Latest Reports</p>
@@ -127,7 +130,8 @@ export default function GlobeView() {
           {[1, 2, 3].map((item) => (
             <div
               key={item}
-              className="flex flex-col gap-1 text-sm border border-slate-600 p-2 rounded-md mt-2 items-start text-slate-300"
+              onClick={() => router.push("/cleanapppro")}
+              className="flex flex-col gap-1 text-sm border border-slate-600 p-2 rounded-md mt-2 items-start text-slate-300 cursor-pointer"
             >
               <p>Google Ads Bug, 12 seconds ago</p>
               <p className="text-xs">San Francisco, CA</p>
