@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import router from "next/router";
 
 const PropertyOverview = () => {
   return (
@@ -60,7 +61,10 @@ const PropertyOverview = () => {
               className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
               style={{ animationDuration: "4s" }}
             ></div>
-            <button className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10">
+            <button
+              className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10"
+              onClick={() => router.push("/pricing")}
+            >
               <span className="flex items-center">
                 <svg
                   className="mr-2 h-5 w-5"
