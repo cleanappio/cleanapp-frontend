@@ -4,7 +4,7 @@ import Map from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
 
 export default function GlobeView() {
@@ -15,6 +15,20 @@ export default function GlobeView() {
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   return (
     <div className="flex flex-col h-screen relative">
@@ -53,6 +67,7 @@ export default function GlobeView() {
         </button>
 
         <div
+          ref={menuRef}
           className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-2 transition-all duration-300 ${
             isMenuOpen ? "block" : "hidden"
           }`}
