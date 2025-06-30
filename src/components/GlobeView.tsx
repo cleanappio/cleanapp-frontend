@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
+import type { MapRef } from "react-map-gl/mapbox";
 
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -19,6 +20,7 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -33,12 +35,74 @@ export default function GlobeView() {
     };
   }, [isMenuOpen]);
 
+  // Gray overlay logic
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map) return;
+    if (selectedTab === "digital") {
+      if (!map.getSource("gray-overlay")) {
+        map.addSource("gray-overlay", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [-180, -85],
+                  [180, -85],
+                  [180, 85],
+                  [-180, 85],
+                  [-180, -85],
+                ],
+              ],
+            },
+          },
+        });
+        map.addLayer({
+          id: "gray-overlay",
+          type: "fill",
+          source: "gray-overlay",
+          paint: { "fill-color": "#666666", "fill-opacity": 1 },
+        });
+      } else {
+        map.setPaintProperty("gray-overlay", "fill-opacity", 1);
+        map.setLayoutProperty("gray-overlay", "visibility", "visible");
+      }
+    } else {
+      if (map.getLayer("gray-overlay")) {
+        map.setPaintProperty("gray-overlay", "fill-opacity", 0);
+        map.setLayoutProperty("gray-overlay", "visibility", "none");
+      }
+    }
+  }, [selectedTab]);
+
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map) return;
+
+    // Only works for Mapbox Standard or Standard Satellite styles
+    if (selectedTab === "digital") {
+      map.setConfigProperty("basemap", "showPlaceLabels", false);
+      map.setConfigProperty("basemap", "showRoadLabels", false);
+      map.setConfigProperty("basemap", "showPointOfInterestLabels", false);
+      map.setConfigProperty("basemap", "showTransitLabels", false);
+    } else {
+      map.setConfigProperty("basemap", "showPlaceLabels", true);
+      map.setConfigProperty("basemap", "showRoadLabels", true);
+      map.setConfigProperty("basemap", "showPointOfInterestLabels", true);
+      map.setConfigProperty("basemap", "showTransitLabels", true);
+    }
+  }, [selectedTab]);
+
   return (
     <div className="flex flex-col h-screen relative">
       <main className="mainStyle">
         <Map
+          ref={mapRef}
           mapboxAccessToken={mapboxToken}
-          mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+          mapStyle="mapbox://styles/mapbox/standard-satellite"
           projection="globe"
           maxZoom={30}
           minZoom={1}
