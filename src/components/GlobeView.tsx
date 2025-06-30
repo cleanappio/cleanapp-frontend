@@ -564,7 +564,7 @@ export default function GlobeView() {
       </main>
 
       {/* Logo */}
-      <div className="absolute top-2 left-2 p-2">
+      <div className="absolute top-2 left-4 p-2">
         <Link href="/" className="flex items-center">
           <Image
             src="/cleanapp-logo.png"
@@ -580,7 +580,7 @@ export default function GlobeView() {
       {/* Right side menu */}
       <div className="absolute top-4 right-4 flex flex-col items-end">
         <button
-          className="p-3 bg-gray-800 rounded-md"
+          className="p-3 bg-gray-800 rounded-md border border-gray-700"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           <FiMenu className="text-gray-300" size={24} />
@@ -588,33 +588,41 @@ export default function GlobeView() {
 
         <div
           ref={menuRef}
-          className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-2 transition-all duration-300 ${
+          className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
             isMenuOpen ? "block" : "hidden"
           }`}
         >
           {[
-            "Install",
-            "Subscribe",
-            "History",
-            "CleanAppMap",
-            "CleanAppGPT",
-            "STXN",
+            {
+              label: "Install",
+              link: "http://app.cleanapp.io:3000/ref?refid=If3E6gmxyU",
+            },
+            { label: "Subscribe", link: "/pricing" },
+            { label: "History", link: "https://www.cleanapp.io/history" },
+            { label: "CleanAppMap", link: "https://cleanappmap.replit.app" },
+            {
+              label: "CleanAppGPT",
+              link: "https://urban-tracker-b0150.replit.app/",
+            },
+            { label: "STXN", link: "https://www.stxn.io" },
           ].map((item) => {
             return (
-              <p
-                key={item}
-                className="text-gray-300 cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md"
+              <Link
+                key={item.label}
+                href={item.link}
+                className="text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md"
+                target="_blank"
               >
-                {item.toUpperCase()}
-              </p>
+                {item.label.toUpperCase()}
+              </Link>
             );
           })}
         </div>
       </div>
 
       {/* Center menu */}
-      <div className="absolute left-1/2 -translate-x-1/2 p-2">
-        <div className="flex gap-2 rounded-full bg-black text-gray-400 p-1 border border-gray-500">
+      <div className="absolute left-1/2 -translate-x-1/2 p-2 mt-2">
+        <div className="flex gap-2 rounded-full bg-black text-gray-400 p-2 border border-gray-500">
           <p
             className={`text-sm cursor-pointer rounded-full px-4 py-2 font-bold ${
               selectedTab === "physical"
@@ -639,21 +647,25 @@ export default function GlobeView() {
       </div>
 
       {/* Latest Reports */}
-      <div className="absolute left-4 bottom-20 p-2">
+      <div className="absolute left-4 bottom-8 p-2">
         {/* Create translucent div with a gradient */}
-        <div className="w-full h-full bg-gradient-to-b from-[#333333] to-black text-white px-3 py-2 border border-slate-400 rounded-lg text-center">
-          <p className="text-slate-300">Latest Reports</p>
+        <div className="w-full h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center">
+          <p className="text-slate-300 font-semibold text-sm mt-2 mb-3">
+            LATEST REPORTS
+          </p>
 
-          {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              onClick={() => router.push("/cleanapppro")}
-              className="flex flex-col gap-1 text-sm border border-slate-600 p-2 rounded-md mt-2 items-start text-slate-300 cursor-pointer"
-            >
-              <p>Google Ads Bug, 12 seconds ago</p>
-              <p className="text-xs">San Francisco, CA</p>
-            </div>
-          ))}
+          <div className="mb-2">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                onClick={() => router.push("/cleanapppro")}
+                className="flex flex-col gap-1 text-sm border border-slate-700 p-3 rounded-lg mt-2 items-start text-slate-300 cursor-pointer min-w-[275px]"
+              >
+                <p className="text-xs">Google Ads Bug, 12 seconds ago</p>
+                <p className="text-xs text-gray-400">San Francisco, CA</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
