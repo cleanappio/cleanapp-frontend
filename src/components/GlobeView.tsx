@@ -549,6 +549,55 @@ export default function GlobeView() {
     };
   }, [selectedTab]);
 
+  const BASE_URL = "https://devlive.cleanapp.io";
+
+  useEffect(() => {
+    // Connect to the WebSocket endpoint
+    const ws = new WebSocket(`${BASE_URL}/api/v3/reports/listen`);
+
+    ws.onopen = function () {
+      console.log("Connected to report listener");
+    };
+
+    ws.onmessage = function (event) {
+      const message = JSON.parse(event.data);
+      if (message.type === "reports") {
+        const batch = message.data;
+        console.log(
+          `Received ${batch.count} reports with analysis (seq ${batch.from_seq}-${batch.to_seq})`
+        );
+        batch.reports.forEach((reportWithAnalysis: any) => {
+          const report = reportWithAnalysis.report;
+          const analysis = reportWithAnalysis.analysis;
+          console.log(
+            `Report ${report.seq}: ${report.id} at (${report.latitude}, ${report.longitude})`
+          );
+          console.log(`Analysis source: ${analysis.source}`);
+          console.log(`Analysis text: ${analysis.analysis_text}`);
+          console.log(`Title: ${analysis.title}`);
+          console.log(`Description: ${analysis.description}`);
+          console.log(`Litter probability: ${analysis.litter_probability}`);
+          console.log(`Hazard probability: ${analysis.hazard_probability}`);
+          console.log(`Severity level: ${analysis.severity_level}`);
+          console.log(`Summary: ${analysis.summary}`);
+        });
+      }
+    };
+
+    ws.onclose = function () {
+      console.log("Disconnected from report listener");
+    };
+
+    ws.onerror = function (error) {
+      console.error("WebSocket error:", error);
+    };
+
+    // Cleanup on unmount
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-screen relative">
       <main className="mainStyle">
