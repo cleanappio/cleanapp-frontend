@@ -48,13 +48,11 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiY2xlYW5hcHAiLCJhIjoiY21jM3Zsb2s4MDlsb
 . .version
 
 # Increment version build number
-if [ "${OPT}" == "dev" ]; then
-  BUILD=$(echo ${BUILD_VERSION} | cut -f 3 -d ".")
-  VER=$(echo ${BUILD_VERSION} | cut -f 1,2 -d ".")
-  BUILD=$((${BUILD} + 1))
-  BUILD_VERSION="${VER}.${BUILD}"
-  echo "BUILD_VERSION=${BUILD_VERSION}" > .version
-fi
+BUILD=$(echo ${BUILD_VERSION} | cut -f 3 -d ".")
+VER=$(echo ${BUILD_VERSION} | cut -f 1,2 -d ".")
+BUILD=$((${BUILD} + 1))
+BUILD_VERSION="${VER}.${BUILD}"
+echo "BUILD_VERSION=${BUILD_VERSION}" > .version
 
 echo "Running docker build for version ${BUILD_VERSION}"
 
@@ -82,12 +80,10 @@ if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
   gcloud config set project ${PROJECT_NAME}
 fi
 
-if [ "${OPT}" == "dev" ]; then
-  echo "Building and pushing docker image..."
-  gcloud builds submit \
-    --region=${CLOUD_REGION} \
-    --tag=${DOCKER_TAG}:${BUILD_VERSION}
-fi
+echo "Building and pushing docker image..."
+gcloud builds submit \
+  --region=${CLOUD_REGION} \
+  --tag=${DOCKER_TAG}:${BUILD_VERSION}
 
 echo "Tagging Docker image as current ${OPT}..."
 gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
