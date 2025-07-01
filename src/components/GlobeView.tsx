@@ -577,11 +577,9 @@ export default function GlobeView() {
     };
   }, [selectedTab]);
 
-  const BASE_URL = "https://devlive.cleanapp.io";
-
   useEffect(() => {
     // Connect to the WebSocket endpoint
-    const ws = new WebSocket(`${BASE_URL}/api/v3/reports/listen`);
+    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`);
 
     ws.onopen = function () {
       console.log("Connected to report listener");
@@ -643,7 +641,7 @@ export default function GlobeView() {
   useEffect(() => {
     async function fetchLastReports() {
       try {
-        const res = await fetch(`${BASE_URL}/api/v3/reports/last?n=10`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10`);
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
         setLatestReports(data.reports || []);
