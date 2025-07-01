@@ -8,13 +8,13 @@ interface NavbarProps {
 export default function Navbar({ reportItem }: NavbarProps) {
   // Get the title from the report analysis, fallback to a default
   const title = reportItem?.analysis?.title || "CleanApp Report";
-  
+
   // Get coordinates from the report, fallback to default
   const latitude = reportItem?.report?.latitude || 47.3566;
   const longitude = reportItem?.report?.longitude || 8.5696;
-  
+
   // Get timestamp from the report, fallback to current time
-  const timestamp = reportItem?.report?.timestamp 
+  const timestamp = reportItem?.report?.timestamp
     ? new Date(reportItem.report.timestamp).toLocaleString()
     : new Date().toLocaleString();
 
@@ -24,7 +24,7 @@ export default function Navbar({ reportItem }: NavbarProps) {
         <h1 className="text-3xl font-medium">CleanApp Report</h1>
         <p className="text-md text-gray-600">{title}</p>
         <p className="text-xs text-gray-500">
-          Zurich, Switzerland • {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
+          {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
         </p>
       </div>
 
