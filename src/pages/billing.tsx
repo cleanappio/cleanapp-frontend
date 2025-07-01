@@ -317,7 +317,8 @@ function BillingPageContent() {
     fetchBillingData,
     cancelSubscription,
     deletePaymentMethod,
-    setDefaultPaymentMethod
+    setDefaultPaymentMethod,
+    downloadInvoice
   } = useAuthStore();
   
   const [cancelling, setCancelling] = useState(false);
@@ -374,6 +375,16 @@ function BillingPageContent() {
 
   const handlePaymentMethodAdded = async () => {
     setShowAddPaymentForm(false);
+  };
+
+  const handleDownloadInvoice = async (billingHistoryId: number) => {
+    try {
+      await downloadInvoice(billingHistoryId);
+      toast.success('Invoice downloaded successfully');
+    } catch (error) {
+      console.error('Download invoice error:', error);
+      toast.error('Failed to download invoice');
+    }
   };
 
   const formatPlanName = (planType: string) => {
@@ -583,7 +594,11 @@ function BillingPageContent() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-green-600 hover:text-green-700">
+                      <button 
+                        onClick={() => handleDownloadInvoice(record.id)}
+                        className="text-green-600 hover:text-green-700"
+                        title="Download Invoice"
+                      >
                         <Download className="w-4 h-4" />
                       </button>
                     </td>
