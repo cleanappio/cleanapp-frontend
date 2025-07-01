@@ -29,8 +29,8 @@ if [ -z "${OPT}" ]; then
           ;;
       "prod")
           echo "Using prod environment"
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
-          NEXT_PUBLIC_API_URL=""
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51RaMSvF5CkX59Cnm7ZTuIIx0Fg1cQxqilIpOHippAYaVqFMDft3AESH5Ih8aPn4wUFL2VX3Ou9LvwCgqD5O0SDvF00a8ybMiUq"
+          NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
           break
           ;;
       "quit")
@@ -40,6 +40,8 @@ if [ -z "${OPT}" ]; then
     esac
   done
 fi
+
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiY2xlYW5hcHAiLCJhIjoiY21jM3Zsb2s4MDlsbjJqb2ZzZGtpOWZvYSJ9.YIy8EXQ9IFtmGs55z71-NQ
 
 . .version
 
@@ -56,8 +58,13 @@ echo "Running docker build for version ${BUILD_VERSION}"
 
 set -e
 
+# Construct Dockerfile
 ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
-cat Dockerfile.template | sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" > Dockerfile
+cat Dockerfile.template | \
+sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
+sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
+sed "s/{{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}/${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}/" \
+ > Dockerfile
 
 CLOUD_REGION="us-central1"
 PROJECT_NAME="cleanup-mysql-v2"
