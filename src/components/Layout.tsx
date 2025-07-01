@@ -1,9 +1,9 @@
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { useAuthStore } from "@/lib/auth-store";
-import { LogOut } from "lucide-react";
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { useAuthStore } from '@/lib/auth-store';
+import { LogOut } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -11,10 +11,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push('/');
   };
-
-  return <main>{children}</main>;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,16 +21,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex justify-between h-16">
             <div className="flex">
               <Link href="/" className="flex items-center">
-                <Image
-                  src="/cleanapp-logo.png"
-                  alt="CleanApp Logo"
-                  width={200}
+                <Image 
+                  src="/cleanapp-logo.png" 
+                  alt="CleanApp Logo" 
+                  width={200} 
                   height={60}
                   className="h-12 w-auto"
                   priority
                 />
               </Link>
-
+              
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link
                   href="/pricing"
@@ -58,7 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </div>
-
+            
             <div className="flex items-center">
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
@@ -90,7 +88,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </nav>
-
+      
       <main>{children}</main>
     </div>
   );
