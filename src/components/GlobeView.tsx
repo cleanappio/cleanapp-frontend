@@ -569,6 +569,19 @@ export default function GlobeView() {
         console.log(
           `Received ${batch.count} reports with analysis (seq ${batch.from_seq}-${batch.to_seq})`
         );
+        // Add new reports to the top of the list
+        setLatestReports((prev) => {
+          const newReports = batch.reports || [];
+          // Remove duplicates by id (keep the newest)
+          const seen = new Set();
+          const combined = [...newReports, ...prev].filter((item) => {
+            const id = item.report?.id;
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
+          return combined;
+        });
         batch.reports.forEach((reportWithAnalysis: any) => {
           const report = reportWithAnalysis.report;
           const analysis = reportWithAnalysis.analysis;
