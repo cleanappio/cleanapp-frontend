@@ -25,10 +25,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     try {
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
-      const url = reportItem?.report?.id 
+      const url = reportItem?.report?.id
         ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-id?id=${reportItem.report.id}&n=10`
         : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10`;
-      
+
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -85,7 +85,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
             <div className="text-red-400 text-4xl mb-2">⚠️</div>
             <p className="text-red-600 font-medium">Error loading reports</p>
             <p className="text-sm text-red-500 mt-1">{error}</p>
-            <button 
+            <button
               onClick={fetchRecentReports}
               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors text-sm"
             >
@@ -125,8 +125,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     className="rounded-t-xl w-full h-40 object-cover"
                     onError={(e) => {
                       console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling?.classList.remove(
+                        "hidden"
+                      );
                     }}
                   />
                 ) : (
@@ -134,11 +136,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     <p className="text-gray-500 text-sm">No Image</p>
                   </div>
                 )}
-                {analysis?.severity_level && (
-                  <span className={`absolute top-3 right-3 ${getPriorityColor(analysis.severity_level)} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
-                    {getPriorityText(analysis.severity_level)}
-                  </span>
-                )}
+                {analysis?.severity_level !== undefined &&
+                  analysis?.severity_level !== 0 && (
+                    <span
+                      className={`absolute top-3 right-3 ${getPriorityColor(
+                        analysis.severity_level
+                      )} text-white text-xs font-semibold px-3 py-1 rounded-full`}
+                    >
+                      {getPriorityText(analysis.severity_level)}
+                    </span>
+                  )}
               </div>
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
@@ -146,10 +153,22 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {analysis?.title || `Report ${report?.seq || index + 1}`}
                   </h2>
                   <p className="text-gray-500 text-sm mb-2">
-                    Reported: {report?.timestamp ? new Date(report.timestamp).toLocaleString() : "Unknown"}
+                    Reported:{" "}
+                    {report?.timestamp
+                      ? new Date(report.timestamp).toLocaleString()
+                      : "Unknown"}
                   </p>
-                  <p className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                    {analysis?.summary || analysis?.description || "No description available"}
+                  <p
+                    className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {analysis?.summary ||
+                      analysis?.description ||
+                      "No description available"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-auto">
@@ -157,7 +176,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {getCategory(analysis)}
                   </span>
                   <span className="text-xs px-3 py-1 text-gray-500">
-                    {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
+                    {report?.latitude?.toFixed(4)},{" "}
+                    {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
                 <button
@@ -193,11 +213,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     <p className="text-gray-500 text-sm">No Image</p>
                   </div>
                 )}
-                {analysis?.severity_level && (
-                  <span className={`absolute top-3 right-3 ${getPriorityColor(analysis.severity_level)} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
-                    {getPriorityText(analysis.severity_level)}
-                  </span>
-                )}
+                {analysis?.severity_level !== undefined &&
+                  analysis?.severity_level !== 0 && (
+                    <span
+                      className={`absolute top-3 right-3 ${getPriorityColor(
+                        analysis.severity_level
+                      )} text-white text-xs font-semibold px-3 py-1 rounded-full`}
+                    >
+                      {getPriorityText(analysis.severity_level)}
+                    </span>
+                  )}
               </div>
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
@@ -205,10 +230,22 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {analysis?.title || `Report ${report?.seq || index + 4}`}
                   </h2>
                   <p className="text-gray-500 text-sm mb-2">
-                    Reported: {report?.timestamp ? new Date(report.timestamp).toLocaleString() : "Unknown"}
+                    Reported:{" "}
+                    {report?.timestamp
+                      ? new Date(report.timestamp).toLocaleString()
+                      : "Unknown"}
                   </p>
-                  <p className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                    {analysis?.summary || analysis?.description || "No description available"}
+                  <p
+                    className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {analysis?.summary ||
+                      analysis?.description ||
+                      "No description available"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-auto">
@@ -216,13 +253,17 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {getCategory(analysis)}
                   </span>
                   <span className="text-xs px-3 py-1 text-gray-500">
-                    {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
+                    {report?.latitude?.toFixed(4)},{" "}
+                    {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
               </div>
               {/* Blur overlay */}
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
-                <button className="mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg" onClick={() => router.push("/pricing")}> 
+                <button
+                  className="mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg"
+                  onClick={() => router.push("/pricing")}
+                >
                   Subscribe
                 </button>
               </div>
@@ -245,7 +286,9 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
             <div className="p-4 flex-1 flex flex-col justify-between">
               <div>
                 <div className="text-gray-700 text-sm mb-2 flex justify-between items-center">
-                  <h2 className="font-semibold text-lg mb-1">Monitoring Zone</h2>
+                  <h2 className="font-semibold text-lg mb-1">
+                    Monitoring Zone
+                  </h2>
                   <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-md">
                     Active
                   </span>
@@ -262,15 +305,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   <span>Live Monitoring</span>
                 </div>
                 <div className="text-gray-500 text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    Coverage:
-                  </span>
+                  <span className="font-semibold text-gray-700">Coverage:</span>
                   <span>24/7</span>
                 </div>
                 <div className="text-sm text-green-500 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    System:
-                  </span>
+                  <span className="font-semibold text-gray-700">System:</span>
                   <span>Operational</span>
                 </div>
               </div>
@@ -286,28 +325,44 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full p-4">
             <div className="space-y-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{recentReports.length}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {recentReports.length}
+                </div>
                 <div className="text-sm text-gray-500">Total Reports</div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <div className="text-lg font-semibold text-red-600">
-                    {recentReports.filter(r => r.analysis?.severity_level >= 7).length}
+                    {
+                      recentReports.filter(
+                        (r) => r.analysis?.severity_level >= 7
+                      ).length
+                    }
                   </div>
                   <div className="text-xs text-gray-500">High Priority</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-semibold text-yellow-600">
-                    {recentReports.filter(r => r.analysis?.severity_level >= 4 && r.analysis?.severity_level < 7).length}
+                    {
+                      recentReports.filter(
+                        (r) =>
+                          r.analysis?.severity_level >= 4 &&
+                          r.analysis?.severity_level < 7
+                      ).length
+                    }
                   </div>
                   <div className="text-xs text-gray-500">Medium Priority</div>
                 </div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-lg font-semibold text-green-600">
-                  {recentReports.filter(r => r.analysis?.litter_probability > 0.5).length}
+                  {
+                    recentReports.filter(
+                      (r) => r.analysis?.litter_probability > 0.5
+                    ).length
+                  }
                 </div>
                 <div className="text-xs text-gray-500">Litter Issues</div>
               </div>
@@ -340,7 +395,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   AI-Powered Recommendations
                 </li>
               </ul>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md transition-colors text-sm">
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md transition-colors text-sm"
+                onClick={() => router.push("/pricing")}
+              >
                 Subscribe
               </button>
             </div>
