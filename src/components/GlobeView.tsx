@@ -270,6 +270,9 @@ export default function GlobeView() {
     },
   ];
 
+  const [latestReports, setLatestReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+
   useEffect(() => {
     if (!isMenuOpen) return;
     function handleClickOutside(event: MouseEvent) {
@@ -598,6 +601,23 @@ export default function GlobeView() {
     };
   }, []);
 
+  // Fetch last 10 reports on mount
+  useEffect(() => {
+    async function fetchLastReports() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/v3/reports/last?n=10`);
+        if (!res.ok) throw new Error("Failed to fetch last reports");
+        const data = await res.json();
+        setLatestReports(data.reports || []);
+      } catch (err) {
+        console.error("Error fetching last reports:", err);
+      } finally {
+        setReportsLoading(false);
+      }
+    }
+    fetchLastReports();
+  }, []);
+
   return (
     <div className="flex flex-col h-screen relative">
       <main className="mainStyle">
@@ -696,7 +716,7 @@ export default function GlobeView() {
       </div>
 
       {/* Latest Reports */}
-      <div className="absolute left-4 bottom-8 p-2">
+      <div className="absolute left-4 bottom-8 p-2 max-h-[350px] flex flex-col overflow-y-auto">
         {/* Create translucent div with a gradient */}
         <div className="w-full h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center">
           <p className="text-slate-300 font-semibold text-sm mt-2 mb-3">
@@ -704,16 +724,31 @@ export default function GlobeView() {
           </p>
 
           <div className="mb-2">
-            {[1, 2, 3].map((item) => (
-              <div
-                key={item}
-                onClick={() => router.push("/cleanapppro")}
-                className="flex flex-col gap-1 text-sm border border-slate-700 p-3 rounded-lg mt-2 items-start text-slate-300 cursor-pointer min-w-[275px]"
-              >
-                <p className="text-xs">Google Ads Bug, 12 seconds ago</p>
-                <p className="text-xs text-gray-400">San Francisco, CA</p>
-              </div>
-            ))}
+            {reportsLoading ? (
+              <p className="text-xs text-gray-400">Loading...</p>
+            ) : latestReports.length === 0 ? (
+              <p className="text-xs text-gray-400">No reports found.</p>
+            ) : (
+              latestReports.map((item, idx) => (
+                <div
+                  key={item.report?.id || idx}
+                  onClick={() => router.push("/cleanapppro")}
+                  className="flex flex-col gap-1 text-sm border border-slate-700 p-3 rounded-lg mt-2 items-start text-slate-300 cursor-pointer max-w-[275px]"
+                >
+                  <p className="text-xs">
+                    {item.analysis?.title || "Report"}
+                    {item.report?.timestamp
+                      ? `, ${new Date(item.report.timestamp).toLocaleString()}`
+                      : ""}
+                  </p>
+                  <p className="text-xs text-gray-400 line-clamp-2">
+                    {item.analysis?.summary ||
+                      item.analysis?.description ||
+                      "No summary"}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
