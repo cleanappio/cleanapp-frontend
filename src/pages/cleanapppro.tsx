@@ -30,8 +30,8 @@ const CleanAppPro = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
-        <PropertyOverview />
-        <RecentReports />
+        <PropertyOverview reportItem={reportItem} />
+        <RecentReports reportItem={reportItem} />
       </div>
       <Footer />
     </div>
