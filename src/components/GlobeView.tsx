@@ -600,9 +600,9 @@ export default function GlobeView() {
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
           const combined = [...newReports, ...prev].filter((item) => {
-            const id = item.report?.id;
-            if (seen.has(id)) return false;
-            seen.add(id);
+            const seq = item.report?.seq;
+            if (seen.has(seq)) return false;
+            seen.add(seq);
             return true;
           });
           return combined;
