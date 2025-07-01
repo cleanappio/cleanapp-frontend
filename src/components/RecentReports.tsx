@@ -114,7 +114,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           {recentReports.map((item, index) => {
             const report = item.report;
             const analysis = item.analysis;
-            const imageUrl = getDisplayableImage(analysis?.analysis_image);
+            const imageUrl = getDisplayableImage(report?.image || null);
             
             return (
               <div

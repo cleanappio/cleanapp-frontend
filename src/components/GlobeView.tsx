@@ -17,6 +17,7 @@ export interface LatestReport {
     id: string;
     latitude: number;
     longitude: number;
+    image?: number[] | string | null; // Report image as bytes array, URL string, or null
   };
   analysis: {
     seq: number;

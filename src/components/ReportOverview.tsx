@@ -69,7 +69,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
   const report = reportItem.report;
   const analysis = reportItem.analysis;
-  const imageUrl = getDisplayableImage(fullReport?.analysis?.analysis_image || analysis?.analysis_image);
+  const imageUrl = getDisplayableImage(fullReport?.report?.image || report?.image);
 
   return (
     <div className="border rounded-md bg-white shadow-md">
