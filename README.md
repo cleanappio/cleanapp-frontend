@@ -115,12 +115,13 @@ interface LatestReport {
     id: string;
     latitude: number;
     longitude: number;
+    image?: number[] | string | null; // Report image as bytes array, URL string, or null
   };
   analysis: {
     seq: number;
     source: string;
     analysis_text: string;
-    analysis_image: number[] | string | null; // Bytes array, URL, or null
+    analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
     title: string;
     description: string;
     litter_probability: number;
