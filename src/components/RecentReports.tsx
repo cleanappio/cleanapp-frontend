@@ -3,6 +3,7 @@ import { FaLock } from "react-icons/fa";
 import Image from "next/image";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
+import { useRouter } from "next/router";
 
 interface RecentReportsProps {
   reportItem?: LatestReport | null;
@@ -12,6 +13,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const [recentReports, setRecentReports] = useState<LatestReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     fetchRecentReports();
@@ -194,6 +196,12 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     </div>
                   </div>
                 )}
+                <button
+                  className="mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg"
+                  onClick={() => router.push("/pricing")}
+                >
+                  Subscribe
+                </button>
               </div>
             </div>
           );
@@ -286,7 +294,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               </div>
               {/* Blur overlay */}
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
-                <button className="mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg">
+                <button className="mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg" onClick={() => router.push("/pricing")}> 
                   Subscribe
                 </button>
               </div>
