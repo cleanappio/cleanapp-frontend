@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 
 // Type for latest reports
-interface LatestReport {
+export interface LatestReport {
   report: {
     seq: number;
     timestamp: string;
@@ -770,7 +770,14 @@ export default function GlobeView() {
               latestReports.map((item, idx) => (
                 <div
                   key={item.report?.id || idx}
-                  onClick={() => router.push("/cleanapppro")}
+                  onClick={() =>
+                    router.push({
+                      pathname: "/cleanapppro",
+                      query: {
+                        report: encodeURIComponent(JSON.stringify(item)),
+                      },
+                    })
+                  }
                   className="flex flex-col gap-1 text-sm border border-slate-700 p-3 rounded-lg mt-2 items-start text-slate-300 cursor-pointer max-w-[275px]"
                 >
                   <p className="text-xs">
