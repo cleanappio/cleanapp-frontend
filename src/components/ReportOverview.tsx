@@ -45,11 +45,26 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     }
   };
 
+  const getGradientColor = (value: number, maxValue: number = 1) => {
+    const percentage = (value / maxValue) * 100;
+    if (percentage <= 33) return "from-green-500 to-green-400";
+    if (percentage <= 66) return "from-yellow-500 to-yellow-400";
+    return "from-red-500 to-red-400";
+  };
+
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const getGoogleMapsUrl = (lat: number, lng: number) => {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  };
+
   if (!reportItem) {
     return (
       <div className="border rounded-md bg-white shadow-md">
         <div className="p-4">
-          <p className="text-lg font-medium">Report Overview</p>
+          <p className="text-lg font-medium">Select a Report</p>
           <p className="text-sm text-gray-500">
             Select a report from the map to view detailed analysis
           </p>
@@ -74,17 +89,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   return (
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
-        <p className="text-lg font-medium">Report Overview</p>
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-gray-500">
-              {analysis?.title || "Report Analysis"}
-            </p>
-            <p className="text-sm text-gray-700">
-              {analysis?.description || "No description available"}
-            </p>
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold text-gray-800">
+          {analysis?.title || `Report ${report.seq}`}
+        </h1>
       </div>
 
       <div className="relative h-96">
@@ -115,31 +122,88 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           </div>
         )}
 
-        {/* Report Info Overlay */}
-        <div className="absolute top-4 left-4 bg-black/70 text-white p-3 rounded-lg max-w-xs">
-          <h3 className="font-semibold text-sm mb-2">Report Details</h3>
-          <div className="text-xs space-y-1">
-            <p><span className="font-medium">ID:</span> {report.id}</p>
-            <p><span className="font-medium">Seq:</span> {report.seq}</p>
-            <p><span className="font-medium">Coordinates:</span> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</p>
-            <p><span className="font-medium">Timestamp:</span> {new Date(report.timestamp).toLocaleString()}</p>
+        {/* Left Panel - Report Details */}
+        <div className="absolute top-4 left-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
+          <div className="space-y-3">
+            {/* Location */}
+            <div>
+              <h3 className="font-semibold text-sm mb-1">Location</h3>
+              <a 
+                href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-300 hover:text-blue-200 text-xs underline"
+              >
+                {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+              </a>
+            </div>
+
+            {/* Time */}
+            <div>
+              <h3 className="font-semibold text-sm mb-1">Time</h3>
+              <p className="text-xs text-gray-300">{formatTime(report.timestamp)}</p>
+            </div>
+
+            {/* Litter Probability */}
             {analysis?.litter_probability !== undefined && (
-              <p><span className="font-medium">Litter Probability:</span> {(analysis.litter_probability * 100).toFixed(1)}%</p>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Litter</h3>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
+                      style={{ width: `${analysis.litter_probability * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs font-medium">
+                    {(analysis.litter_probability * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
             )}
+
+            {/* Hazard Probability */}
             {analysis?.hazard_probability !== undefined && (
-              <p><span className="font-medium">Hazard Probability:</span> {(analysis.hazard_probability * 100).toFixed(1)}%</p>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Hazard</h3>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
+                      style={{ width: `${analysis.hazard_probability * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs font-medium">
+                    {(analysis.hazard_probability * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
             )}
+
+            {/* Severity Level */}
             {analysis?.severity_level !== undefined && (
-              <p><span className="font-medium">Severity Level:</span> {analysis.severity_level}</p>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Severity</h3>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level, 10)}`}
+                      style={{ width: `${(analysis.severity_level / 10) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs font-medium">
+                    {analysis.severity_level.toFixed(1)}/10
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Analysis Summary Overlay */}
-        {analysis?.summary && (
-          <div className="absolute bottom-4 right-4 bg-black/70 text-white p-3 rounded-lg max-w-xs">
-            <h3 className="font-semibold text-sm mb-2">AI Analysis</h3>
-            <p className="text-xs">{analysis.summary}</p>
+        {/* Right Bottom Panel - Description */}
+        {analysis?.description && (
+          <div className="absolute bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
+            <p className="text-xs leading-relaxed">{analysis.description}</p>
           </div>
         )}
 

@@ -95,123 +95,205 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     );
   }
 
+  // Only show up to 6 reports (3 clear, 3 blurred)
+  const visibleReports = recentReports.slice(0, 6);
+  const firstRow = visibleReports.slice(0, 3);
+  const secondRow = visibleReports.slice(3, 6);
+
   return (
     <div className="max-w-7xl mx-auto my-8">
-      <h1 className="text-2xl font-medium mb-4">
-        Recent Reports ({recentReports.length}):
-      </h1>
-      
-      {recentReports.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="text-center">
-            <div className="text-gray-400 text-4xl mb-2">📋</div>
-            <p className="text-gray-500">No recent reports found.</p>
-            <p className="text-sm text-gray-400 mt-1">Reports will appear here as they are generated.</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recentReports.map((item, index) => {
-            const report = item.report;
-            const analysis = item.analysis;
-            const imageUrl = getDisplayableImage(report?.image || null);
-            
-            return (
-              <div
-                key={report?.seq || index}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow"
-              >
-                <div className="relative">
-                  {imageUrl ? (
-                    <Image
-                      src={imageUrl}
-                      alt={analysis?.title || "Report"}
-                      width={400}
-                      height={160}
-                      className="rounded-t-xl w-full h-40 object-cover"
-                      onError={(e) => {
-                        console.error("Failed to load image:", imageUrl);
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                      }}
-                    />
-                  ) : (
-                    <div className="rounded-t-xl w-full h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                      <p className="text-gray-500 text-sm">No Image</p>
-                    </div>
-                  )}
-                  
-                  {analysis?.severity_level && (
-                    <span className={`absolute top-3 right-3 ${getPriorityColor(analysis.severity_level)} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
-                      {getPriorityText(analysis.severity_level)}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h2 className="font-semibold text-lg mb-1">
-                      {analysis?.title || `Report ${report?.seq || index + 1}`}
-                    </h2>
-                    <p className="text-gray-500 text-sm mb-2">
-                      Reported: {report?.timestamp ? new Date(report.timestamp).toLocaleString() : "Unknown"}
-                    </p>
-                    <p className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                      {analysis?.summary || analysis?.description || "No description available"}
-                    </p>
+      <h1 className="text-2xl font-medium mb-4">Recent Reports</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {firstRow.map((item, index) => {
+          const report = item.report;
+          const analysis = item.analysis;
+          const imageUrl = getDisplayableImage(report?.image || null);
+          return (
+            <div
+              key={report?.seq || index}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow"
+            >
+              <div className="relative">
+                {imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={analysis?.title || "Report"}
+                    width={400}
+                    height={160}
+                    className="rounded-t-xl w-full h-40 object-cover"
+                    onError={(e) => {
+                      console.error("Failed to load image:", imageUrl);
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : (
+                  <div className="rounded-t-xl w-full h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm">No Image</p>
                   </div>
-                  
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">
-                      {getCategory(analysis)}
-                    </span>
-                    <span className="text-xs px-3 py-1 text-gray-500">
-                      {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
-                    </span>
-                  </div>
-                  
-                  {analysis && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {analysis.litter_probability !== undefined && (
-                          <div>
-                            <span className="text-gray-500">Litter:</span>
-                            <span className="ml-1 font-medium">
-                              {(analysis.litter_probability * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        )}
-                        {analysis.hazard_probability !== undefined && (
-                          <div>
-                            <span className="text-gray-500">Hazard:</span>
-                            <span className="ml-1 font-medium">
-                              {(analysis.hazard_probability * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        )}
-                        {analysis.severity_level !== undefined && (
-                          <div>
-                            <span className="text-gray-500">Severity:</span>
-                            <span className="ml-1 font-medium">
-                              {analysis.severity_level}/10
-                            </span>
-                          </div>
-                        )}
-                        {report?.seq && (
-                          <div>
-                            <span className="text-gray-500">Seq:</span>
-                            <span className="ml-1 font-medium">{report.seq}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
+                {analysis?.severity_level && (
+                  <span className={`absolute top-3 right-3 ${getPriorityColor(analysis.severity_level)} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
+                    {getPriorityText(analysis.severity_level)}
+                  </span>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <h2 className="font-semibold text-lg mb-1">
+                    {analysis?.title || `Report ${report?.seq || index + 1}`}
+                  </h2>
+                  <p className="text-gray-500 text-sm mb-2">
+                    Reported: {report?.timestamp ? new Date(report.timestamp).toLocaleString() : "Unknown"}
+                  </p>
+                  <p className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                    {analysis?.summary || analysis?.description || "No description available"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">
+                    {getCategory(analysis)}
+                  </span>
+                  <span className="text-xs px-3 py-1 text-gray-500">
+                    {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
+                  </span>
+                </div>
+                {analysis && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {analysis.litter_probability !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Litter:</span>
+                          <span className="ml-1 font-medium">
+                            {(analysis.litter_probability * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {analysis.hazard_probability !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Hazard:</span>
+                          <span className="ml-1 font-medium">
+                            {(analysis.hazard_probability * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {analysis.severity_level !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Severity:</span>
+                          <span className="ml-1 font-medium">
+                            {analysis.severity_level}/10
+                          </span>
+                        </div>
+                      )}
+                      {report?.seq && (
+                        <div>
+                          <span className="text-gray-500">Seq:</span>
+                          <span className="ml-1 font-medium">{report.seq}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {secondRow.map((item, index) => {
+          const report = item.report;
+          const analysis = item.analysis;
+          const imageUrl = getDisplayableImage(report?.image || null);
+          return (
+            <div
+              key={report?.seq || `blurred-${index}`}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full relative overflow-hidden"
+            >
+              <div className="relative">
+                {imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={analysis?.title || "Report"}
+                    width={400}
+                    height={160}
+                    className="rounded-t-xl w-full h-40 object-cover"
+                  />
+                ) : (
+                  <div className="rounded-t-xl w-full h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm">No Image</p>
+                  </div>
+                )}
+                {analysis?.severity_level && (
+                  <span className={`absolute top-3 right-3 ${getPriorityColor(analysis.severity_level)} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
+                    {getPriorityText(analysis.severity_level)}
+                  </span>
+                )}
+              </div>
+              <div className="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <h2 className="font-semibold text-lg mb-1">
+                    {analysis?.title || `Report ${report?.seq || index + 4}`}
+                  </h2>
+                  <p className="text-gray-500 text-sm mb-2">
+                    Reported: {report?.timestamp ? new Date(report.timestamp).toLocaleString() : "Unknown"}
+                  </p>
+                  <p className="text-gray-700 text-sm mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                    {analysis?.summary || analysis?.description || "No description available"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">
+                    {getCategory(analysis)}
+                  </span>
+                  <span className="text-xs px-3 py-1 text-gray-500">
+                    {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
+                  </span>
+                </div>
+                {analysis && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {analysis.litter_probability !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Litter:</span>
+                          <span className="ml-1 font-medium">
+                            {(analysis.litter_probability * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {analysis.hazard_probability !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Hazard:</span>
+                          <span className="ml-1 font-medium">
+                            {(analysis.hazard_probability * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {analysis.severity_level !== undefined && (
+                        <div>
+                          <span className="text-gray-500">Severity:</span>
+                          <span className="ml-1 font-medium">
+                            {analysis.severity_level}/10
+                          </span>
+                        </div>
+                      )}
+                      {report?.seq && (
+                        <div>
+                          <span className="text-gray-500">Seq:</span>
+                          <span className="ml-1 font-medium">{report.seq}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Blur overlay */}
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
+                <button className="mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg">
+                  Subscribe
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* AI Insights Card - Keep the premium features section */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
