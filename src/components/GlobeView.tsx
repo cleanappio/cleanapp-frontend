@@ -9,6 +9,31 @@ import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 
+// Type for latest reports
+interface LatestReport {
+  report: {
+    seq: number;
+    timestamp: string;
+    id: string;
+    latitude: number;
+    longitude: number;
+  };
+  analysis: {
+    seq: number;
+    source: string;
+    analysis_text: string;
+    analysis_image: string | null;
+    title: string;
+    description: string;
+    litter_probability: number;
+    hazard_probability: number;
+    severity_level: number;
+    summary: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -270,7 +295,7 @@ export default function GlobeView() {
     },
   ];
 
-  const [latestReports, setLatestReports] = useState<any[]>([]);
+  const [latestReports, setLatestReports] = useState<LatestReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
 
   useEffect(() => {
