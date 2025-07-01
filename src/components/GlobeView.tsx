@@ -704,7 +704,6 @@ export default function GlobeView() {
               link: "http://app.cleanapp.io:3000/ref?refid=If3E6gmxyU",
             },
             { label: "Subscribe", link: "/pricing" },
-            { label: "History", link: "https://www.cleanapp.io/history" },
             { label: "CleanAppMap", link: "https://cleanappmap.replit.app" },
             {
               label: "CleanAppGPT",
