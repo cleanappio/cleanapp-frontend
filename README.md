@@ -7,7 +7,7 @@ A Next.js application for CleanApp's property monitoring and reporting system.
 ### CleanApp Pro Page
 The `/cleanapppro` page now displays real data from the CleanApp API:
 
-#### PropertyOverview Component
+#### ReportOverview Component
 - **Real Report Data**: Displays actual report information including coordinates, timestamps, and analysis details
 - **Full Report Fetching**: Automatically fetches complete report data including high-resolution images using `/api/v3/reports/by-seq?seq=<seq>`
 - **Image Display**: Handles images from bytes arrays, converting them to displayable data URLs
@@ -90,7 +90,7 @@ npm start
 
 ## Component Architecture
 
-### PropertyOverview
+### ReportOverview
 - **Props**: `reportItem?: LatestReport | null`
 - **State**: `fullReport`, `loading`, `error`
 - **API Calls**: Fetches complete report data when a report is selected
