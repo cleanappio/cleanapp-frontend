@@ -160,42 +160,6 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
-                {analysis && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {analysis.litter_probability !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Litter:</span>
-                          <span className="ml-1 font-medium">
-                            {(analysis.litter_probability * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                      {analysis.hazard_probability !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Hazard:</span>
-                          <span className="ml-1 font-medium">
-                            {(analysis.hazard_probability * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                      {analysis.severity_level !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Severity:</span>
-                          <span className="ml-1 font-medium">
-                            {analysis.severity_level}/10
-                          </span>
-                        </div>
-                      )}
-                      {report?.seq && (
-                        <div>
-                          <span className="text-gray-500">Seq:</span>
-                          <span className="ml-1 font-medium">{report.seq}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
                 <button
                   className="mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-8 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-lg"
                   onClick={() => router.push("/pricing")}
@@ -255,42 +219,6 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {report?.latitude?.toFixed(4)}, {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
-                {analysis && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {analysis.litter_probability !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Litter:</span>
-                          <span className="ml-1 font-medium">
-                            {(analysis.litter_probability * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                      {analysis.hazard_probability !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Hazard:</span>
-                          <span className="ml-1 font-medium">
-                            {(analysis.hazard_probability * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                      {analysis.severity_level !== undefined && (
-                        <div>
-                          <span className="text-gray-500">Severity:</span>
-                          <span className="ml-1 font-medium">
-                            {analysis.severity_level}/10
-                          </span>
-                        </div>
-                      )}
-                      {report?.seq && (
-                        <div>
-                          <span className="text-gray-500">Seq:</span>
-                          <span className="ml-1 font-medium">{report.seq}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
               {/* Blur overlay */}
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
