@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import PropertyOverview from "@/components/PropertyOverview";
+import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import Footer from "@/components/Footer";
 import React from "react";
@@ -19,8 +19,6 @@ const CleanAppPro = () => {
     }
   }
 
-  console.log({ reportItem });
-
   return (
     <div className="bg-gray-50 h-full">
       <div className="bg-white shadow-sm py-4">
@@ -30,7 +28,7 @@ const CleanAppPro = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
-        <PropertyOverview reportItem={reportItem} />
+        <ReportOverview reportItem={reportItem} />
         <RecentReports reportItem={reportItem} />
       </div>
       <Footer />

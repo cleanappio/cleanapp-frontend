@@ -4,11 +4,11 @@ import router from "next/router";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 
-interface PropertyOverviewProps {
+interface ReportOverviewProps {
   reportItem?: LatestReport | null;
 }
 
-const PropertyOverview: React.FC<PropertyOverviewProps> = ({ reportItem }) => {
+const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ const PropertyOverview: React.FC<PropertyOverviewProps> = ({ reportItem }) => {
     return (
       <div className="border rounded-md bg-white shadow-md">
         <div className="p-4">
-          <p className="text-lg font-medium">Property Overview</p>
+          <p className="text-lg font-medium">Report Overview</p>
           <p className="text-sm text-gray-500">
             Select a report from the map to view detailed analysis
           </p>
@@ -74,7 +74,7 @@ const PropertyOverview: React.FC<PropertyOverviewProps> = ({ reportItem }) => {
   return (
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
-        <p className="text-lg font-medium">Property Overview</p>
+        <p className="text-lg font-medium">Report Overview</p>
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">
             <p className="text-sm text-gray-500">
@@ -191,4 +191,4 @@ const PropertyOverview: React.FC<PropertyOverviewProps> = ({ reportItem }) => {
   );
 };
 
-export default PropertyOverview;
+export default ReportOverview;
