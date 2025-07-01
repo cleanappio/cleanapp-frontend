@@ -22,7 +22,7 @@ export interface LatestReport {
     seq: number;
     source: string;
     analysis_text: string;
-    analysis_image: string | null;
+    analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
     title: string;
     description: string;
     litter_probability: number;
@@ -767,7 +767,7 @@ export default function GlobeView() {
             ) : (
               latestReports.map((item, idx) => (
                 <div
-                  key={item.report?.id || idx}
+                  key={item.report?.seq || idx}
                   onClick={() =>
                     router.push({
                       pathname: "/cleanapppro",

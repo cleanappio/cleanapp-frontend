@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import router from "next/router";
 import { LatestReport } from "./GlobeView";
+import { getDisplayableImage } from "@/lib/image-utils";
 
 interface PropertyOverviewProps {
   reportItem?: LatestReport | null;
@@ -68,7 +69,7 @@ const PropertyOverview: React.FC<PropertyOverviewProps> = ({ reportItem }) => {
 
   const report = reportItem.report;
   const analysis = reportItem.analysis;
-  const imageUrl = fullReport?.analysis?.analysis_image || analysis?.analysis_image;
+  const imageUrl = getDisplayableImage(fullReport?.analysis?.analysis_image || analysis?.analysis_image);
 
   return (
     <div className="border rounded-md bg-white shadow-md">
