@@ -10,6 +10,7 @@ The `/cleanapppro` page now displays real data from the CleanApp API:
 #### PropertyOverview Component
 - **Real Report Data**: Displays actual report information including coordinates, timestamps, and analysis details
 - **Full Report Fetching**: Automatically fetches complete report data including high-resolution images using `/api/v3/reports/by-seq?seq=<seq>`
+- **Image Display**: Handles images from bytes arrays, converting them to displayable data URLs
 - **Interactive Display**: Shows report details overlay with:
   - Report ID and sequence number
   - GPS coordinates
@@ -23,8 +24,9 @@ The `/cleanapppro` page now displays real data from the CleanApp API:
 
 #### RecentReports Component
 - **Live Data**: Fetches recent reports with images using `/api/v3/reports/by-id?id=<id>&n=<N>` or `/api/v3/reports/last?n=10`
+- **Image Processing**: Converts bytes array images to displayable format for each report card
 - **Dynamic Content**: Displays real report cards with:
-  - Report images from the API
+  - Report images from bytes arrays or URLs
   - Priority indicators based on severity levels
   - Category classification (Litter/Hazard/General)
   - Probability percentages
@@ -35,11 +37,27 @@ The `/cleanapppro` page now displays real data from the CleanApp API:
   - Litter issue count
 - **Responsive Design**: Grid layout that adapts to different screen sizes
 
+#### Navbar Component
+- **Dynamic Title**: Displays the actual title from `reportItem.analysis.title`
+- **Real Coordinates**: Shows actual GPS coordinates from the report
+- **Live Timestamp**: Displays the real timestamp from the report
+
+### Image Handling
+The application now supports multiple image formats:
+- **Bytes Arrays**: JPEG images coming as number arrays are converted to base64 data URLs
+- **URL Strings**: Direct image URLs are supported as before
+- **Fallback Handling**: Graceful fallbacks when images are unavailable
+
+#### Image Utilities (`src/lib/image-utils.ts`)
+- `bytesToDataUrl(bytes: number[], mimeType?: string)`: Converts bytes array to data URL
+- `getDisplayableImage(imageData: number[] | string | null)`: Universal image converter
+
 ### Data Flow
 1. **Report Selection**: Users click on reports from the GlobeView map
 2. **URL Parameters**: Report data is passed via URL query parameters
 3. **API Integration**: Components fetch additional data from CleanApp's live API
-4. **Real-time Updates**: Recent reports are updated dynamically
+4. **Image Processing**: Bytes arrays are converted to displayable format
+5. **Real-time Updates**: Recent reports are updated dynamically
 
 ### API Endpoints Used
 - `GET /api/v3/reports/by-seq?seq=<seq>` - Fetch full report details with images
@@ -76,11 +94,17 @@ npm start
 - **Props**: `reportItem?: LatestReport | null`
 - **State**: `fullReport`, `loading`, `error`
 - **API Calls**: Fetches complete report data when a report is selected
+- **Image Handling**: Uses `getDisplayableImage()` utility for bytes array conversion
 
 ### RecentReports
 - **Props**: `reportItem?: LatestReport | null`
 - **State**: `recentReports`, `loading`, `error`
 - **API Calls**: Fetches recent reports list with images
+- **Image Processing**: Converts bytes arrays to displayable format for each card
+
+### Navbar
+- **Props**: `reportItem?: LatestReport | null`
+- **Dynamic Content**: Displays real title, coordinates, and timestamp from report data
 
 ### Data Types
 ```typescript
@@ -96,7 +120,7 @@ interface LatestReport {
     seq: number;
     source: string;
     analysis_text: string;
-    analysis_image: string | null;
+    analysis_image: number[] | string | null; // Bytes array, URL, or null
     title: string;
     description: string;
     litter_probability: number;
@@ -112,14 +136,23 @@ interface LatestReport {
 ## Error Handling
 - Network errors are caught and displayed with retry options
 - Image loading failures are handled gracefully
+- Bytes array conversion errors are logged and handled
 - Loading states provide user feedback
 - Empty states guide users on next steps
 
 ## Performance
 - Images are optimized using Next.js Image component
+- Bytes arrays are efficiently converted to base64
 - API calls are debounced and cached appropriately
 - Loading states prevent UI blocking
 - Error boundaries prevent component crashes
+
+## Image Processing
+The application handles images in multiple formats:
+1. **Bytes Arrays**: Number arrays representing JPEG data are converted to base64 data URLs
+2. **URL Strings**: Direct image URLs are used as-is
+3. **Null Values**: Graceful fallback to placeholder content
+4. **Error Handling**: Failed image loads show fallback content
 
 ## Getting Started
 

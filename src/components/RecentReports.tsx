@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
 import { LatestReport } from "./GlobeView";
+import { getDisplayableImage } from "@/lib/image-utils";
 
 interface RecentReportsProps {
   reportItem?: LatestReport | null;
@@ -113,11 +114,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           {recentReports.map((item, index) => {
             const report = item.report;
             const analysis = item.analysis;
-            const imageUrl = analysis?.analysis_image;
+            const imageUrl = getDisplayableImage(analysis?.analysis_image);
             
             return (
               <div
-                key={report?.id || index}
+                key={report?.seq || index}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow"
               >
                 <div className="relative">
