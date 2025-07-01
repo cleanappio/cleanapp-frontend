@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { ChevronRight, Check, MapPin, BarChart3, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
+import { FaArrowLeftLong } from 'react-icons/fa6';
+import Link from 'next/link';
 
 interface BillingCycle {
   type: string;
@@ -14,6 +16,7 @@ interface BillingCycle {
 interface SubscriptionPlan {
   id: string;
   name: string;
+  description: string;
   billingCycles?: BillingCycle[];
   features: string[];
   apiPlanType?: 'base' | 'advanced' | 'exclusive';
@@ -29,57 +32,68 @@ export default function PricingPage() {
 
   const fetchPricesData = async () => {
     await fetchPrices();
-  }
+  };
 
   useEffect(() => {
     fetchPricesData();
   }, []);
 
   const getPricesForPlan = (planId: string) => {
-    const pr = prices.filter(price => price.product === planId) || {};
-    return pr.map(price => ({
+    const pr = prices.filter((price) => price.product === planId) || {};
+    return pr.map((price) => ({
       type: price.period,
       price: price.amount / 100, // Convert cents to dollars
-      currency: price.currency.toUpperCase()
+      currency: price.currency.toUpperCase(),
     }));
   };
 
   const plans: SubscriptionPlan[] = [
     {
       id: 'free',
-      name: 'forever free',
+      name: 'Free',
+      description: 'For individuals & small teams',
       billingCycles: [
         { type: 'monthly', price: 0, currency: 'USD' },
-        { type: 'annual', price: 0, currency: 'USD' }
+        { type: 'annual', price: 0, currency: 'USD' },
       ],
-      features: ['web access to CleanAppMap'],
-      imageSrc: '/free.png'
+      features: [
+        'Live issue map (physical & digital)',
+        'Submit unlimited reports',
+        'Community trends',
+        'Mobile & web access',
+      ],
+      imageSrc: '/free.png',
     },
     {
       id: 'lite',
-      name: 'lite',
+      name: 'CleanAppLive',
+      description: 'For businesses & brands that need deeper visibility',
       apiPlanType: 'base',
       billingCycles: getPricesForPlan('base'),
       features: [
-        'real time data subscription',
-        'AI analytics (material composition, brand analysis, urgency ratings) for 1 location (geoquadrant) -or- 1 brand (eg, Redbull, Starbucks)',
-        'access to CleanApp responder app'
+        'Live data alerts (1 site or brand)',
+        'AI-powered insights (risk, trends, urgency)',
+        'Incident & hotspot tracking',
+        'Priority help',
       ],
-      imageSrc: '/lite.png'
+      imageSrc: '/lite.png',
     },
     {
       id: 'enterprise',
-      name: 'enterprise',
+      name: 'Enterprise',
+      description:
+        'For organizations managing multiple sites, brands, or digital platforms',
       apiPlanType: 'advanced',
       billingCycles: getPricesForPlan('advanced'),
       popular: true,
       features: [
-        'lite tier, plus:',
-        'priority access to AI hotspot mapping & predictive analytics for up to 5 locations -or- 5 brands',
-        'integration support for firmware',
-        'custom web dashboard'
+        'All CleanAppLive features',
+        'Advanced risk & hotspot forecasting',
+        'Multi-site/brand coverage (up to 5)',
+        'Custom dashboards',
+        'Dedicated account manager',
       ],
-      imageSrc: '/enterprise.png'
+      imageSrc: '/enterprise.png',
     },
   ];
 
@@ -89,7 +103,10 @@ export default function PricingPage() {
       return plan.id === 'free';
     }
     // Match the plan by apiPlanType
-    return plan.apiPlanType === subscription.plan_type && billingCycle === subscription.billing_cycle;
+    return (
+      plan.apiPlanType === subscription.plan_type &&
+      billingCycle === subscription.billing_cycle
+    );
   };
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
@@ -106,7 +123,9 @@ export default function PricingPage() {
     if (plan.id === 'free' && subscription) {
       // Downgrading to free means cancelling subscription
       router.push('/billing');
-      toast('To downgrade to free, please cancel your subscription from the billing page');
+      toast(
+        'To downgrade to free, please cancel your subscription from the billing page'
+      );
       return;
     }
 
@@ -117,19 +136,20 @@ export default function PricingPage() {
 
     // Navigate to checkout with plan details
     const display = getPriceDisplay(plan);
-    const displayPrice = billingCycle === 'annual' ? display.annual : display.monthly;
+    const displayPrice =
+      billingCycle === 'annual' ? display.annual : display.monthly;
     router.push({
       pathname: '/checkout',
       query: {
         plan: plan.apiPlanType,
         billing: billingCycle,
         displayPrice: displayPrice,
-      }
+      },
     });
   };
 
   const getPriceDisplay = (plan: SubscriptionPlan) => {
-    const price = plan.billingCycles?.find(bc => bc.type === billingCycle);
+    const price = plan.billingCycles?.find((bc) => bc.type === billingCycle);
     if (!price) {
       return {
         monthly: 'Contact Sales',
@@ -139,22 +159,22 @@ export default function PricingPage() {
     if (billingCycle === 'annual' && price) {
       return {
         monthly: `${price.price / 12} ${price.currency}/mo`,
-        annual: `${price.price} ${price.currency}/yr`
+        annual: `${price.price} ${price.currency}/yr`,
       };
     }
     return {
       monthly: `${price.price} ${price.currency}/mo`,
-      annual: null
+      annual: null,
     };
   };
 
   const getButtonText = (plan: SubscriptionPlan) => {
     if (isCurrentPlan(plan)) {
-      return 'Current';
+      return 'Current Plan';
     }
-    
+
     if (!subscription && plan.id === 'free') {
-      return 'Current';
+      return 'Current Plan';
     }
 
     if (plan.id === 'free') {
@@ -165,7 +185,7 @@ export default function PricingPage() {
       return 'Contact Sales';
     }
 
-    // If user has any subscription, show "Change now" for other plans
+    // If user has any subscription, show 'Change now' for other plans
     if (subscription) {
       return 'Change now';
     }
@@ -191,24 +211,40 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className='py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen'>
+      <Link href='/'>
+        <div className='fixed top-8 left-8 bg-green-100/50 rounded-full text-green-600 font-medium px-6 py-2 border border-green-400 flex items-center gap-2 z-20'>
+          <FaArrowLeftLong className='w-4 h-4' />
+          Back to Map
+        </div>
+      </Link>
+
+      <div className='max-w-7xl mx-auto'>
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Choose Your CleanApp Plan
+        <div className='text-center mb-12'>
+          <div className='flex justify-center mb-4'>
+            <Image
+              src='/cleanapp-logo-high-res.png'
+              alt='CleanApp Logo'
+              width={125}
+              height={100}
+            />
+          </div>
+          <h1 className='text-5xl font-bold text-gray-900 mb-4'>
+            Trash is Cash
           </h1>
-          <p className="text-xl text-gray-600">
-            Select the perfect plan for your litter monitoring needs
+          <p className='text-xl text-gray-600'>
+            LIVE insights, lower maintenance & liability costs,{' '}
+            <span className='font-bold'>much higher margins.</span>
           </p>
         </div>
 
         {/* Billing Toggle - Only show if there are paid plans */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white rounded-lg shadow-sm p-1 inline-flex">
+        <div className='flex justify-center mb-12'>
+          <div className='bg-white rounded-full shadow-sm p-1 inline-flex'>
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`px-4 py-2 rounded-full transition-colors ${
                 billingCycle === 'monthly'
                   ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:text-gray-900'
@@ -218,74 +254,77 @@ export default function PricingPage() {
             </button>
             <button
               onClick={() => setBillingCycle('annual')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`px-4 py-2 rounded-full transition-colors ${
                 billingCycle === 'annual'
                   ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Annual <span className="text-sm">(Discount)</span>
+              Annual <span className='text-sm'>(Discount)</span>
             </button>
           </div>
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg ${
-                isCurrentPlan(plan) ? 'ring-2 ring-green-600 shadow-lg' : ''
+              className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg shadow-sm border ${
+                plan.id === 'lite' ? 'ring-2 ring-green-600 shadow-lg' : ''
               }`}
-              style={{ backgroundColor: '#EBF1E8' }}
             >
               {/* Current Plan Badge */}
               {isCurrentPlan(plan) && (
-                <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full z-10">
+                <div className='absolute top-4 left-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full z-10'>
                   Current Plan
                 </div>
               )}
-              
+
               {/* Plan Image */}
-              <div className="h-40 relative overflow-hidden">
+              <div className='h-40 relative overflow-hidden'>
                 <Image
                   src={plan.imageSrc || '/api/placeholder/400/300'}
                   alt={`${plan.name} plan`}
                   width={400}
                   height={160}
-                  className="w-full h-full object-cover"
+                  className='w-full h-full object-cover'
                   priority={plan.popular}
                 />
                 {plan.popular && !isCurrentPlan(plan) && (
-                  <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full">
+                  <div className='absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full'>
                     Popular
                   </div>
                 )}
               </div>
 
               {/* Plan Details */}
-              <div className="p-6">
+              <div className='p-6'>
                 {/* Plan Name and Price */}
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-green-700 mb-2">
+                <div className='text-center mb-6'>
+                  <h3 className='text-2xl font-bold text-green-700 mb-2'>
                     {plan.name}
                   </h3>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p>{plan.description}</p>
+
+                  <p className='text-3xl font-bold text-gray-900 mt-4'>
                     {getPriceDisplay(plan).monthly}
                   </p>
                   {billingCycle === 'annual' && (
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className='text-sm text-gray-600 mt-1'>
                       {getPriceDisplay(plan).annual}
                     </p>
                   )}
                 </div>
 
                 {/* Features */}
-                <ul className="space-y-3 mb-6 min-h-[200px]">
+                <ul className='space-y-3 mb-6 min-h-[200px]'>
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <Check className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700 leading-tight">{feature}</span>
+                    <li key={index} className='flex items-start'>
+                      <Check className='w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5' />
+                      <span className='text-sm text-gray-700 leading-tight'>
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -294,72 +333,22 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleSelectPlan(plan)}
                   disabled={isCurrentPlan(plan)}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${
-                    getButtonStyle(plan)
-                  } ${(isCurrentPlan(plan)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${getButtonStyle(
+                    plan
+                  )} ${
+                    isCurrentPlan(plan) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   {getButtonText(plan)}
-                  {!isCurrentPlan(plan) && !plan.customPricing && plan.id !== 'free' && (
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  )}
+                  {!isCurrentPlan(plan) &&
+                    !plan.customPricing &&
+                    plan.id !== 'free' && (
+                      <ChevronRight className='w-4 h-4 ml-2' />
+                    )}
                 </button>
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Additional Information */}
-        <div className="mt-16 text-center">
-          <div className="bg-white rounded-2xl shadow-md p-8 max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              All plans include
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-              <div>
-                <div className="flex items-center mb-2">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <MapPin className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">Real-time Updates</h3>
-                </div>
-                <p className="text-gray-600 text-sm ml-13">
-                  Get instant notifications about litter incidents in your monitored areas
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center mb-2">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <BarChart3 className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">API Access</h3>
-                </div>
-                <p className="text-gray-600 text-sm ml-13">
-                  Integrate CleanApp data into your existing systems
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center mb-2">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <Sparkles className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">24/7 Support</h3>
-                </div>
-                <p className="text-gray-600 text-sm ml-13">
-                  Our team is here to help you make the most of CleanApp
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* FAQ or Contact Section */}
-        <div className="mt-12 text-center">
-          <p className="text-gray-600">
-            Questions about our plans?{' '}
-            <a href="#" className="text-green-600 font-semibold hover:underline">
-              Contact our sales team
-            </a>
-          </p>
         </div>
       </div>
     </div>
