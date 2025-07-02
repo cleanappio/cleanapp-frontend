@@ -1,7 +1,7 @@
 import React, { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
-import { ChevronRight, Check, MapPin, BarChart3, Sparkles } from 'lucide-react';
+import { ChevronRight, Check, MapPin, BarChart3, Sparkles, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 import { FaArrowLeftLong } from 'react-icons/fa6';
@@ -27,8 +27,13 @@ interface SubscriptionPlan {
 
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated, subscription, prices, fetchPrices } = useAuthStore();
+  const { user, isAuthenticated, subscription, prices, fetchPrices, logout } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
 
   const fetchPricesData = async () => {
     await fetchPrices();
@@ -110,11 +115,6 @@ export default function PricingPage() {
   };
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
-    if (!isAuthenticated) {
-      router.push('/signup');
-      return;
-    }
-
     // If it's the current plan, do nothing
     if (isCurrentPlan(plan)) {
       return;
@@ -134,7 +134,7 @@ export default function PricingPage() {
       return;
     }
 
-    // Navigate to checkout with plan details
+    // Navigate to checkout with plan details (always, regardless of auth status)
     const display = getPriceDisplay(plan);
     const displayPrice =
       billingCycle === 'annual' ? display.annual : display.monthly;
@@ -211,33 +211,83 @@ export default function PricingPage() {
   };
 
   return (
-    <div className='py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen'>
-      <Link href='/'>
-        <div className='fixed top-8 left-8 bg-green-100/50 rounded-full text-green-600 font-medium px-6 py-2 border border-green-400 flex items-center gap-2 z-20'>
-          <FaArrowLeftLong className='w-4 h-4' />
-          Back to Map
-        </div>
-      </Link>
+    <div className='min-h-screen bg-gray-50'>
+      {/* Header */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/cleanapp-logo.png"
+                  alt="CleanApp Logo"
+                  width={200}
+                  height={60}
+                  className="h-12 w-auto"
+                  priority
+                />
+              </Link>
+            </div>
 
-      <div className='max-w-7xl mx-auto'>
-        {/* Header */}
-        <div className='text-center mb-12'>
-          <div className='flex justify-center mb-4'>
-            <Image
-              src='/cleanapp-logo-high-res.png'
-              alt='CleanApp Logo'
-              width={125}
-              height={100}
-            />
+            <div className="flex items-center">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-700">{user?.email}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-x-4">
+                  <Link
+                    href="/login"
+                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Get started
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
-          <h1 className='text-5xl font-bold text-gray-900 mb-4'>
-            Trash is Cash
-          </h1>
-          <p className='text-xl text-gray-600'>
-            LIVE insights, lower maintenance & liability costs,{' '}
-            <span className='font-bold'>much higher margins.</span>
-          </p>
         </div>
+      </nav>
+
+      <div className='py-12 px-4 sm:px-6 lg:px-8'>
+        <Link href='/'>
+          <div className='fixed top-24 left-8 bg-green-100/50 rounded-full text-green-600 font-medium px-6 py-2 border border-green-400 flex items-center gap-2 z-20'>
+            <FaArrowLeftLong className='w-4 h-4' />
+            Back to Map
+          </div>
+        </Link>
+
+        <div className='max-w-7xl mx-auto'>
+          {/* Header */}
+          <div className='text-center mb-12'>
+            <div className='flex justify-center mb-4'>
+              <Image
+                src='/cleanapp-logo-high-res.png'
+                alt='CleanApp Logo'
+                width={125}
+                height={100}
+              />
+            </div>
+            <h1 className='text-5xl font-bold text-gray-900 mb-4'>
+              Trash is Cash
+            </h1>
+            <p className='text-xl text-gray-600'>
+              LIVE insights, lower maintenance & liability costs,{' '}
+              <span className='font-bold'>much higher margins.</span>
+            </p>
+          </div>
 
         {/* Billing Toggle - Only show if there are paid plans */}
         <div className='flex justify-center mb-12'>
@@ -349,6 +399,7 @@ export default function PricingPage() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>
