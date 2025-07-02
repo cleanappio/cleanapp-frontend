@@ -37,3 +37,10 @@
 .popupWebUrl:focus {
   outline: 0;
 }
+
+.leaflet-bottom,
+.leaflet-top {
+  z-index: 0 !important;
+  position: absolute;
+  pointer-events: none;
+}
