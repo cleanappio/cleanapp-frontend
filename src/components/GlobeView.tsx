@@ -706,9 +706,12 @@ export default function GlobeView() {
         >
           {[
             {
-              label: "Install",
-              link: "http://app.cleanapp.io:3000/ref?refid=If3E6gmxyU",
-              className: "block md:hidden",
+              label: "Install Android",
+              link: "https://play.google.com/store/apps/details/CleanApp?id=com.cleanapp&hl=ln",
+            },
+            {
+              label: "Install iOS",
+              link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
             },
             { label: "Subscribe", link: "/pricing" },
             {
@@ -717,24 +720,10 @@ export default function GlobeView() {
             },
             {
               label: "CleanAppGPT",
-              link: "https://urban-tracker-b0150.replit.app/",
+              link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
             },
             { label: "STXN", link: "https://www.stxn.io" },
           ].map((item) => {
-            if (item.label === "Install") {
-              return (
-                <Link
-                  key={item.label}
-                  href={item.link}
-                  className={`text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md ${
-                    item.className || ""
-                  }`}
-                  target="_blank"
-                >
-                  {item.label.toUpperCase()}
-                </Link>
-              );
-            }
             return (
               <Link
                 key={item.label}
