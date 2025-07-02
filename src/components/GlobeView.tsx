@@ -49,8 +49,115 @@ export default function GlobeView() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<LatestReport | null>(null);
+  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
+
+  // Get user's current location on component mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      // Try to get location with different options
+      const getLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('Location obtained:', position.coords);
+            setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+            setLocationLoading(false);
+          },
+          (error) => {
+            console.log('Geolocation error:', error.code, error.message);
+            
+            // Try with less restrictive options if first attempt fails
+            if (error.code === error.POSITION_UNAVAILABLE || error.code === error.TIMEOUT) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  console.log('Location obtained with fallback options:', position.coords);
+                  setUserLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                  });
+                  setLocationLoading(false);
+                },
+                (fallbackError) => {
+                  console.log('Fallback geolocation also failed:', fallbackError.message);
+                  setLocationLoading(false);
+                },
+                {
+                  enableHighAccuracy: false,
+                  timeout: 15000,
+                  maximumAge: 600000 // 10 minutes
+                }
+              );
+            } else {
+              setLocationLoading(false);
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutes
+          }
+        );
+      };
+
+      // Check if geolocation is available and not blocked
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+          if (result.state === 'granted') {
+            getLocation();
+          } else if (result.state === 'prompt') {
+            getLocation(); // Will prompt user
+          } else {
+            console.log('Geolocation permission denied');
+            setLocationLoading(false);
+          }
+        }).catch(() => {
+          // Fallback if permissions API is not supported
+          getLocation();
+        });
+      } else {
+        // Fallback if permissions API is not supported
+        getLocation();
+      }
+    } else {
+      console.log('Geolocation not supported');
+      setLocationLoading(false);
+    }
+  }, []);
+
+  // Pan to user location when it becomes available
+  useEffect(() => {
+    if (userLocation && mapLoaded && mapRef.current) {
+      console.log('Flying to user location:', userLocation);
+      
+      // Try using the MapRef's flyTo method first
+      try {
+        mapRef.current.flyTo({
+          center: [userLocation.longitude, userLocation.latitude],
+          zoom: 2.5,
+          duration: 2000
+        });
+      } catch (error) {
+        console.log('MapRef flyTo failed, trying map.flyTo:', error);
+        
+        // Fallback to using the map instance directly
+        const map = mapRef.current.getMap();
+        if (map) {
+          map.flyTo({
+            center: [userLocation.longitude, userLocation.latitude],
+            zoom: 2.5,
+            duration: 2000,
+            essential: true
+          });
+        }
+      }
+    }
+  }, [userLocation, mapLoaded]);
 
   const DIGITAL_PROPERTIES = [
     {
@@ -649,7 +756,7 @@ export default function GlobeView() {
     async function fetchLastReports() {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
@@ -672,7 +779,16 @@ export default function GlobeView() {
           mapStyle="mapbox://styles/mapbox/standard-satellite"
           projection="globe"
           maxZoom={30}
-          minZoom={1}
+          minZoom={2}
+          initialViewState={{
+            longitude: 0.0,
+            latitude: 0.0,
+            zoom: 2.5,
+          }}
+          onLoad={() => {
+            console.log('Map loaded');
+            setMapLoaded(true);
+          }}
           antialias={true}
           attributionControl={false}
           logoPosition="bottom-right"
@@ -767,6 +883,40 @@ export default function GlobeView() {
           </p>
         </div>
       </div>
+
+      {/* Location button - show when geolocation fails */}
+      {!locationLoading && !userLocation && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2">
+          <button
+            onClick={() => {
+              setLocationLoading(true);
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    setUserLocation({
+                      latitude: position.coords.latitude,
+                      longitude: position.coords.longitude
+                    });
+                    setLocationLoading(false);
+                  },
+                  (error) => {
+                    console.log('Manual geolocation failed:', error.message);
+                    setLocationLoading(false);
+                  },
+                  {
+                    enableHighAccuracy: false,
+                    timeout: 15000,
+                    maximumAge: 600000
+                  }
+                );
+              }
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg"
+          >
+            {locationLoading ? 'Getting location...' : 'Use My Location'}
+          </button>
+        </div>
+      )}
 
       {/* Latest Reports - only show when modal is not open */}
       {!isCleanAppProOpen && (
