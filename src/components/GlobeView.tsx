@@ -8,6 +8,8 @@ import { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
+import CleanAppProModal from "./CleanAppProModal";
+import LatestReports from "./LatestReports";
 
 // Type for latest reports
 export interface LatestReport {
@@ -45,6 +47,8 @@ export default function GlobeView() {
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<LatestReport | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
 
@@ -764,50 +768,19 @@ export default function GlobeView() {
         </div>
       </div>
 
-      {/* Latest Reports */}
-      <div className="absolute left-4 bottom-8 p-2 max-h-[350px] flex flex-col overflow-y-auto">
-        {/* Create translucent div with a gradient */}
-        <div className="w-full h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center">
-          <p className="text-slate-300 font-semibold text-sm mt-2 mb-3">
-            LATEST REPORTS
-          </p>
-
-          <div className="mb-2">
-            {reportsLoading ? (
-              <p className="text-xs text-gray-400">Loading...</p>
-            ) : latestReports.length === 0 ? (
-              <p className="text-xs text-gray-400">No reports found.</p>
-            ) : (
-              latestReports.map((item, idx) => (
-                <div
-                  key={item.report?.seq || idx}
-                  onClick={() =>
-                    router.push({
-                      pathname: "/cleanapppro",
-                      query: {
-                        report: encodeURIComponent(JSON.stringify(item)),
-                      },
-                    })
-                  }
-                  className="flex flex-col gap-1 text-sm border border-slate-700 p-3 rounded-lg mt-2 items-start text-slate-300 cursor-pointer max-w-[275px]"
-                >
-                  <p className="text-xs">
-                    {item.analysis?.title || "Report"}
-                    {item.report?.timestamp
-                      ? `, ${new Date(item.report.timestamp).toLocaleString()}`
-                      : ""}
-                  </p>
-                  <p className="text-xs text-gray-400 line-clamp-2">
-                    {item.analysis?.summary ||
-                      item.analysis?.description ||
-                      "No summary"}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Latest Reports - only show when modal is not open */}
+      {!isCleanAppProOpen && (
+        <LatestReports
+          reports={latestReports}
+          loading={reportsLoading}
+          onReportClick={(report) => {
+            setSelectedReport(report);
+            setIsCleanAppProOpen(true);
+          }}
+          isModalActive={false}
+          selectedReport={null}
+        />
+      )}
 
       {/* Bottom right logo */}
       <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
@@ -829,6 +802,15 @@ export default function GlobeView() {
           </div>
         </Link>
       </div>
+
+      {/* CleanApp Pro Modal */}
+      <CleanAppProModal
+        isOpen={isCleanAppProOpen}
+        onClose={() => setIsCleanAppProOpen(false)}
+        reportItem={selectedReport}
+        allReports={latestReports}
+        onReportChange={(report) => setSelectedReport(report)}
+      />
     </div>
   );
 }
