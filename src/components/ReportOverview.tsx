@@ -187,12 +187,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-gray-700 rounded-full h-2">
                     <div 
-                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level, 10)}`}
-                      style={{ width: `${(analysis.severity_level / 10) * 100}%` }}
+                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
+                      style={{ width: `${(analysis.severity_level) * 100}%` }}
                     ></div>
                   </div>
                   <span className="text-xs font-medium">
-                    {analysis.severity_level.toFixed(1)}/10
+                    {(analysis.severity_level*10).toFixed(0)}/10
                   </span>
                 </div>
               </div>

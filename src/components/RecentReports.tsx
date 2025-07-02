@@ -45,14 +45,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   };
 
   const getPriorityColor = (severityLevel: number) => {
-    if (severityLevel >= 7) return "bg-red-500";
-    if (severityLevel >= 4) return "bg-yellow-500";
+    if (severityLevel >= 0.7) return "bg-red-500";
+    if (severityLevel >= 0.4) return "bg-yellow-500";
     return "bg-green-500";
   };
 
   const getPriorityText = (severityLevel: number) => {
-    if (severityLevel >= 7) return "High Priority";
-    if (severityLevel >= 4) return "Medium Priority";
+    if (severityLevel >= 0.7) return "High Priority";
+    if (severityLevel >= 0.4) return "Medium Priority";
     return "Low Priority";
   };
 
@@ -336,7 +336,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   <div className="text-lg font-semibold text-red-600">
                     {
                       recentReports.filter(
-                        (r) => r.analysis?.severity_level >= 7
+                        (r) => r.analysis?.severity_level >= 0.7
                       ).length
                     }
                   </div>
@@ -347,8 +347,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {
                       recentReports.filter(
                         (r) =>
-                          r.analysis?.severity_level >= 4 &&
-                          r.analysis?.severity_level < 7
+                          r.analysis?.severity_level >= 0.4 &&
+                          r.analysis?.severity_level < 0.7
                       ).length
                     }
                   </div>
