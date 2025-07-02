@@ -55,6 +55,9 @@ export default function GlobeView() {
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
 
+  const [latestReports, setLatestReports] = useState<LatestReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+
   // Get user's current location on component mount
   useEffect(() => {
     if (navigator.geolocation) {
@@ -407,8 +410,206 @@ export default function GlobeView() {
     },
   ];
 
-  const [latestReports, setLatestReports] = useState<LatestReport[]>([]);
-  const [reportsLoading, setReportsLoading] = useState(true);
+  // Add report pins to the map when reports are loaded
+  useEffect(() => {
+    if (mapLoaded && mapRef.current && latestReports.length > 0) {
+      const map = mapRef.current.getMap();
+      if (map) {
+        // Create GeoJSON data from reports
+        const reportFeatures = latestReports.map((report, index) => ({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [report.report.longitude, report.report.latitude]
+          },
+          properties: {
+            id: report.report.id,
+            seq: report.report.seq,
+            title: report.analysis?.title || 'Report',
+            severity: report.analysis?.severity_level || 1,
+            index: index
+          }
+        }));
+
+        const reportGeoJSON = {
+          type: 'FeatureCollection' as const,
+          features: reportFeatures
+        };
+
+        // Add source if it doesn't exist
+        if (!map.getSource('reports')) {
+          map.addSource('reports', {
+            type: 'geojson',
+            data: reportGeoJSON
+          });
+        } else {
+          // Update existing source
+          (map.getSource('reports') as any).setData(reportGeoJSON);
+        }
+
+        // Add layer if it doesn't exist
+        if (!map.getLayer('report-pins')) {
+          map.addLayer({
+            id: 'report-pins',
+            type: 'circle',
+            source: 'reports',
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['get', 'severity'],
+                0.1, 6.6,
+                0.5, 13.2
+              ],
+              'circle-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'severity'],
+                0.1, '#10b981', // green for low severity
+                0.3, '#f59e0b', // yellow for medium severity
+                0.5, '#ef4444'  // red for high severity
+              ],
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff'
+            }
+          });
+        }
+
+        // Add click handler for report pins
+        map.on('click', 'report-pins', (e) => {
+          if (e.features && e.features[0]) {
+            const feature = e.features[0];
+            const reportIndex = feature.properties?.index;
+            if (reportIndex !== undefined && latestReports[reportIndex]) {
+              setSelectedReport(latestReports[reportIndex]);
+              setIsCleanAppProOpen(true);
+            }
+          }
+        });
+
+        // Add hover effects
+        map.on('mouseenter', 'report-pins', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'report-pins', () => {
+          map.getCanvas().style.cursor = '';
+        });
+      }
+    }
+  }, [mapLoaded, latestReports]);
+
+  // Handle new report from WebSocket
+  const handleNewReport = (reportWithAnalysis: LatestReport) => {
+    if (!mapRef.current) {
+      console.error("mapRef not found");
+      return;
+    }
+    
+    const map = mapRef.current.getMap();
+    if (!map) {
+      console.error("map not found");
+      return;
+    }
+
+    console.log("reportWithAnalysis", reportWithAnalysis);
+
+    const report = reportWithAnalysis.report;
+    const analysis = reportWithAnalysis.analysis;
+
+    // Fly to the new report location
+    map.flyTo({
+      center: [report.longitude, report.latitude],
+      zoom: 2.5,
+      duration: 2000,
+      essential: true
+    });
+
+    // Create a temporary animated pin for the new report
+    const animatedPinId = `animated-pin-${report.seq}`;
+    
+    // Add animated pin source
+    if (!map.getSource(animatedPinId)) {
+      map.addSource(animatedPinId, {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [{
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [report.longitude, report.latitude]
+            },
+            properties: {
+              severity: analysis.severity_level || 1
+            }
+          }]
+        }
+      });
+    }
+
+    // Add animated pin layer
+    if (!map.getLayer(animatedPinId)) {
+      map.addLayer({
+        id: animatedPinId,
+        type: 'circle',
+        source: animatedPinId,
+        paint: {
+          'circle-radius': [
+            'interpolate',
+            ['linear'],
+            ['get', 'severity'],
+            0.1, 6.6,
+            0.5, 13.2
+          ],
+          'circle-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'severity'],
+            0.1, '#10b981',
+            0.3, '#f59e0b',
+            0.5, '#ef4444'
+          ],
+          'circle-stroke-width': 3,
+          'circle-stroke-color': '#ffffff',
+          'circle-opacity': 0.9
+        }
+      });
+    }
+
+    // Animate the pin for 10 seconds
+    let startTime = Date.now();
+    const animationDuration = 10000; // 10 seconds
+    
+    function animatePin() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      // Create pulsing effect (expand/shrink)
+      const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
+      const baseRadius = analysis.severity_level >= 3 ? 13.2 : 6.6;
+      const currentRadius = baseRadius * pulseScale;
+      
+      // Update the pin radius
+      map.setPaintProperty(animatedPinId, 'circle-radius', currentRadius);
+      
+      // Continue animation if not finished
+      if (progress < 1) {
+        requestAnimationFrame(animatePin);
+      } else {
+        // Remove the animated pin after animation completes
+        if (map.getLayer(animatedPinId)) {
+          map.removeLayer(animatedPinId);
+        }
+        if (map.getSource(animatedPinId)) {
+          map.removeSource(animatedPinId);
+        }
+      }
+    }
+    
+    // Start the animation
+    requestAnimationFrame(animatePin);
+  };
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -706,6 +907,9 @@ export default function GlobeView() {
         console.log(
           `Received ${batch.count} reports with analysis (seq ${batch.from_seq}-${batch.to_seq})`
         );
+        // Fly to new report location and animate the pin
+        handleNewReport(batch.reports[0]);
+        
         // Add new reports to the top of the list
         setLatestReports((prev) => {
           const newReports = batch.reports || [];
@@ -718,21 +922,6 @@ export default function GlobeView() {
             return true;
           });
           return combined;
-        });
-        batch.reports.forEach((reportWithAnalysis: any) => {
-          const report = reportWithAnalysis.report;
-          const analysis = reportWithAnalysis.analysis;
-          console.log(
-            `Report ${report.seq}: ${report.id} at (${report.latitude}, ${report.longitude})`
-          );
-          console.log(`Analysis source: ${analysis.source}`);
-          console.log(`Analysis text: ${analysis.analysis_text}`);
-          console.log(`Title: ${analysis.title}`);
-          console.log(`Description: ${analysis.description}`);
-          console.log(`Litter probability: ${analysis.litter_probability}`);
-          console.log(`Hazard probability: ${analysis.hazard_probability}`);
-          console.log(`Severity level: ${analysis.severity_level}`);
-          console.log(`Summary: ${analysis.summary}`);
         });
       }
     };
