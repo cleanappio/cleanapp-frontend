@@ -187,8 +187,10 @@ export class ApiClient {
         if (error.response?.status === 401) {
           // Clear token on unauthorized
           this.setAuthToken(null);
-          // Only redirect if in browser context
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          // Only redirect if in browser context and not on login or checkout pages
+          if (typeof window !== 'undefined' && 
+              window.location.pathname !== '/login' && 
+              window.location.pathname !== '/checkout') {
             window.location.href = '/login';
           }
         }
@@ -402,6 +404,24 @@ export class ApiClient {
     const { data } = await this.axios.get<PricesResponse>('/api/v3/prices');
     console.log('Fetched prices:', data);
     return data;
+  }
+
+  // ==================== USER UTILITY ENDPOINTS ====================
+
+  /**
+   * Checks if a user exists by email.
+   * @param email The email to check.
+   * @returns Promise<boolean> true if user exists, false otherwise
+   */
+  async userExists(email: string): Promise<boolean> {
+    try {
+      const { data } = await this.axios.get<{ user_exists: boolean }>(`/api/v3/users/exists`, { params: { email } });
+      return !!data.user_exists;
+    } catch (error: any) {
+      // If API returns 404 or similar, treat as not found
+      if (error?.response?.status === 404) return false;
+      throw error;
+    }
   }
 }
 

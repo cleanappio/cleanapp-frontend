@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -9,8 +9,11 @@ import {
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp } from 'lucide-react';
-import { COUNTRIES } from '@/constants/countries';
+import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check } from 'lucide-react';
+
+import { apiClient } from '@/lib/api-client';
+import Image from 'next/image';
+import Link from 'next/link';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -43,22 +46,88 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
-  const { user, paymentMethods, fetchPaymentMethods, createSubscription, addPaymentMethod } = useAuthStore();
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const {
+    user,
+    isAuthenticated,
+    login,
+    signup,
+    paymentMethods,
+    fetchPaymentMethods,
+    createSubscription,
+    addPaymentMethod,
+  } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
   const [email, setEmail] = useState(user?.email || '');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [userExists, setUserExists] = useState<null | boolean>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isAuthComplete, setIsAuthComplete] = useState(isAuthenticated);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
-  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
   
-  // Billing address fields
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('US');
+
+
+  // Check if user exists on email blur
+  const handleEmailBlur = async () => {
+    if (!email) return;
+    setIsAuthLoading(true);
+    setUserExists(null);
+    try {
+      // Use the new API to check if user exists
+      const exists = await apiClient.userExists(email);
+      console.log('User exists:', exists);
+      setUserExists(exists);
+      // Focus password field if user exists
+      if (exists && passwordRef.current) {
+        setTimeout(() => passwordRef.current?.focus(), 100);
+      }
+    } catch (error: any) {
+      console.error('Failed to check user existence:', error);
+      // Fallback: treat as user not found
+      setUserExists(false);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Handle login on password blur if user exists
+  const handlePasswordBlur = async () => {
+    if (!userExists || !email || !password) return;
+    setIsAuthLoading(true);
+    try {
+      await login(email, password);
+      toast.success('Logged in!');
+      setIsAuthComplete(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Login failed');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Handle signup on confirm password blur if user does not exist
+  const handleConfirmPasswordBlur = async () => {
+    if (userExists !== false || !email || !password || !confirmPassword) return;
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setIsAuthLoading(true);
+    try {
+      await signup(email, email, password); // Use email as name for simplicity
+      toast.success('Account created!');
+      setIsAuthComplete(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Signup failed');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
 
   const fetchPaymentMethodsData = async () => {
     try {
@@ -84,8 +153,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   };
 
   useEffect(() => {
-    fetchPaymentMethodsData();
-  }, []);
+    if (isAuthComplete) {
+      fetchPaymentMethodsData();
+    }
+  }, [isAuthComplete]);
 
   // Watch for changes to paymentMethods from the store
   useEffect(() => {
@@ -135,14 +206,6 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           billing_details: {
             name: cardholderName,
             email: email,
-            address: {
-              line1: addressLine1,
-              line2: addressLine2 || undefined,
-              city: city,
-              state: state,
-              postal_code: postalCode,
-              country: country,
-            },
           },
         });
 
@@ -193,16 +256,231 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     return <div>Invalid plan selected</div>;
   }
 
-  if (loadingPaymentMethods) {
+  if (isAuthComplete && loadingPaymentMethods) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <span className="ml-2 text-sm text-gray-600">Loading payment methods...</span>
+      </div>
+    );
+  }
+
+  // If not authenticated, show login/signup box above the checkout form
+  if (!isAuthComplete) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        {/* Login/Signup Box */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">Sign up or Log in to Continue</h3>
+          <div className="mb-4">
+            <label htmlFor="checkout-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              id="checkout-email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setUserExists(null); setIsAuthComplete(false); }}
+              onBlur={handleEmailBlur}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+              disabled={isAuthLoading}
+            />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="checkout-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              ref={passwordRef}
+              type="password"
+              id="checkout-password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onBlur={userExists ? handlePasswordBlur : undefined}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+              disabled={isAuthLoading || userExists === null}
+            />
+          </div>
+          {/* Show confirm password only if user does not exist */}
+          {userExists === false && (
+            <div className="mb-4">
+              <label htmlFor="checkout-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <input
+                type="password"
+                id="checkout-confirm-password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                onBlur={handleConfirmPasswordBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+                disabled={isAuthLoading}
+              />
+            </div>
+          )}
+          {isAuthLoading && (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+              <span className="ml-2 text-sm text-gray-600">
+                {userExists === null ? 'Checking...' : userExists ? 'Logging in...' : 'Creating account...'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Checkout Form - Disabled */}
+        <form onSubmit={handleSubmit} className="opacity-50 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-lg font-semibold mb-4">Subscription Summary</h3>
+            <div className="border-b pb-4 mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Plan</span>
+                <span className="font-medium">{planDetails.name}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Billing Cycle</span>
+                <span className="font-medium capitalize">{billingCycle}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total</span>
+                <span className="font-bold text-lg">{planDetails.displayPrice}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <CreditCard className="w-5 h-5 mr-2" />
+              Payment Information
+            </h3>
+            <p className="text-gray-500 text-sm mb-4">Please complete authentication to continue with checkout</p>
+            
+            {/* Existing Payment Methods */}
+            {paymentMethods.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-700 mb-3">Select Payment Method</p>
+                <div className="space-y-2">
+                  {paymentMethods.map((method) => (
+                    <label
+                      key={method.id}
+                      className={`flex items-center p-3 border rounded-lg cursor-not-allowed transition-colors ${
+                        selectedPaymentMethod === method.stripe_payment_method_id 
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method.stripe_payment_method_id}
+                        checked={selectedPaymentMethod === method.stripe_payment_method_id}
+                        onChange={() => {}}
+                        disabled
+                        className="mr-3 text-green-600 focus:ring-green-500"
+                      />
+                      <CreditCard className="w-5 h-5 text-gray-400 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Expires {method.exp_month}/{method.exp_year}
+                        </p>
+                      </div>
+                      {method.is_default && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Default</span>
+                      )}
+                    </label>
+                  ))}
+                  
+                  {/* Add New Payment Method Option */}
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full flex items-center justify-center p-3 border rounded-lg transition-colors border-gray-200 text-gray-400 cursor-not-allowed"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add New Payment Method
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* New Payment Method Form */}
+            {showNewPaymentForm && (
+              <div className={`space-y-4 ${paymentMethods.length > 0 ? 'mt-4 pt-4 border-t' : ''}`}>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                    required={showNewPaymentForm}
+                    disabled
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-400 mb-1">
+                    Cardholder Name
+                  </label>
+                  <input
+                    type="text"
+                    id="cardholder-name"
+                    value={cardholderName}
+                    onChange={(e) => setCardholderName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                    required={showNewPaymentForm}
+                    disabled
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Card Information
+                  </label>
+                  <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                    <div className="h-6 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled
+              className="w-full mt-6 bg-gray-300 text-gray-500 py-3 px-4 rounded-md font-semibold cursor-not-allowed flex items-center justify-center"
+            >
+              <Lock className="w-5 h-5 mr-2" />
+              Subscribe {planDetails.displayPrice}
+            </button>
+
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Your payment information is encrypted and secure. You can cancel your subscription at any time.
+            </p>
+          </div>
+        </form>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto">
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+      {/* Auth Status Box */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center text-green-600">
+          <Check className="w-5 h-5 mr-2" />
+          Authentication Complete
+        </h3>
+        <div className="space-y-2 text-sm text-gray-600">
+          <p><strong>Email:</strong> {email}</p>
+          <p><strong>Status:</strong> Ready to checkout</p>
+        </div>
+      </div>
+
+      {/* Subscription Summary */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4">Subscription Summary</h3>
         <div className="border-b pb-4 mb-4">
@@ -221,6 +499,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         </div>
       </div>
 
+      {/* Payment Information */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <CreditCard className="w-5 h-5 mr-2" />
@@ -336,103 +615,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               </div>
             </div>
 
-            {/* Billing Address Section */}
-            <div className="border-t pt-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Billing Address</h4>
-              
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="checkout-address-line1" className="block text-sm font-medium text-gray-700 mb-1">
-                    Address Line 1
-                  </label>
-                  <input
-                    type="text"
-                    id="checkout-address-line1"
-                    value={addressLine1}
-                    onChange={(e) => setAddressLine1(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    required={showNewPaymentForm}
-                  />
-                </div>
 
-                <div>
-                  <label htmlFor="checkout-address-line2" className="block text-sm font-medium text-gray-700 mb-1">
-                    Address Line 2 (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="checkout-address-line2"
-                    value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Apartment, suite, etc."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="checkout-city" className="block text-sm font-medium text-gray-700 mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      id="checkout-city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required={showNewPaymentForm}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="checkout-state" className="block text-sm font-medium text-gray-700 mb-1">
-                      State/Province
-                    </label>
-                    <input
-                      type="text"
-                      id="checkout-state"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required={showNewPaymentForm}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="checkout-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                      Postal Code
-                    </label>
-                    <input
-                      type="text"
-                      id="checkout-postal-code"
-                      value={postalCode}
-                      onChange={(e) => setPostalCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required={showNewPaymentForm}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="checkout-country" className="block text-sm font-medium text-gray-700 mb-1">
-                      Country
-                    </label>
-                    <select
-                      id="checkout-country"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required={showNewPaymentForm}
-                    >
-                      {COUNTRIES.map((country) => (
-                        <option key={country.code} value={country.code}>{country.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <div className="flex items-center">
               <input
@@ -477,53 +660,154 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const { plan, billing, displayPrice } = router.query;
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
 
   if (!plan || !billing) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-md mx-auto text-center">
-          <p className="text-gray-600 mb-4">No plan selected</p>
-          <button
-            onClick={() => router.push('/pricing')}
-            className="text-green-600 hover:text-green-700 font-medium"
-          >
-            ← Back to pricing
-          </button>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <nav className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex">
+                <Link href="/" className="flex items-center">
+                  <Image
+                    src="/cleanapp-logo.png"
+                    alt="CleanApp Logo"
+                    width={200}
+                    height={60}
+                    className="h-12 w-auto"
+                    priority
+                  />
+                </Link>
+              </div>
+
+              <div className="flex items-center">
+                {isAuthenticated ? (
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-700">{user?.email}</span>
+                    <button
+                      onClick={handleLogout}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-x-4">
+                    <Link
+                      href="/login"
+                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      Get started
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="py-12 px-4">
+          <div className="max-w-md mx-auto text-center">
+            <p className="text-gray-600 mb-4">No plan selected</p>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="text-green-600 hover:text-green-700 font-medium"
+            >
+              ← Back to pricing
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <button
-          onClick={() => router.push('/pricing')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-8"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to pricing
-        </button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/cleanapp-logo.png"
+                  alt="CleanApp Logo"
+                  width={200}
+                  height={60}
+                  className="h-12 w-auto"
+                  priority
+                />
+              </Link>
+            </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Complete Your Subscription
-        </h1>
+            <div className="flex items-center">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-700">{user?.email}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-x-4">
+                  <Link
+                    href="/login"
+                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Get started
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
 
-        <Elements stripe={stripePromise}>
-          <CheckoutForm 
-            planType={plan as string} 
-            billingCycle={billing as 'monthly' | 'annual'} 
-            displayPrice={displayPrice as string}
-          />
-        </Elements>
+      <div className="py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={() => router.push('/pricing')}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-8"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to pricing
+          </button>
+
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Complete Your Subscription
+          </h1>
+
+          <Elements stripe={stripePromise}>
+            <CheckoutForm 
+              planType={plan as string} 
+              billingCycle={billing as 'monthly' | 'annual'} 
+              displayPrice={displayPrice as string}
+            />
+          </Elements>
+        </div>
       </div>
     </div>
   );
