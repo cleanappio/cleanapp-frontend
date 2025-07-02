@@ -11,6 +11,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { CreditCard, Download, Plus, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { COUNTRIES } from '@/constants/countries';
+import PageHeader from '@/components/PageHeader';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -420,8 +421,10 @@ function BillingPageContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Billing & Subscription</h1>
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Billing & Subscription</h1>
 
       {/* Current Subscription */}
       <div className="bg-white rounded-lg shadow mb-8 p-6">
@@ -612,6 +615,7 @@ function BillingPageContent() {
         )}
       </div>
     </div>
+  </div>
   );
 }
 
