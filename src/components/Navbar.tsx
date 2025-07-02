@@ -21,7 +21,6 @@ export default function Navbar({ reportItem }: NavbarProps) {
   return (
     <div className="flex justify-between items-center">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-medium">CleanApp Report</h1>
         <p className="text-md text-gray-600">{title}</p>
         <p className="text-xs text-gray-500">
           {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
