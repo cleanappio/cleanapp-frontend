@@ -670,6 +670,8 @@ export default function GlobeView() {
           maxZoom={30}
           minZoom={1}
           antialias={true}
+          attributionControl={false}
+          logoPosition="bottom-right"
         ></Map>
       </main>
 
@@ -816,6 +818,27 @@ export default function GlobeView() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Bottom right logo */}
+      <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
+        <Link href={"https://stxn.io/"} target="_blank">
+          <div className="flex items-center justify-center gap-2">
+            <span>Powered by</span>
+            <span>
+              <Image
+                src={"/stxn.svg"}
+                alt={"STXN Logo"}
+                width={"24"}
+                height={"24"}
+                style={{ height: "14px", width: "auto" }}
+              />
+            </span>
+            <span className="underline underline-offset-4">
+              Smart Transactions
+            </span>
+          </div>
+        </Link>
       </div>
     </div>
   );
