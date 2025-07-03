@@ -65,7 +65,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto my-8">
-        <h1 className="text-2xl font-medium mb-4">Recent Reports</h1>
+        <h1 className="text-2xl font-medium mb-4 text-white">Recent Reports</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
@@ -79,7 +79,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto my-8">
-        <h1 className="text-2xl font-medium mb-4">Recent Reports</h1>
+        <h1 className="text-2xl font-medium mb-4 text-white">Recent Reports</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="text-center">
             <div className="text-red-400 text-4xl mb-2">⚠️</div>
@@ -104,7 +104,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
   return (
     <div className="max-w-7xl mx-auto my-8">
-      <h1 className="text-2xl font-medium mb-4">Recent Reports</h1>
+      <h1 className="text-2xl font-medium mb-4 text-white">Recent Reports</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {firstRow.map((item, index) => {
           const report = item.report;
@@ -276,7 +276,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-lg font-medium">Locations</h1>
+            <h1 className="text-lg font-medium text-white">Locations</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
@@ -319,7 +319,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-lg font-medium">Statistics</h1>
+            <h1 className="text-lg font-medium text-white">Statistics</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full p-4">
@@ -372,7 +372,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-lg font-medium">AI Insights</h1>
+            <h1 className="text-lg font-medium text-white">AI Insights</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-dashed border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 h-full">
