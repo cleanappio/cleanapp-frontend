@@ -482,6 +482,7 @@ export default function GlobeView() {
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
               setSelectedReport(latestReports[reportIndex]);
+              flyToReport(latestReports[reportIndex]);
               setIsCleanAppProOpen(true);
             }
           }
@@ -959,6 +960,19 @@ export default function GlobeView() {
     fetchLastReports();
   }, []);
 
+  // Add this helper inside GlobeView
+  const flyToReport = (report: LatestReport) => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    if (!map) return;
+    map.flyTo({
+      center: [report.report.longitude, report.report.latitude],
+      zoom: 2.5,
+      duration: 2000,
+      essential: true
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen relative">
       <main className="mainStyle">
@@ -1115,6 +1129,7 @@ export default function GlobeView() {
           onReportClick={(report) => {
             setSelectedReport(report);
             setIsCleanAppProOpen(true);
+            flyToReport(report);
           }}
           isModalActive={false}
           selectedReport={null}
@@ -1148,7 +1163,10 @@ export default function GlobeView() {
         onClose={() => setIsCleanAppProOpen(false)}
         reportItem={selectedReport}
         allReports={latestReports}
-        onReportChange={(report) => setSelectedReport(report)}
+        onReportChange={(report) => {
+          setSelectedReport(report);
+          flyToReport(report);
+        }}
       />
     </div>
   );
