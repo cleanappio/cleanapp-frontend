@@ -1,10 +1,15 @@
 echo "Building cleanapp frontend docker image..."
 
 OPT=""
+SSH_KEYFILE=""
 while [[ $# -gt 0 ]]; do
   case $1 in
     "-e"|"--env")
       OPT="$2"
+      shift 2
+      ;;
+    "--ssh-keyfile")
+      SSH_KEYFILE="$2"
       shift 2
       ;;
     *)
@@ -16,32 +21,32 @@ done
 
 # Choose the environment if not specified
 if [ -z "${OPT}" ]; then
-  PS3="Please choose the environment: "
-  options=("dev" "prod" "quit")
-  select OPT in "${options[@]}"
-  do
-    case ${OPT} in
-      "dev")
-          echo "Using dev environment"
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51ReIGOFW3SknKzLcSITZxoZi8fySW11iQNY1SAe1dpzVOcHS2U05GlMZ6aQCcSdxILX0r6cm8Lx6yz4U8TR8l6HH00ihXdefVs"
-          NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
-          NEXT_PUBLIC_LIVE_API_URL="https://devlive.cleanapp.io"
-          break
-          ;;
-      "prod")
-          echo "Using prod environment"
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51RaMSvF5CkX59Cnm7ZTuIIx0Fg1cQxqilIpOHippAYaVqFMDft3AESH5Ih8aPn4wUFL2VX3Ou9LvwCgqD5O0SDvF00a8ybMiUq"
-          NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
-          NEXT_PUBLIC_LIVE_API_URL="https://live.cleanapp.io"
-          break
-          ;;
-      "quit")
-          exit
-          ;;
-      *) echo "invalid option $REPLY";;
-    esac
-  done
+  echo "Usage: $0 -e|--env <dev|prod> [--ssh-keyfile <ssh_keyfile>]"
+  exit 1
 fi
+
+case ${OPT} in
+  "dev")
+      echo "Using dev environment"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51ReIGOFW3SknKzLcSITZxoZi8fySW11iQNY1SAe1dpzVOcHS2U05GlMZ6aQCcSdxILX0r6cm8Lx6yz4U8TR8l6HH00ihXdefVs"
+      NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
+      NEXT_PUBLIC_LIVE_API_URL="https://devlive.cleanapp.io"
+      TARGET_VM_IP="34.132.121.53"
+      break
+      ;;
+  "prod")
+      echo "Using prod environment"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51RaMSvF5CkX59Cnm7ZTuIIx0Fg1cQxqilIpOHippAYaVqFMDft3AESH5Ih8aPn4wUFL2VX3Ou9LvwCgqD5O0SDvF00a8ybMiUq"
+      NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
+      NEXT_PUBLIC_LIVE_API_URL="https://live.cleanapp.io"
+      TARGET_VM_IP="34.122.15.16"
+      break
+      ;;
+  *)
+    echo "Usage: $0 -e|--env <dev|prod> [--ssh-keyfile <ssh_keyfile>]"
+    exit 1
+    ;;
+esac
 
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiY2xlYW5hcHAiLCJhIjoiY21jM3Zsb2s4MDlsbjJqb2ZzZGtpOWZvYSJ9.YIy8EXQ9IFtmGs55z71-NQ
 
@@ -89,3 +94,10 @@ echo "Tagging Docker image as current ${OPT}..."
 gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
 
 test -f Dockerfile && rm Dockerfile
+
+if [ -n "${SSH_KEYFILE}" ]; then
+  SETUP_SCRIPT="https://raw.githubusercontent.com/cleanappio/cleanapp_back_end_v2/refs/heads/main/setup/setup.sh"
+  
+  # Copy deployment script on target VM and run it 
+  curl ${SETUP_SCRIPT} | ssh -i ${SSH_KEYFILE} deployer@${TARGET_VM_IP} "cat > deploy.sh && chmod +x deploy.sh && ./deploy.sh -e ${OPT}"
+fi
