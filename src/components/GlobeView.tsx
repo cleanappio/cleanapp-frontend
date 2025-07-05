@@ -142,7 +142,7 @@ export default function GlobeView() {
       try {
         mapRef.current.flyTo({
           center: [userLocation.longitude, userLocation.latitude],
-          zoom: 2.5,
+          zoom: mapRef.current.getMap()?.getZoom() || 2.5,
           duration: 2000
         });
       } catch (error) {
@@ -153,7 +153,7 @@ export default function GlobeView() {
         if (map) {
           map.flyTo({
             center: [userLocation.longitude, userLocation.latitude],
-            zoom: 2.5,
+            zoom: map.getZoom() || 2.5,
             duration: 2000,
             essential: true
           });
@@ -521,7 +521,7 @@ export default function GlobeView() {
     // Fly to the new report location
     map.flyTo({
       center: [report.longitude, report.latitude],
-      zoom: 2.5,
+      zoom: map.getZoom() || 2.5,
       duration: 2000,
       essential: true
     });
@@ -967,7 +967,7 @@ export default function GlobeView() {
     if (!map) return;
     map.flyTo({
       center: [report.report.longitude, report.report.latitude],
-      zoom: 2.5,
+      zoom: map.getZoom() || 2.5,
       duration: 2000,
       essential: true
     });
