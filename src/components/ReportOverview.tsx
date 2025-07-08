@@ -8,6 +8,9 @@ interface ReportOverviewProps {
   reportItem?: LatestReport | null;
 }
 
+// Check if embedded mode is enabled
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+
 const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -217,39 +220,41 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
             )}
 
             {/* Subscribe Button */}
-            <div className="flex justify-center pt-2">
-              <div className="relative">
-                <div
-                  className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
-                  style={{ animationDuration: "3s" }}
-                ></div>
-                <div
-                  className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
-                  style={{ animationDuration: "4s" }}
-                ></div>
-                <button
-                  className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-2 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
-                  onClick={() => router.push("/pricing")}
-                >
-                  <span className="flex items-center">
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 3l14 9-14 9V3z"
-                      ></path>
-                    </svg>
-                    Subscribe for Full Access
-                  </span>
-                </button>
+            {!isEmbeddedMode && (
+              <div className="flex justify-center pt-2">
+                <div className="relative">
+                  <div
+                    className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
+                    style={{ animationDuration: "3s" }}
+                  ></div>
+                  <div
+                    className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
+                    style={{ animationDuration: "4s" }}
+                  ></div>
+                  <button
+                    className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-2 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
+                    onClick={() => router.push("/pricing")}
+                  >
+                    <span className="flex items-center">
+                      <svg
+                        className="mr-2 h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 3l14 9-14 9V3z"
+                        ></path>
+                      </svg>
+                      Subscribe for Full Access
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -341,39 +346,41 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           )}
 
           {/* Subscribe Button - Desktop */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="relative">
-              <div
-                className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
-                style={{ animationDuration: "3s" }}
-              ></div>
-              <div
-                className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
-                style={{ animationDuration: "4s" }}
-              ></div>
-              <button
-                className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
-                onClick={() => router.push("/pricing")}
-              >
-                <span className="flex items-center">
-                  <svg
-                    className="mr-2 h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 3l14 9-14 9V3z"
-                    ></path>
-                  </svg>
-                  Subscribe for Full Access
-                </span>
-              </button>
+          {!isEmbeddedMode && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="relative">
+                <div
+                  className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
+                  style={{ animationDuration: "3s" }}
+                ></div>
+                <div
+                  className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
+                  style={{ animationDuration: "4s" }}
+                ></div>
+                <button
+                  className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
+                  onClick={() => router.push("/pricing")}
+                >
+                  <span className="flex items-center">
+                    <svg
+                      className="mr-2 h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 3l14 9-14 9V3z"
+                      ></path>
+                    </svg>
+                    Subscribe for Full Access
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Loading Overlay */}

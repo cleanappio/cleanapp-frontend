@@ -9,6 +9,9 @@ interface RecentReportsProps {
   reportItem?: LatestReport | null;
 }
 
+// Check if embedded mode is enabled
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+
 const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const [recentReports, setRecentReports] = useState<LatestReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,12 +183,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
-                <button
-                  className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
-                  onClick={() => router.push("/pricing")}
-                >
-                  Subscribe
-                </button>
+                {!isEmbeddedMode && (
+                  <button
+                    className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
+                    onClick={() => router.push("/pricing")}
+                  >
+                    Subscribe
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -260,12 +265,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               </div>
               {/* Blur overlay */}
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
-                <button
-                  className="mb-3 sm:mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
-                  onClick={() => router.push("/pricing")}
-                >
-                  Subscribe
-                </button>
+                {!isEmbeddedMode && (
+                  <button
+                    className="mb-3 sm:mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
+                    onClick={() => router.push("/pricing")}
+                  >
+                    Subscribe
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -395,12 +402,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   AI-Powered Recommendations
                 </li>
               </ul>
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-md transition-colors text-sm"
-                onClick={() => router.push("/pricing")}
-              >
-                Subscribe
-              </button>
+              {!isEmbeddedMode && (
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-md transition-colors text-sm"
+                  onClick={() => router.push("/pricing")}
+                >
+                  Subscribe
+                </button>
+              )}
             </div>
           </div>
         </div>

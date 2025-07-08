@@ -63,37 +63,51 @@ echo "Running docker build for version ${BUILD_VERSION}"
 
 set -e
 
-# Construct Dockerfile
-ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
-ESCAPED_NEXT_PUBLIC_LIVE_API_URL=$(echo ${NEXT_PUBLIC_LIVE_API_URL} | sed 's/\//\\\//g')
-cat Dockerfile.template | \
-sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
-sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
-sed "s/{{NEXT_PUBLIC_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_LIVE_API_URL}/" | \
-sed "s/{{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}/${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}/" \
- > Dockerfile
+# Build the full and embedded images
 
-CLOUD_REGION="us-central1"
-PROJECT_NAME="cleanup-mysql-v2"
-DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image"
-DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
+for MODE in "full" "embedded"; do
+  CLOUD_REGION="us-central1"
+  PROJECT_NAME="cleanup-mysql-v2"
+  if [ "${MODE}" == "full" ]; then
+    DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image"
+  else
+    DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image-embedded"
+  fi
+  DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
 
-CURRENT_PROJECT=$(gcloud config get project)
-echo ${CURRENT_PROJECT}
-if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
-  gcloud auth login
-  gcloud config set project ${PROJECT_NAME}
-fi
+  # Construct Dockerfile
+  ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_LIVE_API_URL=$(echo ${NEXT_PUBLIC_LIVE_API_URL} | sed 's/\//\\\//g')
+  if [ "${MODE}" == "full" ]; then
+    NEXT_PUBLIC_EMBEDDED_MODE="false"
+  else
+    NEXT_PUBLIC_EMBEDDED_MODE="true"
+  fi
+  cat Dockerfile.template | \
+  sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
+  sed "s/{{NEXT_PUBLIC_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_LIVE_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}/${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}/" | \
+  sed "s/{{NEXT_PUBLIC_EMBEDDED_MODE}}/${NEXT_PUBLIC_EMBEDDED_MODE}/" \
+  > Dockerfile
 
-echo "Building and pushing docker image..."
-gcloud builds submit \
-  --region=${CLOUD_REGION} \
-  --tag=${DOCKER_TAG}:${BUILD_VERSION}
+  CURRENT_PROJECT=$(gcloud config get project)
+  echo ${CURRENT_PROJECT}
+  if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
+    gcloud auth login
+    gcloud config set project ${PROJECT_NAME}
+  fi
 
-echo "Tagging Docker image as current ${OPT}..."
-gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
+  echo "Building and pushing docker image..."
+  gcloud builds submit \
+    --region=${CLOUD_REGION} \
+    --tag=${DOCKER_TAG}:${BUILD_VERSION}
 
-test -f Dockerfile && rm Dockerfile
+  echo "Tagging Docker image as current ${OPT}..."
+  gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
+
+  test -f Dockerfile && rm Dockerfile
+done
 
 if [ -n "${SSH_KEYFILE}" ]; then
   SETUP_SCRIPT="https://raw.githubusercontent.com/cleanappio/cleanapp_back_end_v2/refs/heads/main/setup/setup.sh"
