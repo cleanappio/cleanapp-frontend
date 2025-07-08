@@ -13,6 +13,9 @@ interface CleanAppProModalProps {
   onReportChange: (report: LatestReport) => void;
 }
 
+// Check if embedded mode is enabled
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+
 const CleanAppProModal: React.FC<CleanAppProModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -75,7 +78,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
               <div className="px-4 py-6">
                 <ReportOverview reportItem={reportItem} />
                 <div className="mt-6">
-                  <RecentReports reportItem={reportItem} />
+                  {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
                 </div>
               </div>
             </div>
@@ -95,7 +98,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
               {/* Content */}
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
                 <ReportOverview reportItem={reportItem} />
-                <RecentReports reportItem={reportItem} />
+                {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
               </div>
             </div>
 
