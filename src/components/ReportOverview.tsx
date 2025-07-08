@@ -69,9 +69,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
             Select a report from the map to view detailed analysis
           </p>
         </div>
-        <div className="relative h-96 bg-gray-100 rounded-b-md flex items-center justify-center">
+        <div className="relative min-h-[400px] sm:h-96 bg-gray-100 rounded-b-md flex items-center justify-center">
           <div className="text-center">
-            <div className="text-gray-400 text-6xl mb-4">📊</div>
+            <div className="text-gray-400 text-4xl sm:text-6xl mb-4">📊</div>
             <p className="text-gray-500">No report selected</p>
             <p className="text-sm text-gray-400 mt-2">
               Click on a report from the map to see detailed information
@@ -89,16 +89,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   return (
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
-        <h1 className="text-2xl font-semibold text-gray-800">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
           {analysis?.title || `Report ${report.seq}`}
         </h1>
       </div>
 
-      <div className="relative h-96">
+      <div className="relative min-h-[400px] sm:h-96">
         {error ? (
           <div className="w-full h-full bg-red-50 rounded-b-md flex items-center justify-center">
             <div className="text-center">
-              <div className="text-red-400 text-4xl mb-2">⚠️</div>
+              <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
               <p className="text-red-600 font-medium">Error loading report</p>
               <p className="text-sm text-red-500 mt-1">{error}</p>
             </div>
@@ -122,134 +122,269 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           </div>
         )}
 
-        {/* Left Panel - Report Details */}
-        <div className="absolute top-4 left-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
-          <div className="space-y-3">
-            {/* Location */}
-            <div>
-              <h3 className="font-semibold text-sm mb-1">Location</h3>
-              <a 
-                href={getGoogleMapsUrl(report.latitude, report.longitude)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-300 hover:text-blue-200 text-xs underline"
-              >
-                {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
-              </a>
+        {/* Mobile Layout - Content below image */}
+        <div className="sm:hidden">
+
+          {/* Content sections below image */}
+          <div className="p-4 space-y-4">
+            {/* Top section with report details */}
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <div className="space-y-3">
+                {/* Location and Time - Horizontal layout */}
+                <div className="flex gap-4">
+                  {/* Location */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Location</h3>
+                    <a 
+                      href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
+                    >
+                      {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+                    </a>
+                  </div>
+
+                  {/* Time */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Time</h3>
+                    <p className="text-sm text-gray-600">{formatTime(report.timestamp)}</p>
+                  </div>
+                </div>
+
+                {/* Litter Probability */}
+                {analysis?.litter_probability !== undefined && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Litter</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-300 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
+                          style={{ width: `${analysis.litter_probability * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {(analysis.litter_probability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hazard Probability */}
+                {analysis?.hazard_probability !== undefined && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Hazard</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-300 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
+                          style={{ width: `${analysis.hazard_probability * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {(analysis.hazard_probability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Severity Level */}
+                {analysis?.severity_level !== undefined && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Severity</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-300 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
+                          style={{ width: `${(analysis.severity_level) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {(analysis.severity_level*10).toFixed(0)}/10
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Time */}
-            <div>
-              <h3 className="font-semibold text-sm mb-1">Time</h3>
-              <p className="text-xs text-gray-300">{formatTime(report.timestamp)}</p>
+            {/* Bottom section with description */}
+            {analysis?.description && (
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <h3 className="font-semibold text-sm mb-2 text-gray-800">Description</h3>
+                <p className="text-sm leading-relaxed text-gray-700">{analysis.description}</p>
+              </div>
+            )}
+
+            {/* Subscribe Button */}
+            <div className="flex justify-center pt-2">
+              <div className="relative">
+                <div
+                  className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
+                  style={{ animationDuration: "3s" }}
+                ></div>
+                <div
+                  className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
+                  style={{ animationDuration: "4s" }}
+                ></div>
+                <button
+                  className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-2 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
+                  onClick={() => router.push("/pricing")}
+                >
+                  <span className="flex items-center">
+                    <svg
+                      className="mr-2 h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 3l14 9-14 9V3z"
+                      ></path>
+                    </svg>
+                    Subscribe for Full Access
+                  </span>
+                </button>
+              </div>
             </div>
-
-            {/* Litter Probability */}
-            {analysis?.litter_probability !== undefined && (
-              <div>
-                <h3 className="font-semibold text-sm mb-1">Litter</h3>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-700 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
-                      style={{ width: `${analysis.litter_probability * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-medium">
-                    {(analysis.litter_probability * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Hazard Probability */}
-            {analysis?.hazard_probability !== undefined && (
-              <div>
-                <h3 className="font-semibold text-sm mb-1">Hazard</h3>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-700 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
-                      style={{ width: `${analysis.hazard_probability * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-medium">
-                    {(analysis.hazard_probability * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Severity Level */}
-            {analysis?.severity_level !== undefined && (
-              <div>
-                <h3 className="font-semibold text-sm mb-1">Severity</h3>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-700 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
-                      style={{ width: `${(analysis.severity_level) * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-medium">
-                    {(analysis.severity_level*10).toFixed(0)}/10
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Bottom Panel - Description */}
-        {analysis?.description && (
-          <div className="absolute bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
-            <p className="text-xs leading-relaxed">{analysis.description}</p>
+        {/* Desktop Layout - Original positioning */}
+        <div className="hidden sm:block">
+          {/* Left Panel - Report Details */}
+          <div className="absolute top-4 left-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
+            <div className="space-y-3">
+              {/* Location */}
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Location</h3>
+                <a 
+                  href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 hover:text-blue-200 text-xs underline"
+                >
+                  {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+                </a>
+              </div>
+
+              {/* Time */}
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Time</h3>
+                <p className="text-xs text-gray-300">{formatTime(report.timestamp)}</p>
+              </div>
+
+              {/* Litter Probability */}
+              {analysis?.litter_probability !== undefined && (
+                <div>
+                  <h3 className="font-semibold text-sm mb-1">Litter</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
+                        style={{ width: `${analysis.litter_probability * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs font-medium">
+                      {(analysis.litter_probability * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Hazard Probability */}
+              {analysis?.hazard_probability !== undefined && (
+                <div>
+                  <h3 className="font-semibold text-sm mb-1">Hazard</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
+                        style={{ width: `${analysis.hazard_probability * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs font-medium">
+                      {(analysis.hazard_probability * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Severity Level */}
+              {analysis?.severity_level !== undefined && (
+                <div>
+                  <h3 className="font-semibold text-sm mb-1">Severity</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
+                        style={{ width: `${(analysis.severity_level) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs font-medium">
+                      {(analysis.severity_level*10).toFixed(0)}/10
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Right Bottom Panel - Description */}
+          {analysis?.description && (
+            <div className="absolute bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
+              <p className="text-xs leading-relaxed">{analysis.description}</p>
+            </div>
+          )}
+
+          {/* Subscribe Button - Desktop */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="relative">
+              <div
+                className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
+                style={{ animationDuration: "3s" }}
+              ></div>
+              <div
+                className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
+                style={{ animationDuration: "4s" }}
+              ></div>
+              <button
+                className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
+                onClick={() => router.push("/pricing")}
+              >
+                <span className="flex items-center">
+                  <svg
+                    className="mr-2 h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 3l14 9-14 9V3z"
+                    ></path>
+                  </svg>
+                  Subscribe for Full Access
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-b-md">
             <div className="text-white flex items-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
-              Loading full report...
+              <span className="text-sm sm:text-base">Loading full report...</span>
             </div>
           </div>
         )}
-
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="relative">
-            <div
-              className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
-              style={{ animationDuration: "3s" }}
-            ></div>
-            <div
-              className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
-              style={{ animationDuration: "4s" }}
-            ></div>
-            <button
-              className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10"
-              onClick={() => router.push("/pricing")}
-            >
-              <span className="flex items-center">
-                <svg
-                  className="mr-2 h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 3l14 9-14 9V3z"
-                  ></path>
-                </svg>
-                Subscribe for Full Access
-              </span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

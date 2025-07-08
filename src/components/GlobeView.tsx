@@ -37,10 +37,24 @@ export interface LatestReport {
   };
 }
 
+// Responsive hook for mobile detection
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   const router = useRouter();
+
+  const isMobile = useIsMobile();
 
   const [selectedTab, setSelectedTab] = useState<"physical" | "digital">(
     "physical"
@@ -1121,8 +1135,8 @@ export default function GlobeView() {
         </div>
       )}
 
-      {/* Latest Reports - only show when modal is not open */}
-      {!isCleanAppProOpen && (
+      {/* Latest Reports - only show when modal is not open and not on mobile */}
+      {!isCleanAppProOpen && !isMobile && (
         <LatestReports
           reports={latestReports}
           loading={reportsLoading}

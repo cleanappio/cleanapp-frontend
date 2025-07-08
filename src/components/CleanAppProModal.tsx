@@ -1,7 +1,7 @@
 import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { LatestReport } from "@/components/GlobeView";
 import { X } from "lucide-react";
 
@@ -21,6 +21,18 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   onReportChange
 }) => {
   const [isClosing, setIsClosing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleCloseModal = () => {
     setIsClosing(true);
@@ -47,30 +59,56 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
       
       {/* Modal content */}
       <div className={`fixed inset-0 z-50 transition-opacity duration-150 ${isClosing ? 'opacity-0' : 'opacity-100'}`} onClick={handleModalContentClick}>
-        <div className="fixed top-[0px] left-[50px] right-[50px] bottom-[0px] overflow-y-auto scrollbar-hide">
-          {/* Close button */}
-          <button
-            onClick={handleCloseModal}
-            className="fixed top-[20px] right-[20px] z-60 p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-          >
-            <X className="w-6 h-6" />
-          </button>
+        {/* Mobile Layout */}
+        {isMobile ? (
+          <div className="fixed inset-0 overflow-y-auto scrollbar-hide">
+            {/* Close button for mobile */}
+            <button
+              onClick={handleCloseModal}
+              className="fixed top-4 right-4 z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
-          {/* Content */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
-            <ReportOverview reportItem={reportItem} />
-            <RecentReports reportItem={reportItem} />
+            {/* Mobile content container with transparency */}
+            <div className="min-h-screen">
+              <div className="px-4 py-6">
+                <ReportOverview reportItem={reportItem} />
+                <div className="mt-6">
+                  <RecentReports reportItem={reportItem} />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Desktop Layout */
+          <>
+            <div className="fixed top-[0px] left-[50px] right-[50px] bottom-[0px] overflow-y-auto scrollbar-hide">
+              {/* Close button */}
+              <button
+                onClick={handleCloseModal}
+                className="fixed top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+              >
+                <X className="w-6 h-6" />
+              </button>
 
-        {/* Latest Reports in fixed position outside scrollable container */}
-        <LatestReports
-          reports={allReports}
-          loading={false}
-          onReportClick={onReportChange}
-          isModalActive={true}
-          selectedReport={reportItem}
-        />
+              {/* Content */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
+                <ReportOverview reportItem={reportItem} />
+                <RecentReports reportItem={reportItem} />
+              </div>
+            </div>
+
+            {/* Latest Reports in fixed position outside scrollable container - Hidden on mobile */}
+            <LatestReports
+              reports={allReports}
+              loading={false}
+              onReportClick={onReportChange}
+              isModalActive={true}
+              selectedReport={reportItem}
+            />
+          </>
+        )}
       </div>
     </>
   );
