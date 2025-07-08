@@ -519,6 +519,11 @@ export default function GlobeView() {
 
   // Handle new report from WebSocket
   const handleNewReport = (reportWithAnalysis: LatestReport) => {
+    // Skip new report handling in embedded mode
+    if (isEmbeddedMode) {
+      return;
+    }
+
     if (!mapRef.current) {
       console.error("mapRef not found");
       return;
@@ -909,6 +914,11 @@ export default function GlobeView() {
   }, [selectedTab]);
 
   useEffect(() => {
+    // Skip WebSocket connection in embedded mode
+    if (isEmbeddedMode) {
+      return;
+    }
+
     // Connect to the WebSocket endpoint
     const ws = new WebSocket(
       `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`
