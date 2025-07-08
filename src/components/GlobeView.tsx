@@ -49,6 +49,9 @@ function useIsMobile() {
   return isMobile;
 }
 
+// Check if embedded mode is enabled
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -1013,67 +1016,71 @@ export default function GlobeView() {
       </main>
 
       {/* Logo */}
-      <div className="absolute top-2 left-4 p-2">
-        <Link href="/" className="flex items-center">
-          <Image
-            src="/cleanapp-logo.png"
-            alt="CleanApp Logo"
-            width={200}
-            height={60}
-            className="h-12 w-auto"
-            priority
-          />
-        </Link>
-      </div>
+      {!isEmbeddedMode && (
+        <div className="absolute top-2 left-4 p-2">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/cleanapp-logo.png"
+              alt="CleanApp Logo"
+              width={200}
+              height={60}
+              className="h-12 w-auto"
+              priority
+            />
+          </Link>
+        </div>
+      )}
 
       {/* Right side menu */}
-      <div className="absolute top-4 right-4 flex flex-col items-end">
-        <button
-          className="p-3 bg-gray-800 rounded-md border border-gray-700"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <FiMenu className="text-gray-300" size={24} />
-        </button>
+      {!isEmbeddedMode && (
+        <div className="absolute top-4 right-4 flex flex-col items-end">
+          <button
+            className="p-3 bg-gray-800 rounded-md border border-gray-700"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <FiMenu className="text-gray-300" size={24} />
+          </button>
 
-        <div
-          ref={menuRef}
-          className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
-            isMenuOpen ? "block" : "hidden"
-          }`}
-        >
-          {[
-            {
-              label: "Install Android",
-              link: "https://play.google.com/store/apps/details/CleanApp?id=com.cleanapp&hl=ln",
-            },
-            {
-              label: "Install iOS",
-              link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
-            },
-            { label: "Subscribe", link: "/pricing" },
-            {
-              label: "CleanAppMap",
-              link: "https://cleanappmap.replit.app",
-            },
-            {
-              label: "CleanAppGPT",
-              link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
-            },
-            { label: "STXN", link: "https://www.stxn.io" },
-          ].map((item) => {
-            return (
-              <Link
-                key={item.label}
-                href={item.link}
-                className="text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md"
-                target="_blank"
-              >
-                {item.label.toUpperCase()}
-              </Link>
-            );
-          })}
+          <div
+            ref={menuRef}
+            className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
+              isMenuOpen ? "block" : "hidden"
+            }`}
+          >
+            {[
+              {
+                label: "Install Android",
+                link: "https://play.google.com/store/apps/details/CleanApp?id=com.cleanapp&hl=ln",
+              },
+              {
+                label: "Install iOS",
+                link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
+              },
+              { label: "Subscribe", link: "/pricing" },
+              {
+                label: "CleanAppMap",
+                link: "https://cleanappmap.replit.app",
+              },
+              {
+                label: "CleanAppGPT",
+                link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
+              },
+              { label: "STXN", link: "https://www.stxn.io" },
+            ].map((item) => {
+              return (
+                <Link
+                  key={item.label}
+                  href={item.link}
+                  className="text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md"
+                  target="_blank"
+                >
+                  {item.label.toUpperCase()}
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Center menu */}
       <div className="absolute left-1/2 -translate-x-1/2 p-2 mt-2">
@@ -1151,25 +1158,27 @@ export default function GlobeView() {
       )}
 
       {/* Bottom right logo */}
-      <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
-        <Link href={"https://stxn.io/"} target="_blank">
-          <div className="flex items-center justify-center gap-2">
-            <span>Powered by</span>
-            <span>
-              <Image
-                src={"/stxn.svg"}
-                alt={"STXN Logo"}
-                width={"24"}
-                height={"24"}
-                style={{ height: "14px", width: "auto" }}
-              />
-            </span>
-            <span className="underline underline-offset-4">
-              Smart Transactions
-            </span>
-          </div>
-        </Link>
-      </div>
+      {!isEmbeddedMode && (
+        <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
+          <Link href={"https://stxn.io/"} target="_blank">
+            <div className="flex items-center justify-center gap-2">
+              <span>Powered by</span>
+              <span>
+                <Image
+                  src={"/stxn.svg"}
+                  alt={"STXN Logo"}
+                  width={"24"}
+                  height={"24"}
+                  style={{ height: "14px", width: "auto" }}
+                />
+              </span>
+              <span className="underline underline-offset-4">
+                Smart Transactions
+              </span>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* CleanApp Pro Modal */}
       <CleanAppProModal
