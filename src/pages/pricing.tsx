@@ -261,15 +261,14 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <div className='py-12 px-4 sm:px-6 lg:px-8'>
-        <Link href='/'>
-          <div className='fixed top-24 left-8 bg-green-100/50 rounded-full text-green-600 font-medium px-6 py-2 border border-green-400 flex items-center gap-2 z-20'>
-            <FaArrowLeftLong className='w-4 h-4' />
-            Back to Map
-          </div>
-        </Link>
-
+            <div className='py-12 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl mx-auto'>
+          <Link href='/'>
+            <button className='flex items-center text-gray-600 hover:text-gray-900 mb-8'>
+              <FaArrowLeftLong className='w-4 h-4 mr-2' />
+              Back to Map
+            </button>
+          </Link>
           {/* Header */}
           <div className='text-center mb-12'>
             <div className='flex justify-center mb-4'>
