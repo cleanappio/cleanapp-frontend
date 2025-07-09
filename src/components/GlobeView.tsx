@@ -519,11 +519,6 @@ export default function GlobeView() {
 
   // Handle new report from WebSocket
   const handleNewReport = (reportWithAnalysis: LatestReport) => {
-    // Skip new report handling in embedded mode
-    if (isEmbeddedMode) {
-      return;
-    }
-
     if (!mapRef.current) {
       console.error("mapRef not found");
       return;
@@ -541,13 +536,14 @@ export default function GlobeView() {
     const analysis = reportWithAnalysis.analysis;
 
     // Fly to the new report location
-    map.flyTo({
-      center: [report.longitude, report.latitude],
-      zoom: map.getZoom() || 2.5,
-      duration: 2000,
-      essential: true
-    });
-
+    if (!isEmbeddedMode) {
+      map.flyTo({
+        center: [report.longitude, report.latitude],
+        zoom: map.getZoom() || 2.5,
+        duration: 2000,
+        essential: true
+      });
+    }
     // Create a temporary animated pin for the new report
     const animatedPinId = `animated-pin-${report.seq}`;
     
@@ -914,11 +910,6 @@ export default function GlobeView() {
   }, [selectedTab]);
 
   useEffect(() => {
-    // Skip WebSocket connection in embedded mode
-    if (isEmbeddedMode) {
-      return;
-    }
-
     // Connect to the WebSocket endpoint
     const ws = new WebSocket(
       `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`
