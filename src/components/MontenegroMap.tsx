@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
+import L from 'leaflet';
 import { getColorByValue } from '@/lib/util';
+
+// ReportStats structure
+interface ReportStats {
+  reportsNumber: number;
+  overallRate: number;
+  averageSeverity: number;
+}
 
 // Custom hook to handle map center changes
 function MapController({ center }: { center: [number, number] }) {
@@ -49,21 +57,21 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [isClient, setIsClient] = useState(false);
   const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
   const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
-  const municipalitiesRate = useRef<Map<number, number>>(new Map());
+  const municipalitiesRate = useRef<Map<number, ReportStats>>(new Map());
 
   function getMunicipalityColor(osmId: number): string {
     if (!municipalitiesRate.current) {
       return '#808080';
     }
-    const rate = municipalitiesRate.current.get(osmId);
+    const stats = municipalitiesRate.current.get(osmId);
     
-    if (rate === undefined || rate === null) {
-      // Return a default gray color if no rate is found
+    if (stats === undefined || stats === null) {
+      // Return a default gray color if no stats found
       return '#808080';
     }
     
-    // Use the getColorByValue function to get the appropriate color
-    return getColorByValue(rate);
+    // Use the getColorByValue function to get the appropriate color based on overallRate
+    return getColorByValue(stats.overallRate);
   }
   
   useEffect(() => {
@@ -130,9 +138,13 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         // DEBUG
         data.areas.forEach((a: any) => {
           console.log('osmId', a.osm_id);
-          const v = Math.random();
-          console.log('v', v);
-          municipalitiesRate.current.set(a.osm_id, v);
+          const stats: ReportStats = {
+            reportsNumber: Math.floor(Math.random() * 100) + 1,
+            overallRate: Math.random(),
+            averageSeverity: Math.random()
+          };
+          console.log('stats', stats);
+          municipalitiesRate.current.set(a.osm_id, stats);
         });
       } catch (error) {
         console.error('Error fetching polygons:', error);
@@ -179,6 +191,32 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             opacity: 0.8,
             fillColor: getMunicipalityColor(a.osm_id),
             fillOpacity: 0.7
+          }}
+          eventHandlers={{
+            click: (e) => {
+              const stats = municipalitiesRate.current.get(a.osm_id);
+              if (stats) {
+                const popup = L.popup()
+                  .setLatLng(e.latlng)
+                  .setContent(`
+                    <div style="min-width: 200px; padding: 10px;">
+                      <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: bold;">
+                        Municipality Stats
+                      </h3>
+                      <div style="margin-bottom: 8px;">
+                        <strong>Reports:</strong> ${stats.reportsNumber}
+                      </div>
+                      <div style="margin-bottom: 8px;">
+                        <strong>Average Severity:</strong> ${stats.averageSeverity.toFixed(3)}
+                      </div>
+                      <div style="margin-bottom: 8px;">
+                        <strong>Overall Rate:</strong> ${stats.overallRate.toFixed(3)}
+                      </div>
+                    </div>
+                  `)
+                  .openOn(e.target._map);
+              }
+            }
           }}
         />
       ))}
