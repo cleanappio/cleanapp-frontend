@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 
@@ -15,58 +15,6 @@ function MapController({ center }: { center: [number, number] }) {
   
   return null;
 }
-
-// Sample data for Montenegro
-const montenegroData = [
-  {
-    id: 1,
-    name: "Podgorica",
-    position: [42.4304, 19.2594] as [number, number],
-    type: "capital",
-    population: "187085",
-    description: "Capital and largest city of Montenegro"
-  },
-  {
-    id: 2,
-    name: "Kotor",
-    position: [42.4242, 18.7719] as [number, number],
-    type: "cultural",
-    population: "22124",
-    description: "UNESCO World Heritage site with medieval architecture"
-  },
-  {
-    id: 3,
-    name: "Budva",
-    position: [42.2778, 18.8375] as [number, number],
-    type: "tourism",
-    population: "19218",
-    description: "Popular coastal resort town"
-  },
-  {
-    id: 4,
-    name: "Cetinje",
-    position: [42.3908, 18.9144] as [number, number],
-    type: "historical",
-    population: "13872",
-    description: "Historical capital and cultural center"
-  },
-  {
-    id: 5,
-    name: "Bar",
-    position: [42.0964, 19.0897] as [number, number],
-    type: "port",
-    population: "42048",
-    description: "Main seaport of Montenegro"
-  },
-  {
-    id: 6,
-    name: "Nikšić",
-    position: [42.7731, 18.9445] as [number, number],
-    type: "industrial",
-    population: "56970",
-    description: "Second largest city and industrial center"
-  }
-];
 
 // Custom marker icon
 const createCustomIcon = (type: string) => {
@@ -94,15 +42,82 @@ const createCustomIcon = (type: string) => {
 
 interface MontenegroMapProps {
   mapCenter: [number, number];
-  onCitySelect: (city: typeof montenegroData[0]) => void;
 }
 
-export default function MontenegroMap({ mapCenter, onCitySelect }: MontenegroMapProps) {
+export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [isClient, setIsClient] = useState(false);
-
+  const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
+  const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Fetch Montenegro country polygon
+  useEffect(() => {
+    const fetchCountryPolygons = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_MONTENEGRO_API_URL;
+        if (!apiUrl) {
+          console.error('NEXT_PUBLIC_MONTENEGRO_API_URL not configured');
+          return;
+        }
+
+        const response = await fetch(`${apiUrl}/areas?admin_level=2`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fetched polygons:', data);
+        
+        if (data.areas && Array.isArray(data.areas)) {
+          setCountryPolygons(data.areas.map((a: any) => (a.area)));
+        } else {
+          console.warn('No areas found in response or invalid format');
+        }
+      } catch (error) {
+        console.error('Error fetching polygons:', error);
+      }
+    };
+
+    if (isClient) {
+      fetchCountryPolygons();
+    }
+  }, [isClient]);
+
+  // Fetch Montenegro municipalities polygons
+  useEffect(() => {
+    const fetchMunicipalitiesPolygons = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_MONTENEGRO_API_URL;
+        if (!apiUrl) {
+          console.error('NEXT_PUBLIC_MONTENEGRO_API_URL not configured');
+          return;
+        }
+
+        const response = await fetch(`${apiUrl}/areas?admin_level=6`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fetched polygons:', data);
+        
+        if (data.areas && Array.isArray(data.areas)) {
+          setMunicipalitiesPolygons(data.areas.map((a: any) => (a.area)));
+        } else {
+          console.warn('No areas found in response or invalid format');
+        }
+      } catch (error) {
+        console.error('Error fetching polygons:', error);
+      }
+    };
+
+    if (isClient) {
+      fetchMunicipalitiesPolygons();
+    }
+  }, [isClient]);
 
   if (!isClient) {
     return (
@@ -125,50 +140,38 @@ export default function MontenegroMap({ mapCenter, onCitySelect }: MontenegroMap
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       
-      {/* Montenegro boundary highlight */}
-      <Circle
-        center={[42.7087, 19.3744]}
-        radius={50000}
-        pathOptions={{
-          color: '#3b82f6',
-          fillColor: '#3b82f6',
-          fillOpacity: 0.1,
-          weight: 2
-        }}
-      />
-
-      {/* City markers */}
-      {montenegroData.map((city) => (
-        <Marker
-          key={city.id}
-          position={city.position}
-          icon={createCustomIcon(city.type)}
-          eventHandlers={{
-            click: () => {
-              onCitySelect(city);
-            }
+      {/* Montenegro municipalities polygons */}
+      {municipalitiesPolygons.map((polygon, index) => (
+        <GeoJSON
+          key={`polygon-${index}`}
+          data={polygon}
+          style={{
+            color: '#555555',
+            weight: 3,
+            opacity: 0.8,
+            fillOpacity: 0
           }}
-        >
-          <Popup>
-            <div className="p-2">
-              <h3 className="font-semibold text-lg">{city.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{city.description}</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="bg-gray-100 px-2 py-1 rounded">
-                  {city.type}
-                </span>
-                <span className="text-gray-500">
-                  Population: {city.population}
-                </span>
-              </div>
-            </div>
-          </Popup>
-        </Marker>
+        />
       ))}
-
+      
+      {/* Montenegro country polygons */}
+      {countryPolygons.map((polygon, index) => (
+        <GeoJSON
+          key={`polygon-${index}`}
+          data={polygon}
+          style={{
+            color: '#555555',
+            weight: 5,
+            opacity: 0.8,
+            fillColor: 'lightgreen',
+            fillOpacity: 0.3
+          }}
+        />
+      ))}
+      
       <MapController center={mapCenter} />
     </MapContainer>
   );
