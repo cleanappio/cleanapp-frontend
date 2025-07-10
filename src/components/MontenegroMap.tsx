@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
+import { getColorByValue } from '@/lib/util';
 
 // Custom hook to handle map center changes
 function MapController({ center }: { center: [number, number] }) {
@@ -48,6 +49,22 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [isClient, setIsClient] = useState(false);
   const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
   const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
+  const municipalitiesRate = useRef<Map<number, number>>(new Map());
+
+  function getMunicipalityColor(osmId: number): string {
+    if (!municipalitiesRate.current) {
+      return '#808080';
+    }
+    const rate = municipalitiesRate.current.get(osmId);
+    
+    if (rate === undefined || rate === null) {
+      // Return a default gray color if no rate is found
+      return '#808080';
+    }
+    
+    // Use the getColorByValue function to get the appropriate color
+    return getColorByValue(rate);
+  }
   
   useEffect(() => {
     setIsClient(true);
@@ -105,10 +122,18 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         console.log('Fetched polygons:', data);
         
         if (data.areas && Array.isArray(data.areas)) {
-          setMunicipalitiesPolygons(data.areas.map((a: any) => (a.area)));
+          setMunicipalitiesPolygons(data.areas);
         } else {
           console.warn('No areas found in response or invalid format');
         }
+
+        // DEBUG
+        data.areas.forEach((a: any) => {
+          console.log('osmId', a.osm_id);
+          const v = Math.random();
+          console.log('v', v);
+          municipalitiesRate.current.set(a.osm_id, v);
+        });
       } catch (error) {
         console.error('Error fetching polygons:', error);
       }
@@ -144,15 +169,16 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       />
       
       {/* Montenegro municipalities polygons */}
-      {municipalitiesPolygons.map((polygon, index) => (
+      {municipalitiesPolygons.map((a, index) => (
         <GeoJSON
           key={`polygon-${index}`}
-          data={polygon}
+          data={a.area}
           style={{
             color: '#555555',
             weight: 3,
             opacity: 0.8,
-            fillOpacity: 0
+            fillColor: getMunicipalityColor(a.osm_id),
+            fillOpacity: 0.7
           }}
         />
       ))}
@@ -166,8 +192,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             color: '#555555',
             weight: 5,
             opacity: 0.8,
-            fillColor: 'lightgreen',
-            fillOpacity: 0.3
+            fillOpacity: 0
           }}
         />
       ))}
