@@ -6,6 +6,8 @@ import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 import L from 'leaflet';
 import { getColorByValue } from '@/lib/util';
+import LatestReports from './LatestReports';
+import MontenegroReportOverview from './MontenegroReportOverview';
 
 // ReportStats structure
 interface ReportStats {
@@ -15,13 +17,29 @@ interface ReportStats {
 }
 
 // Report interface from GlobeView
-interface Report {
-  seq: number;
-  timestamp: string;
-  id: string;
-  latitude: number;
-  longitude: number;
-  image?: number[] | string | null;
+export interface Report {
+  report: {
+    seq: number;
+    timestamp: string;
+    id: string;
+    latitude: number;
+    longitude: number;
+    image?: number[] | string | null; // Report image as bytes array, URL string, or null
+  };
+  analysis: {
+    seq: number;
+    source: string;
+    analysis_text: string;
+    analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
+    title: string;
+    description: string;
+    litter_probability: number;
+    hazard_probability: number;
+    severity_level: number;
+    summary: string;
+    created_at: string;
+    updated_at: string;
+  };
 }
 
 // Custom hook to handle map center changes
@@ -46,7 +64,15 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [viewMode, setViewMode] = useState<'Stats' | 'Reports'>('Stats');
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const municipalitiesRate = useRef<Map<number, ReportStats>>(new Map());
+
+  // Handle report click from LatestReports
+  const handleReportClick = (report: Report) => {
+    setSelectedReport(report);
+    setIsCleanAppProOpen(true);
+  };
 
   function getMunicipalityColor(osmId: number): string {
     if (!municipalitiesRate.current) {
@@ -316,7 +342,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         {/* Individual report markers - only show in Reports mode when reports are loaded */}
         {viewMode === 'Reports' && reports.map((report) => {
           // Calculate severity-based styling similar to GlobeView
-          const severity = 0.5; // Default severity, you might want to get this from report data
+          const severity = report.analysis?.severity_level || 0.5; // Use actual severity from analysis
           const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
           
           // Color based on severity (similar to GlobeView)
@@ -330,8 +356,8 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
 
           return (
             <CircleMarker
-              key={report.seq}
-              center={[report.latitude, report.longitude]}
+              key={report.report.seq}
+              center={[report.report.latitude, report.report.longitude]}
               radius={baseRadius}
               pathOptions={{
                 color: color,
@@ -342,30 +368,11 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               }}
               eventHandlers={{
                 click: () => {
-                  console.log('Report clicked:', report);
+                  setSelectedReport(report);
+                  setIsCleanAppProOpen(true);
                 }
               }}
-            >
-              <Popup>
-                <div style={{ minWidth: '200px', padding: '10px' }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '16px', fontWeight: 'bold' }}>
-                    Report #{report.seq}
-                  </h3>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>ID:</strong> {report.id}
-                  </div>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Timestamp:</strong> {new Date(report.timestamp).toLocaleString()}
-                  </div>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Location:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
-                  </div>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Severity:</strong> {severity.toFixed(2)}
-                  </div>
-                </div>
-              </Popup>
-            </CircleMarker>
+            />
           );
         })}
         
@@ -385,6 +392,27 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         
         <MapController center={mapCenter} />
       </MapContainer>
+
+      {/* Latest Reports - only show in Reports mode */}
+      {viewMode === 'Reports' && (
+        <div className="absolute left-4 bottom-8 z-[1000] w-80 h-96">
+          <LatestReports
+            reports={reports}
+            loading={reportsLoading}
+            onReportClick={handleReportClick}
+            isModalActive={false}
+            selectedReport={selectedReport}
+          />
+        </div>
+      )}
+
+      {/* Montenegro Report Overview */}
+      {isCleanAppProOpen && selectedReport && (
+        <MontenegroReportOverview
+          reportItem={selectedReport}
+          onClose={() => setIsCleanAppProOpen(false)}
+        />
+      )}
     </div>
   );
-} 
+}
