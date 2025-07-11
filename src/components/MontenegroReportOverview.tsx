@@ -168,14 +168,38 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       tempContainer.style.fontFamily = 'Arial, sans-serif';
       document.body.appendChild(tempContainer);
 
-      // Add title with reduced height
+      // Add logo and title container
+      const headerContainer = document.createElement('div');
+      headerContainer.style.display = 'flex';
+      headerContainer.style.alignItems = 'center';
+      headerContainer.style.gap = '15px';
+      headerContainer.style.marginBottom = '10px';
+      tempContainer.appendChild(headerContainer);
+
+      // Add logo
+      const logo = document.createElement('img');
+      logo.src = '/cleanapp-logo.png';
+      logo.style.height = '40px';
+      logo.style.width = 'auto';
+      logo.style.display = 'block';
+      logo.style.verticalAlign = 'middle';
+      headerContainer.appendChild(logo);
+
+      // Add title
       const title = document.createElement('h1');
       title.textContent = reportItem.analysis?.title || `Report #${reportItem.report.seq}`;
       title.style.fontSize = '20px';
       title.style.fontWeight = 'bold';
-      title.style.marginBottom = '10px';
       title.style.color = '#1f2937';
-      tempContainer.appendChild(title);
+      title.style.marginLeft = '10px';
+      title.style.marginBottom = '10px';
+      title.style.lineHeight = '48px'; // Match logo height for perfect alignment
+      title.style.display = 'flex';
+      title.style.alignItems = 'center';
+      title.style.justifyContent = 'center';
+      title.style.verticalAlign = 'middle';
+      title.style.textAlign = 'center';
+      headerContainer.appendChild(title);
 
       // Add timestamp
       const timestamp = document.createElement('p');
@@ -307,7 +331,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         severityDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <span style="font-size: 11px; color: #374151;">Severity Level</span>
-            <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.severity_level * 100).toFixed(0)}%</span>
+            <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.severity_level * 10).toFixed(0)}/10</span>
           </div>
           <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
             <div style="width: ${reportItem.analysis.severity_level * 100}%; height: 100%; background-color: ${getGaugeColor(reportItem.analysis.severity_level)}; border-radius: 3px;"></div>
@@ -322,7 +346,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           litterDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
               <span style="font-size: 11px; color: #374151;">Litter Probability</span>
-              <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.litter_probability * 100).toFixed(0)}%</span>
+              <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.litter_probability * 100).toFixed(0)}</span>
             </div>
             <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
               <div style="width: ${reportItem.analysis.litter_probability * 100}%; height: 100%; background-color: ${getGaugeColor(reportItem.analysis.litter_probability)}; border-radius: 3px;"></div>
@@ -483,6 +507,11 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 h-16 bg-gray-50 border-b border-gray-200 flex items-center justify-between px-6 z-10">
         <div className="flex items-center space-x-4">
+          <img 
+            src="/cleanapp-logo.png" 
+            alt="CleanApp Logo" 
+            className="h-8 w-auto"
+          />
           <h1 className="text-xl font-semibold text-gray-900">
             {analysis?.title || `Report #${report.seq}`}
           </h1>
@@ -491,6 +520,15 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           </span>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() => {
+              // TODO: Implement mark as fixed functionality
+              console.log('Mark as fixed clicked for report:', reportItem?.report?.seq);
+            }}
+            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+          >
+            Mark as fixed
+          </button>
           <button
             onClick={exportToPDF}
             className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
@@ -594,7 +632,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-gray-700">Severity Level</span>
-                    <span className="text-sm font-semibold">{(analysis.severity_level * 100).toFixed(0)}%</span>
+                    <span className="text-sm font-semibold">{(analysis.severity_level * 10).toFixed(0)}/10</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
