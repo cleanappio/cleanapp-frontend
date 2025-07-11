@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 import L from 'leaflet';
@@ -317,7 +317,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         {viewMode === 'Reports' && reports.map((report) => {
           // Calculate severity-based styling similar to GlobeView
           const severity = 0.5; // Default severity, you might want to get this from report data
-          const baseRadius = severity >= 0.3 ? 13.2 : 6.6;
+          const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
           
           // Color based on severity (similar to GlobeView)
           let color = '#10b981'; // green for low severity
@@ -329,7 +329,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
           }
 
           return (
-            <Circle
+            <CircleMarker
               key={report.seq}
               center={[report.latitude, report.longitude]}
               radius={baseRadius}
@@ -365,7 +365,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
                   </div>
                 </div>
               </Popup>
-            </Circle>
+            </CircleMarker>
           );
         })}
         
