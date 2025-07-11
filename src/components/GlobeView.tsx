@@ -492,6 +492,15 @@ export default function GlobeView() {
           });
         }
 
+        // Show/hide report pins based on selectedTab
+        if (map.getLayer('report-pins')) {
+          if (selectedTab === 'physical') {
+            map.setLayoutProperty('report-pins', 'visibility', 'visible');
+          } else {
+            map.setLayoutProperty('report-pins', 'visibility', 'none');
+          }
+        }
+
         // Add click handler for report pins
         map.on('click', 'report-pins', (e) => {
           if (e.features && e.features[0]) {
@@ -515,7 +524,7 @@ export default function GlobeView() {
         });
       }
     }
-  }, [mapLoaded, latestReports]);
+  }, [mapLoaded, latestReports, selectedTab]);
 
   // Handle new report from WebSocket
   const handleNewReport = (reportWithAnalysis: LatestReport) => {

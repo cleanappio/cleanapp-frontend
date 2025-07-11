@@ -201,7 +201,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
                   .setContent(`
                     <div style="min-width: 200px; padding: 10px;">
                       <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: bold;">
-                        Municipality Stats
+                        ${a.name}
                       </h3>
                       <div style="margin-bottom: 8px;">
                         <strong>Reports:</strong> ${stats.reportsNumber}
