@@ -11,6 +11,7 @@ interface CleanAppProModalProps {
   reportItem: LatestReport | null;
   allReports: LatestReport[];
   onReportChange: (report: LatestReport) => void;
+  showLatestReports?: boolean;
 }
 
 // Check if embedded mode is enabled
@@ -21,7 +22,8 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   onClose, 
   reportItem,
   allReports,
-  onReportChange
+  onReportChange,
+  showLatestReports = true
 }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -103,13 +105,15 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             </div>
 
             {/* Latest Reports in fixed position outside scrollable container - Hidden on mobile */}
-            <LatestReports
-              reports={allReports}
-              loading={false}
-              onReportClick={onReportChange}
-              isModalActive={true}
-              selectedReport={reportItem}
-            />
+            {showLatestReports && (
+              <LatestReports
+                reports={allReports}
+                loading={false}
+                onReportClick={onReportChange}
+                isModalActive={true}
+                selectedReport={reportItem}
+              />
+            )}
           </>
         )}
       </div>
