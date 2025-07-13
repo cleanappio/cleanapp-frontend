@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { authApiClient } from './auth-api-client';
 
 // ==================== INTERFACES ====================
 
@@ -9,6 +10,13 @@ export interface Customer {
   area_ids?: number[];
   created_at: string;
   updated_at: string;
+}
+
+export interface UpdateCustomerRequest {
+  name?: string;
+  email?: string;
+  area_ids?: number[];
+  password?: string;
 }
 
 export interface Subscription {
@@ -95,37 +103,6 @@ export interface PricesResponse {
   prices: Price[];
 }
 
-// OAuth interfaces (for future backend implementation)
-export interface OAuthLoginRequest {
-  provider: 'google' | 'facebook' | 'apple';
-  id_token?: string;
-  access_token?: string;
-  authorization_code?: string;
-  user_info?: {
-    email?: string;
-    name?: string;
-    picture?: string;
-  };
-}
-
-export interface OAuthUrlResponse {
-  url: string;
-  state?: string;
-}
-
-// Request interfaces
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface SignupRequest {
-  name: string;
-  email: string;
-  password: string;
-  area_ids?: number[];
-}
-
 export interface CreateSubscriptionRequest {
   plan_type: 'base' | 'advanced' | 'exclusive';
   billing_cycle: 'monthly' | 'annual';
@@ -141,25 +118,17 @@ export interface UpdatePaymentMethodRequest {
   is_default: boolean;
 }
 
-export interface UpdateCustomerRequest {
-  name?: string;
-  email?: string;
-  area_ids?: number[];
-  password?: string;
-}
-
 // ==================== API CLIENT ====================
 
 export class ApiClient {
   private axios: AxiosInstance;
-  private token: string | null = null;
 
   constructor() {
     if (!process.env.NEXT_PUBLIC_API_URL) {
       throw 'NEXT_PUBLIC_API_URL is not set.';
     }
     this.axios = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
+      baseURL: process.env.NEXT_PUBLIC_API_URL,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -170,8 +139,9 @@ export class ApiClient {
     // Request interceptor
     this.axios.interceptors.request.use(
       (config) => {
-        if (this.token) {
-          config.headers.Authorization = `Bearer ${this.token}`;
+        const token = authApiClient.getAuthToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
       },
@@ -186,7 +156,7 @@ export class ApiClient {
       (error) => {
         if (error.response?.status === 401) {
           // Clear token on unauthorized
-          this.setAuthToken(null);
+          authApiClient.setAuthToken(null);
           // Only redirect if in browser context and not on login or checkout pages
           if (typeof window !== 'undefined' && 
               window.location.pathname !== '/login' && 
@@ -199,94 +169,7 @@ export class ApiClient {
     );
   }
 
-  // ==================== AUTH MANAGEMENT ====================
-
-  setAuthToken(token: string | null) {
-    this.token = token;
-    if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('auth_token', token);
-      } else {
-        localStorage.removeItem('auth_token');
-      }
-    }
-  }
-
-  getAuthToken(): string | null {
-    return this.token;
-  }
-
-  loadTokenFromStorage(): void {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        this.token = token;
-      }
-    }
-  }
-
-  // ==================== AUTHENTICATION ENDPOINTS ====================
-
-  async login(email: string, password: string): Promise<TokenResponse> {
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/login', {
-      email,
-      password
-    });
-    this.setAuthToken(data.token);
-    return data;
-  }
-
-  async logout(): Promise<void> {
-    try {
-      await this.axios.post('/api/v3/auth/logout');
-    } finally {
-      this.setAuthToken(null);
-    }
-  }
-
-  async refreshToken(refreshToken?: string): Promise<TokenResponse> {
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/refresh', {
-      refresh_token: refreshToken || this.getRefreshToken()
-    });
-    this.setAuthToken(data.token);
-    return data;
-  }
-
-  private getRefreshToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('refresh_token');
-    }
-    return null;
-  }
-
-  // OAuth methods (for when backend implements them)
-  async loginWithOAuth(provider: 'google' | 'facebook' | 'apple', credential: string): Promise<TokenResponse> {
-    const payload: OAuthLoginRequest = {
-      provider,
-      ...(provider === 'apple' ? { authorization_code: credential } : { id_token: credential })
-    };
-    
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/oauth', payload);
-    this.setAuthToken(data.token);
-    return data;
-  }
-
-  async getOAuthUrl(provider: 'google' | 'facebook' | 'apple'): Promise<OAuthUrlResponse> {
-    const { data } = await this.axios.get<OAuthUrlResponse>(`/api/v3/auth/oauth/${provider}`);
-    return data;
-  }
-
   // ==================== CUSTOMER ENDPOINTS ====================
-
-  async signup(name: string, email: string, password: string, area_ids: number[] = [1]): Promise<Customer> {
-    const { data } = await this.axios.post<Customer>('/api/v3/customers', {
-      name,
-      email,
-      password,
-      area_ids
-    });
-    return data;
-  }
 
   async getCurrentCustomer(): Promise<Customer> {
     const { data } = await this.axios.get<Customer>('/api/v3/customers/me');
@@ -300,7 +183,7 @@ export class ApiClient {
 
   async deleteCustomer(): Promise<MessageResponse> {
     const { data } = await this.axios.delete<MessageResponse>('/api/v3/customers/me');
-    this.setAuthToken(null);
+    authApiClient.setAuthToken(null);
     return data;
   }
 
@@ -427,8 +310,3 @@ export class ApiClient {
 
 // Export singleton instance
 export const apiClient = new ApiClient();
-
-// Initialize token from storage on load
-if (typeof window !== 'undefined') {
-  apiClient.loadTokenFromStorage();
-}

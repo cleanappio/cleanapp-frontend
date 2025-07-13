@@ -32,6 +32,7 @@ case ${OPT} in
       NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://devlive.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://devapimontenegro.cleanapp.io"
+      NEXT_PUBLIC_AUTH_API_URL="https://devauth.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       break
       ;;
@@ -41,6 +42,7 @@ case ${OPT} in
       NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://live.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://apimontenegro.cleanapp.io"
+      NEXT_PUBLIC_AUTH_API_URL="https://auth.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       break
       ;;
