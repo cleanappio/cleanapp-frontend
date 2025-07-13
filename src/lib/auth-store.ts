@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { apiClient, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
-import { authApiClient, Customer } from './auth-api-client';
+import { authApiClient, User } from './auth-api-client';
 
 interface AuthState {
   // User state
-  user: Customer | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   
@@ -23,7 +23,7 @@ interface AuthState {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
-  updateUser: (updates: Partial<Customer>) => void;
+  updateUser: (updates: Partial<User>) => void;
   
   // Billing actions
   fetchBillingData: () => Promise<void>;
@@ -66,7 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (response.refresh_token) {
       localStorage.setItem('refresh_token', response.refresh_token);
     }
-    const user = await apiClient.getCurrentCustomer();
+    const user = await authApiClient.getCurrentUser();
     set({ user, isAuthenticated: true });
     // Fetch billing data after successful login
     get().fetchBillingData();
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
-      const user = await apiClient.getCurrentCustomer();
+      const user = await authApiClient.getCurrentUser();
       set({ user, isAuthenticated: true });
       get().fetchBillingData();
     } catch (error: any) {
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
-      const user = await apiClient.getCurrentCustomer();
+      const user = await authApiClient.getCurrentUser();
       set({ user, isAuthenticated: true });
       get().fetchBillingData();
     } catch (error: any) {
@@ -112,7 +112,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
-      const user = await apiClient.getCurrentCustomer();
+      const user = await authApiClient.getCurrentUser();
       set({ user, isAuthenticated: true });
       get().fetchBillingData();
     } catch (error: any) {
@@ -157,7 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (token) {
       authApiClient.setAuthToken(token);
       try {
-        const user = await apiClient.getCurrentCustomer();
+        const user = await authApiClient.getCurrentUser();
         set({ user, isAuthenticated: true, isLoading: false });
         get().fetchBillingData();
       } catch {
@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (response.refresh_token) {
               localStorage.setItem('refresh_token', response.refresh_token);
             }
-            const user = await apiClient.getCurrentCustomer();
+            const user = await authApiClient.getCurrentUser();
             set({ user, isAuthenticated: true, isLoading: false });
             get().fetchBillingData();
           } catch {
@@ -180,7 +180,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
     } else {
-      set({ isLoading: false });
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 

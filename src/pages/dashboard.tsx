@@ -6,13 +6,13 @@ import PageHeader from '@/components/PageHeader';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated, subscription, billingLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading, subscription, billingLoading } = useAuthStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   const formatPlanName = (planType: string) => {
     const names: Record<string, string> = {
@@ -32,6 +32,14 @@ export default function DashboardPage() {
       default: return 0;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   if (billingLoading) {
     return (
