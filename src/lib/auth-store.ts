@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { apiClient, Customer, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
+import { apiClient, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
+import { authApiClient, Customer } from './auth-api-client';
 
 interface AuthState {
   // User state
@@ -61,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Auth actions
   login: async (email, password) => {
-    const response = await apiClient.login(email, password);
+    const response = await authApiClient.login(email, password);
     if (response.refresh_token) {
       localStorage.setItem('refresh_token', response.refresh_token);
     }
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginWithGoogle: async (credential) => {
     try {
-      const response = await apiClient.loginWithOAuth('google', credential);
+      const response = await authApiClient.loginWithOAuth('google', credential);
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
@@ -90,7 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginWithFacebook: async (accessToken) => {
     try {
-      const response = await apiClient.loginWithOAuth('facebook', accessToken);
+      const response = await authApiClient.loginWithOAuth('facebook', accessToken);
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
@@ -107,7 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginWithApple: async (authorizationCode) => {
     try {
-      const response = await apiClient.loginWithOAuth('apple', authorizationCode);
+      const response = await authApiClient.loginWithOAuth('apple', authorizationCode);
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
@@ -123,9 +124,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signup: async (name, email, password) => {
-    const customer = await apiClient.signup(name, email, password);
+    const customer = await authApiClient.signup(name, email, password);
     // Login after signup
-    const loginResponse = await apiClient.login(email, password);
+    const loginResponse = await authApiClient.login(email, password);
     if (loginResponse.refresh_token) {
       localStorage.setItem('refresh_token', loginResponse.refresh_token);
     }
@@ -135,11 +136,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await apiClient.logout();
+      await authApiClient.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      apiClient.setAuthToken(null);
+      authApiClient.setAuthToken(null);
       localStorage.removeItem('refresh_token');
       set({ 
         user: null, 
@@ -154,7 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   checkAuth: async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
     if (token) {
-      apiClient.setAuthToken(token);
+      authApiClient.setAuthToken(token);
       try {
         const user = await apiClient.getCurrentCustomer();
         set({ user, isAuthenticated: true, isLoading: false });
@@ -164,7 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
           try {
-            const response = await apiClient.refreshToken(refreshToken);
+            const response = await authApiClient.refreshToken(refreshToken);
             if (response.refresh_token) {
               localStorage.setItem('refresh_token', response.refresh_token);
             }

@@ -10,6 +10,7 @@ import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
+import { getColorByValue } from "@/lib/util";
 
 // Type for latest reports
 export interface LatestReport {
@@ -443,7 +444,7 @@ export default function GlobeView() {
             id: report.report.id,
             seq: report.report.seq,
             title: report.analysis?.title || 'Report',
-            severity: report.analysis?.severity_level || 1,
+            severity: report.analysis?.severity_level || 0,
             index: index
           }
         }));
@@ -475,16 +476,16 @@ export default function GlobeView() {
                 'interpolate',
                 ['linear'],
                 ['get', 'severity'],
-                0.1, 6.6,
-                0.5, 13.2
+                0.0, 6.6,
+                0.9, 13.2
               ],
               'circle-color': [
                 'interpolate',
                 ['linear'],
                 ['get', 'severity'],
-                0.1, '#10b981', // green for low severity
-                0.3, '#f59e0b', // yellow for medium severity
-                0.5, '#ef4444'  // red for high severity
+                0.0, getColorByValue(0.0), // green for low severity
+                0.5, getColorByValue(0.5), // yellow for medium severity
+                0.9, getColorByValue(0.9)  // red for high severity
               ],
               'circle-stroke-width': 2,
               'circle-stroke-color': '#ffffff'
@@ -587,16 +588,16 @@ export default function GlobeView() {
             'interpolate',
             ['linear'],
             ['get', 'severity'],
-            0.1, 6.6,
-            0.5, 13.2
+            0.0, 6.6,
+            0.9, 13.2
           ],
           'circle-color': [
             'interpolate',
             ['linear'],
             ['get', 'severity'],
-            0.1, '#10b981',
-            0.3, '#f59e0b',
-            0.5, '#ef4444'
+            0.0, getColorByValue(0.0),
+            0.5, getColorByValue(0.5),
+            0.9, getColorByValue(0.9)
           ],
           'circle-stroke-width': 3,
           'circle-stroke-color': '#ffffff',

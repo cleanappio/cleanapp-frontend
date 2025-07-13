@@ -11,7 +11,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check } from 'lucide-react';
 
-import { apiClient } from '@/lib/api-client';
+import { authApiClient } from '@/lib/auth-api-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
@@ -80,7 +80,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     setUserExists(null);
     try {
       // Use the new API to check if user exists
-      const exists = await apiClient.userExists(email);
+      const exists = await authApiClient.userExists(email);
       console.log('User exists:', exists);
       setUserExists(exists);
       // Focus password field if user exists
