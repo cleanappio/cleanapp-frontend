@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Report } from "./MontenegroMap";
 import { getDisplayableImage } from "@/lib/image-utils";
+import { authApiClient } from "@/lib/auth-api-client";
+import { useAuthStore } from "@/lib/auth-store";
+import Link from 'next/link';
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -24,23 +27,28 @@ interface MontenegroReportOverviewProps {
 }
 
 const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ reportItem, onClose }) => {
+  const { isAuthenticated } = useAuthStore();
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setFullReport(null);
+      setError(null);
+      return;
+    }
     if (reportItem?.report?.seq) {
       fetchFullReport();
     } else {
       setFullReport(null);
       setError(null);
     }
-  }, [reportItem]);
+  }, [reportItem, isAuthenticated]);
 
   const fetchFullReport = async () => {
     if (!reportItem?.report?.seq) return;
-    
     setLoading(true);
     setError(null);
     try {
@@ -467,6 +475,20 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       alert('Failed to generate PDF. Please try again.');
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 bg-white z-[2000] flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h3 className="text-lg font-medium text-red-800 mb-2">Authentication Required</h3>
+          <p className="text-red-700 mb-4">You must be logged in to view report details.</p>
+          <Link href="/login" className="text-sm font-medium text-red-800 hover:text-red-600 underline">
+            Go to Login →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!reportItem) {
     return (

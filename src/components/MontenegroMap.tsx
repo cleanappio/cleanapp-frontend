@@ -5,7 +5,10 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap, G
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 import L from 'leaflet';
+import Link from 'next/link';
 import { getColorByValue } from '@/lib/util';
+import { authApiClient } from '@/lib/auth-api-client';
+import { useAuthStore } from '@/lib/auth-store';
 import LatestReports from './LatestReports';
 import MontenegroReportOverview from './MontenegroReportOverview';
 
@@ -58,6 +61,7 @@ interface MontenegroMapProps {
 }
 
 export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
+  const { isAuthenticated, isLoading } = useAuthStore();
   const [isClient, setIsClient] = useState(false);
   const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
   const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
@@ -66,10 +70,47 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const municipalitiesRate = useRef<Map<number, ReportStats>>(new Map());
+
+  // Helper function to create authenticated fetch requests
+  const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+    console.log('authenticatedFetch called with URL:', url);
+    
+    // Load token from storage first
+    authApiClient.loadTokenFromStorage();
+    const token = authApiClient.getAuthToken();
+    console.log('Token available:', !!token);
+    
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    };
+
+    options.headers = headers;
+    console.log("Authenticated fetch", url, options);
+
+    try {
+      const response = await fetch(url, options);
+      console.log('Fetch response status:', response.status);
+      return response;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      throw error;
+    }
+  };
 
   // Handle report click from LatestReports
   const handleReportClick = (report: Report) => {
+    if (!isAuthenticated) {
+      setAuthError('Authentication required to view report details.');
+      return;
+    }
     setSelectedReport(report);
     setIsCleanAppProOpen(true);
   };
@@ -93,14 +134,21 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const fetchReportsForMontenegro = async () => {
     try {
       setReportsLoading(true);
+      setAuthError(null);
       const apiUrl = process.env.NEXT_PUBLIC_MONTENEGRO_API_URL;
+      console.log('API URL:', apiUrl);
       if (!apiUrl) {
         console.error('NEXT_PUBLIC_MONTENEGRO_API_URL not configured');
         return;
       }
 
-      const response = await fetch(`${apiUrl}/reports?osm_id=-53296&n=100`);
+      const fullUrl = `${apiUrl}/reports?osm_id=-53296&n=100`;
+      console.log('Full URL:', fullUrl);
+      const response = await authenticatedFetch(fullUrl);
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required');
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -115,6 +163,9 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       }
     } catch (error) {
       console.error('Error fetching reports:', error);
+      if (error instanceof Error && (error.message.includes('authentication') || error.message.includes('Authentication required'))) {
+        setAuthError('Authentication required. Please log in to view reports.');
+      }
       setReports([]);
     } finally {
       setReportsLoading(false);
@@ -131,7 +182,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         return;
       }
 
-      const response = await fetch(`${apiUrl}/reports?osm_id=${osmId}&n=100`);
+      const response = await authenticatedFetch(`${apiUrl}/reports?osm_id=${osmId}&n=100`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -159,10 +210,14 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
 
   // Fetch Montenegro reports on mount
   useEffect(() => {
-    if (isClient) {
+    if (isClient && isAuthenticated && !isLoading) {
+      console.log('Making API call - user is authenticated');
       fetchReportsForMontenegro();
+    } else if (isClient && !isLoading && !isAuthenticated) {
+      console.log('User not authenticated, setting auth error');
+      setAuthError('Authentication required. Please log in to view reports.');
     }
-  }, [isClient]);
+  }, [isClient, isAuthenticated, isLoading]);
 
   // Fetch Montenegro country polygon
   useEffect(() => {
@@ -174,7 +229,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
           return;
         }
 
-        const response = await fetch(`${apiUrl}/areas?admin_level=2`);
+        const response = await authenticatedFetch(`${apiUrl}/areas?admin_level=2`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -192,10 +247,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       }
     };
 
-    if (isClient) {
+    if (isClient && isAuthenticated && !isLoading) {
       fetchCountryPolygons();
     }
-  }, [isClient]);
+  }, [isClient, isAuthenticated, isLoading]);
 
   // Fetch Montenegro municipalities polygons
   useEffect(() => {
@@ -207,7 +262,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
           return;
         }
 
-        const response = await fetch(`${apiUrl}/areas?admin_level=6`);
+        const response = await authenticatedFetch(`${apiUrl}/areas?admin_level=6`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -237,10 +292,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       }
     };
 
-    if (isClient) {
+    if (isClient && isAuthenticated && !isLoading) {
       fetchMunicipalitiesPolygons();
     }
-  }, [isClient]);
+  }, [isClient, isAuthenticated, isLoading]);
 
   if (!isClient) {
     return (
@@ -255,6 +310,31 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
 
   return (
     <div className="relative h-full w-full">
+      {/* Authentication Error Display */}
+      {authError && (
+        <div className="absolute top-4 right-4 z-[1000] bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Authentication Required</h3>
+              <p className="mt-1 text-sm text-red-700">{authError}</p>
+              <div className="mt-3">
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-red-800 hover:text-red-600 underline"
+                >
+                  Go to Login →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toggle Control */}
       <div className="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-2">
         <div className="flex bg-gray-100 rounded-md p-1">
@@ -290,7 +370,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          url={viewMode === 'Reports' 
+            ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          }
         />
         
         {/* Montenegro municipalities polygons */}
@@ -341,18 +424,14 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
 
         {/* Individual report markers - only show in Reports mode when reports are loaded */}
         {viewMode === 'Reports' && reports.map((report) => {
-          // Calculate severity-based styling similar to GlobeView
-          const severity = report.analysis?.severity_level || 0.5; // Use actual severity from analysis
-          const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
+          // Calculate severity-based styling using the same logic as GlobeView
+          const severity = report.analysis?.severity_level || 0.0; // Use actual severity from analysis
           
-          // Color based on severity (similar to GlobeView)
-          let color = '#10b981'; // green for low severity
-          if (severity >= 0.3) {
-            color = '#f59e0b'; // yellow for medium severity
-          }
-          if (severity >= 0.5) {
-            color = '#ef4444'; // red for high severity
-          }
+          // Use the same color interpolation as GlobeView
+          const color = getColorByValue(severity);
+          
+          // Use the same radius interpolation as GlobeView
+          const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
 
           return (
             <CircleMarker
@@ -368,6 +447,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               }}
               eventHandlers={{
                 click: () => {
+                  if (!isAuthenticated) {
+                    setAuthError('Authentication required to view report details.');
+                    return;
+                  }
                   setSelectedReport(report);
                   setIsCleanAppProOpen(true);
                 }
@@ -382,10 +465,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             key={`polygon-${index}`}
             data={polygon}
             style={{
-              color: '#555555',
+              color: '#333333',
               weight: 5,
               opacity: 0.8,
-              fillOpacity: 0
+              fillOpacity: 0.3
             }}
           />
         ))}
