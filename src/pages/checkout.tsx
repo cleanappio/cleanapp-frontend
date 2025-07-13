@@ -51,11 +51,13 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const {
     user,
     isAuthenticated,
+    subscription,
     login,
     signup,
     paymentMethods,
     fetchPaymentMethods,
     createSubscription,
+    updateSubscription,
     addPaymentMethod,
   } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -240,10 +242,23 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         paymentMethodId = selectedPaymentMethod;
       }
 
-      // Create subscription via store
-      await createSubscription(planType, billingCycle, paymentMethodId);
-
-      toast.success('Subscription created successfully!');
+      // Check if user has existing subscription and call appropriate method
+      if (subscription) {
+        // If adding a new payment method, add it first
+        if (showNewPaymentForm && setAsDefault) {
+          try {
+            await addPaymentMethod(paymentMethodId, true);
+          } catch (error) {
+            console.log('Failed to add payment method, continuing with subscription update');
+          }
+        }
+        await updateSubscription(planType, billingCycle);
+        toast.success('Subscription updated successfully!');
+      } else {
+        await createSubscription(planType, billingCycle, paymentMethodId);
+        toast.success('Subscription created successfully!');
+      }
+      
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Subscription error:', error);

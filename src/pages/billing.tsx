@@ -310,7 +310,8 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 function BillingPageContent() {
   const router = useRouter();
   const { 
-    isAuthenticated, 
+    isAuthenticated,
+    isLoading,
     subscription, 
     paymentMethods, 
     billingHistory,
@@ -326,15 +327,17 @@ function BillingPageContent() {
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/login');
       return;
     }
 
     // Fetch billing data when component mounts
     // The store will handle caching, so this is safe to call
-    fetchBillingData();
-  }, [isAuthenticated, fetchBillingData, router]);
+    if (isAuthenticated) {
+      fetchBillingData();
+    }
+  }, [isAuthenticated, isLoading, fetchBillingData, router]);
 
   const handleCancelSubscription = async () => {
     if (!confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
@@ -411,6 +414,14 @@ function BillingPageContent() {
       currency: 'USD'
     }).format(amount);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   if (billingLoading) {
     return (

@@ -52,7 +52,7 @@ export interface SignupRequest {
   area_ids?: number[];
 }
 
-export interface Customer {
+export interface User {
   id: string;
   name: string;
   email: string;
@@ -189,13 +189,18 @@ export class AuthApiClient {
     return data;
   }
 
-  async signup(name: string, email: string, password: string, area_ids: number[] = [1]): Promise<Customer> {
-    const { data } = await this.axios.post<Customer>('/api/v3/auth/register', {
+  async signup(name: string, email: string, password: string, area_ids: number[] = [1]): Promise<User> {
+    const { data } = await this.axios.post<User>('/api/v3/auth/register', {
       name,
       email,
       password,
       area_ids
     });
+    return data;
+  }
+
+  async getCurrentUser(): Promise<User> {
+    const { data } = await this.axios.get<User>('/api/v3/users/me');
     return data;
   }
 
