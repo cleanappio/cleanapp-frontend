@@ -19,6 +19,18 @@ interface ReportStats {
   averageSeverity: number;
 }
 
+// AreaAggrData structure from the API
+interface AreaAggrData {
+  osm_id: number;
+  name: string;
+  reports_count: number;
+  reports_max: number;
+  reports_mean: number;
+  mean_severity: number;
+  mean_litter_probability: number;
+  mean_hazard_probability: number;
+}
+
 // Report interface from GlobeView
 export interface Report {
   report: {
@@ -48,11 +60,11 @@ export interface Report {
 // Custom hook to handle map center changes
 function MapController({ center }: { center: [number, number] }) {
   const map = useMap();
-  
+
   useEffect(() => {
     map.setView(center, map.getZoom());
   }, [center, map]);
-  
+
   return null;
 }
 
@@ -71,17 +83,18 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const municipalitiesRate = useRef<Map<number, ReportStats>>(new Map());
+  const [areaAggrData, setAreaAggrData] = useState<AreaAggrData[]>([]);
+  const [municipalitiesRate, setMunicipalitiesRate] = useState<Map<number, ReportStats>>(new Map());
 
   // Helper function to create authenticated fetch requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     console.log('authenticatedFetch called with URL:', url);
-    
+
     // Load token from storage first
     authApiClient.loadTokenFromStorage();
     const token = authApiClient.getAuthToken();
     console.log('Token available:', !!token);
-    
+
     if (!token) {
       throw new Error('No authentication token available');
     }
@@ -116,16 +129,16 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   };
 
   function getMunicipalityColor(osmId: number): string {
-    if (!municipalitiesRate.current) {
+    if (!municipalitiesRate) {
       return '#808080';
     }
-    const stats = municipalitiesRate.current.get(osmId);
-    
+    const stats = municipalitiesRate.get(osmId);
+
     if (stats === undefined || stats === null) {
       // Return a default gray color if no stats found
       return '#808080';
     }
-    
+
     // Use the getColorByValue function to get the appropriate color based on overallRate
     return getColorByValue(stats.overallRate);
   }
@@ -151,10 +164,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log('Fetched reports for Montenegro:', data);
-      
+
       if (data.reports && Array.isArray(data.reports)) {
         setReports(data.reports);
       } else {
@@ -186,10 +199,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log('Fetched reports for municipality:', osmId, data);
-      
+
       if (data.reports && Array.isArray(data.reports)) {
         setReports(data.reports);
       } else {
@@ -203,16 +216,56 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       setReportsLoading(false);
     }
   };
-  
+
+  // Fetch aggregated data for all areas
+  const fetchAreaAggrData = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_MONTENEGRO_API_URL;
+      if (!apiUrl) {
+        console.error('NEXT_PUBLIC_MONTENEGRO_API_URL not configured');
+        return;
+      }
+
+      const response = await authenticatedFetch(`${apiUrl}/reports_aggr`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Fetched area aggregated data:', data);
+
+      if (Array.isArray(data.areas)) {
+        setAreaAggrData(data.areas);
+
+        // Update municipalitiesRate with real data
+        const munRate = new Map<number, ReportStats>();
+        data.areas.forEach((area: AreaAggrData) => {
+          const stats: ReportStats = {
+            reportsNumber: area.reports_count,
+            overallRate: area.reports_count / Math.max(area.reports_max, 1),
+            averageSeverity: area.mean_severity
+          };
+          munRate.set(area.osm_id, stats);
+        });
+        setMunicipalitiesRate(munRate);
+      } else {
+        console.warn('No aggregated data found in response or invalid format');
+      }
+    } catch (error) {
+      console.error('Error fetching area aggregated data:', error);
+    }
+  };
+
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Fetch Montenegro reports on mount
+  // Fetch Montenegro reports and aggregated data on mount
   useEffect(() => {
     if (isClient && isAuthenticated && !isLoading) {
       console.log('Making API call - user is authenticated');
       fetchReportsForMontenegro();
+      fetchAreaAggrData();
     } else if (isClient && !isLoading && !isAuthenticated) {
       console.log('User not authenticated, setting auth error');
       setAuthError('Authentication required. Please log in to view reports.');
@@ -233,10 +286,10 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Fetched polygons:', data);
-        
+
         if (data.areas && Array.isArray(data.areas)) {
           setCountryPolygons(data.areas.map((a: any) => (a.area)));
         } else {
@@ -266,27 +319,15 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Fetched polygons:', data);
-        
+
         if (data.areas && Array.isArray(data.areas)) {
           setMunicipalitiesPolygons(data.areas);
         } else {
           console.warn('No areas found in response or invalid format');
         }
-
-        // DEBUG
-        data.areas.forEach((a: any) => {
-          console.log('osmId', a.osm_id);
-          const stats: ReportStats = {
-            reportsNumber: Math.floor(Math.random() * 100) + 1,
-            overallRate: Math.random(),
-            averageSeverity: Math.random()
-          };
-          console.log('stats', stats);
-          municipalitiesRate.current.set(a.osm_id, stats);
-        });
       } catch (error) {
         console.error('Error fetching polygons:', error);
       }
@@ -340,21 +381,19 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         <div className="flex bg-gray-100 rounded-md p-1">
           <button
             onClick={() => setViewMode('Stats')}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              viewMode === 'Stats'
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'Stats'
                 ? 'bg-white text-blue-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-800'
-            }`}
+              }`}
           >
             Stats
           </button>
           <button
             onClick={() => setViewMode('Reports')}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              viewMode === 'Reports'
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'Reports'
                 ? 'bg-white text-blue-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-800'
-            }`}
+              }`}
           >
             Reports
           </button>
@@ -370,12 +409,12 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url={viewMode === 'Reports' 
+          url={viewMode === 'Reports'
             ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           }
         />
-        
+
         {/* Montenegro municipalities polygons */}
         {municipalitiesPolygons.map((a, index) => (
           <GeoJSON
@@ -392,26 +431,34 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               click: (e) => {
                 if (viewMode !== 'Reports') {
                   // Show stats popup when in Stats mode
-                  const stats = municipalitiesRate.current.get(a.osm_id);
+                  const stats = municipalitiesRate.get(a.osm_id);
                   if (stats) {
+                    // Find the corresponding aggregated data for this area
+                    const areaData = areaAggrData.find(area => area.osm_id === a.osm_id);
+
                     const popup = L.popup()
                       .setLatLng(e.latlng)
                       .setContent(`
-                        <div style="min-width: 200px; padding: 10px;">
-                          <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: bold;">
-                            ${a.name}
-                          </h3>
-                          <div style="margin-bottom: 8px;">
-                            <strong>Reports:</strong> ${stats.reportsNumber}
-                          </div>
-                          <div style="margin-bottom: 8px;">
-                            <strong>Average Severity:</strong> ${stats.averageSeverity.toFixed(3)}
-                          </div>
-                          <div style="margin-bottom: 8px;">
-                            <strong>Overall Rate:</strong> ${stats.overallRate.toFixed(3)}
-                          </div>
+                      <div style="min-width: 200px; padding: 10px;">
+                        <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: bold;">
+                          ${a.name}
+                        </h3>
+                        <div style="margin-bottom: 8px;">
+                          <strong>Reports Count:</strong> ${stats.reportsNumber}
                         </div>
-                      `)
+                        <div style="margin-bottom: 8px;">
+                          <strong>Mean Severity:</strong> ${stats.averageSeverity.toFixed(3)}
+                        </div>
+                        ${areaData ? `
+                        <div style="margin-bottom: 8px;">
+                          <strong>Mean Litter Probability:</strong> ${(areaData.mean_litter_probability * 100).toFixed(1)}%
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                          <strong>Mean Hazard Probability:</strong> ${(areaData.mean_hazard_probability * 100).toFixed(1)}%
+                        </div>
+                        ` : ''}
+                      </div>
+                    `)
                       .openOn(e.target._map);
                   }
                 }
@@ -419,17 +466,17 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             }}
           />
         ))}
-        
+
 
 
         {/* Individual report markers - only show in Reports mode when reports are loaded */}
         {viewMode === 'Reports' && reports.map((report) => {
           // Calculate severity-based styling using the same logic as GlobeView
           const severity = report.analysis?.severity_level || 0.0; // Use actual severity from analysis
-          
+
           // Use the same color interpolation as GlobeView
           const color = getColorByValue(severity);
-          
+
           // Use the same radius interpolation as GlobeView
           const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
 
@@ -458,7 +505,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             />
           );
         })}
-        
+
         {/* Montenegro country polygons */}
         {countryPolygons.map((polygon, index) => (
           <GeoJSON
@@ -472,7 +519,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
             }}
           />
         ))}
-        
+
         <MapController center={mapCenter} />
       </MapContainer>
 

@@ -354,7 +354,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           litterDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
               <span style="font-size: 11px; color: #374151;">Litter Probability</span>
-              <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.litter_probability * 100).toFixed(0)}</span>
+              <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.litter_probability * 100).toFixed(0)}%</span>
             </div>
             <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
               <div style="width: ${reportItem.analysis.litter_probability * 100}%; height: 100%; background-color: ${getGaugeColor(reportItem.analysis.litter_probability)}; border-radius: 3px;"></div>
