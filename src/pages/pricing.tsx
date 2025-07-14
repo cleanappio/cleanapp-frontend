@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import Link from 'next/link';
+import { useTranslations } from '@/lib/i18n';
 
 interface BillingCycle {
   type: string;
@@ -29,6 +30,7 @@ export default function PricingPage() {
   const router = useRouter();
   const { user, isAuthenticated, subscription, prices, fetchPrices, logout } = useAuthStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const { t } = useTranslations();
 
   const handleLogout = () => {
     logout();
@@ -55,48 +57,47 @@ export default function PricingPage() {
   const plans: SubscriptionPlan[] = [
     {
       id: 'free',
-      name: 'Free',
-      description: 'For individuals & small teams',
+      name: t('free'),
+      description: t('forIndividualsAndSmallTeams'),
       billingCycles: [
         { type: 'monthly', price: 0, currency: 'USD' },
         { type: 'annual', price: 0, currency: 'USD' },
       ],
       features: [
-        'Live issue map (physical & digital)',
-        'Submit unlimited reports',
-        'Community trends',
-        'Mobile & web access',
+        t('liveIssueMap'),
+        t('submitUnlimitedReports'),
+        t('communityTrends'),
+        t('mobileWebAccess'),
       ],
       imageSrc: '/free.png',
     },
     {
       id: 'lite',
-      name: 'CleanAppLive',
-      description: 'For businesses & brands that need deeper visibility',
+      name: t('cleanAppLive'),
+      description: t('forBusinessesAndBrands'),
       apiPlanType: 'base',
       billingCycles: getPricesForPlan('base'),
       features: [
-        'Live data alerts (1 site or brand)',
-        'AI-powered insights (risk, trends, urgency)',
-        'Incident & hotspot tracking',
-        'Priority help',
+        t('liveDataAlerts'),
+        t('aiPoweredInsights'),
+        t('incidentHotspotTracking'),
+        t('priorityHelp'),
       ],
       imageSrc: '/lite.png',
     },
     {
       id: 'enterprise',
-      name: 'Enterprise',
-      description:
-        'For organizations managing multiple sites, brands, or digital platforms',
+      name: t('enterprise'),
+      description: t('forOrganizationsManagingMultiple'),
       apiPlanType: 'advanced',
       billingCycles: getPricesForPlan('advanced'),
       popular: true,
       features: [
-        'All CleanAppLive features',
-        'Advanced risk & hotspot forecasting',
-        'Multi-site/brand coverage (up to 5)',
-        'Custom dashboards',
-        'Dedicated account manager',
+        t('allCleanAppLiveFeatures'),
+        t('advancedRiskHotspotForecasting'),
+        t('multiSiteBrandCoverage'),
+        t('customDashboards'),
+        t('dedicatedAccountManager'),
       ],
       imageSrc: '/enterprise.png',
     },
@@ -170,28 +171,28 @@ export default function PricingPage() {
 
   const getButtonText = (plan: SubscriptionPlan) => {
     if (isCurrentPlan(plan)) {
-      return 'Current Plan';
+      return t('currentPlan');
     }
 
     if (!subscription && plan.id === 'free') {
-      return 'Current Plan';
+      return t('currentPlan');
     }
 
     if (plan.id === 'free') {
-      return 'Downgrade';
+      return t('downgrade');
     }
 
     if (plan.customPricing) {
-      return 'Contact Sales';
+      return t('contactSales');
     }
 
     // If user has any subscription, show 'Change now' for other plans
     if (subscription) {
-      return 'Change now';
+      return t('changeNow');
     }
 
     // If no subscription (on free plan), show different text
-    return 'Subscribe Now';
+    return t('subscribeNow');
   };
 
   const getButtonStyle = (plan: SubscriptionPlan) => {
@@ -246,13 +247,13 @@ export default function PricingPage() {
                     href="/login"
                     className="text-gray-500 hover:text-gray-700 text-sm font-medium"
                   >
-                    Sign in
+                    {t('signIn')}
                   </Link>
                   <Link
                     href="/signup"
                     className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
                   >
-                    Get started
+                    {t('getStarted')}
                   </Link>
                 </div>
               )}
@@ -266,7 +267,7 @@ export default function PricingPage() {
           <Link href='/'>
             <button className='flex items-center text-gray-600 hover:text-gray-900 mb-8'>
               <FaArrowLeftLong className='w-4 h-4 mr-2' />
-              Back to Map
+              {t('backToMap')}
             </button>
           </Link>
           {/* Header */}
@@ -280,11 +281,10 @@ export default function PricingPage() {
               />
             </div>
             <h1 className='text-5xl font-bold text-gray-900 mb-4'>
-              Trash is Cash
+              {t('trashIsCash')}
             </h1>
             <p className='text-xl text-gray-600'>
-              LIVE insights, lower maintenance & liability costs,{' '}
-              <span className='font-bold'>much higher margins.</span>
+              {t('liveInsightsLowerCosts')} <span className='font-bold'>{t('muchHigherMargins')}</span>
             </p>
           </div>
 

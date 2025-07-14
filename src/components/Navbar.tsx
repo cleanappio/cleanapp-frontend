@@ -1,13 +1,16 @@
 import { MdOutlineFileDownload } from "react-icons/md";
 import { LatestReport } from "./GlobeView";
+import { useTranslations } from '@/lib/i18n';
 
 interface NavbarProps {
   reportItem?: LatestReport | null;
 }
 
 export default function Navbar({ reportItem }: NavbarProps) {
+  const { t } = useTranslations();
+  
   // Get the title from the report analysis, fallback to a default
-  const title = reportItem?.analysis?.title || "CleanApp Report";
+  const title = reportItem?.analysis?.title || t('cleanAppReport');
 
   // Get coordinates from the report, fallback to default
   const latitude = reportItem?.report?.latitude || 47.3566;
@@ -30,14 +33,14 @@ export default function Navbar({ reportItem }: NavbarProps) {
       <div className="h-12">
         <div className="flex gap-4 h-full items-center">
           <div className="flex flex-col items-end text-sm">
-            <p className="text-gray-500">Last updated</p>
+            <p className="text-gray-500">{t('lastUpdated')}</p>
             <p className="">{timestamp}</p>
           </div>
           <div className="w-[1px] h-full bg-gray-200"></div>
 
           <div className="bg-green-700 text-white rounded-md px-4 py-2 flex items-center gap-3">
             <MdOutlineFileDownload size={20} />
-            <p>Export Report</p>
+            <p>{t('exportReport')}</p>
           </div>
         </div>
       </div>

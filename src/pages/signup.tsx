@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
 import PageHeader from '@/components/PageHeader';
+import { useTranslations } from '@/lib/i18n';
 
 interface SignupForm {
   name: string;
@@ -17,6 +18,7 @@ export default function SignupPage() {
   const router = useRouter();
   const signup = useAuthStore((state) => state.signup);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslations();
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>();
   const password = watch('password');
@@ -34,7 +36,7 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       await signup(data.name, data.email, data.password);
-      toast.success('Account created successfully!');
+      toast.success(t('accountCreated'));
       
       // Check for stored redirect URL
       const redirectUrl = sessionStorage.getItem('authRedirect');
@@ -45,7 +47,7 @@ export default function SignupPage() {
         router.push('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to create account');
+      toast.error(error.response?.data?.error || t('failedToCreateAccount'));
     } finally {
       setIsLoading(false);
     }
@@ -58,12 +60,12 @@ export default function SignupPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            {t('createYourAccount')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
+            {t('or')}{' '}
             <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
-              sign in to your existing account
+              {t('signInToExistingAccount')}
             </Link>
           </p>
         </div>
@@ -71,13 +73,13 @@ export default function SignupPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
+                {t('fullName')}
               </label>
               <input
-                {...register('name', { required: 'Name is required' })}
+                {...register('name', { required: t('nameRequired') })}
                 type="text"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="John Doe"
+                placeholder={t('johnDoe')}
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
@@ -86,19 +88,19 @@ export default function SignupPage() {
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
+                {t('emailAddress')}
               </label>
               <input
                 {...register('email', { 
-                  required: 'Email is required',
+                  required: t('emailRequired'),
                   pattern: {
                     value: /^\S+@\S+$/i,
-                    message: 'Invalid email address'
+                    message: t('invalidEmailAddress')
                   }
                 })}
                 type="email"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="john@example.com"
+                placeholder={t('johnEmail')}
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -107,19 +109,19 @@ export default function SignupPage() {
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                {t('password')}
               </label>
               <input
                 {...register('password', { 
-                  required: 'Password is required',
+                  required: t('passwordRequired'),
                   minLength: {
                     value: 8,
-                    message: 'Password must be at least 8 characters'
+                    message: t('passwordMinLength')
                   }
                 })}
                 type="password"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
+                placeholder={t('passwordPlaceholder')}
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -128,16 +130,16 @@ export default function SignupPage() {
             
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+                {t('confirmPassword')}
               </label>
               <input
                 {...register('confirmPassword', { 
-                  required: 'Please confirm your password',
-                  validate: value => value === password || 'Passwords do not match'
+                  required: t('confirmPasswordRequired'),
+                  validate: value => value === password || t('passwordsDoNotMatch')
                 })}
                 type="password"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
+                placeholder={t('passwordPlaceholder')}
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
@@ -151,7 +153,7 @@ export default function SignupPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? t('creatingAccount') : t('createAccount')}
             </button>
           </div>
         </form>
