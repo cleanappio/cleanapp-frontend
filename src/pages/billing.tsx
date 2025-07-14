@@ -12,6 +12,7 @@ import { CreditCard, Download, Plus, Trash2, ChevronDown, ChevronUp, X } from 'l
 import toast from 'react-hot-toast';
 import { COUNTRIES } from '@/constants/countries';
 import PageHeader from '@/components/PageHeader';
+import { useTranslations } from '@/lib/i18n';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -55,6 +56,8 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('US');
+
+  const { t } = useTranslations();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +120,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
   return (
     <form onSubmit={handleSubmit} className="bg-gray-50 rounded-lg p-4 mt-4">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Add New Payment Method</h3>
+        <h3 className="text-lg font-semibold">{t('add_new_payment_method')}</h3>
         <button
           type="button"
           onClick={onCancel}
@@ -130,7 +133,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
       <div className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            {t('email')}
           </label>
           <input
             type="email"
@@ -144,7 +147,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
         <div>
           <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-700 mb-1">
-            Cardholder Name
+            {t('cardholder_name')}
           </label>
           <input
             type="text"
@@ -158,7 +161,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Card Information
+            {t('card_information')}
           </label>
           <div className="border border-gray-300 rounded-md p-3 bg-white">
             <CardElement options={CARD_ELEMENT_OPTIONS} />
@@ -167,12 +170,12 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
         {/* Billing Address Section */}
         <div className="border-t pt-4">
-          <h4 className="text-md font-medium text-gray-900 mb-3">Billing Address</h4>
+          <h4 className="text-md font-medium text-gray-900 mb-3">{t('billing_address')}</h4>
           
           <div className="space-y-4">
             <div>
               <label htmlFor="address-line1" className="block text-sm font-medium text-gray-700 mb-1">
-                Address Line 1
+                {t('address_line_1')}
               </label>
               <input
                 type="text"
@@ -186,7 +189,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
             <div>
               <label htmlFor="address-line2" className="block text-sm font-medium text-gray-700 mb-1">
-                Address Line 2 (Optional)
+                {t('address_line_2_optional')}
               </label>
               <input
                 type="text"
@@ -194,14 +197,14 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
                 value={addressLine2}
                 onChange={(e) => setAddressLine2(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Apartment, suite, etc."
+                placeholder={t('apartment_suite_etc')}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                  City
+                  {t('city')}
                 </label>
                 <input
                   type="text"
@@ -215,7 +218,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
               <div>
                 <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                  State/Province
+                  {t('state_province')}
                 </label>
                 <input
                   type="text"
@@ -231,7 +234,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                  Postal Code
+                  {t('postal_code')}
                 </label>
                 <input
                   type="text"
@@ -245,7 +248,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
               <div>
                 <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
+                  {t('country')}
                 </label>
                 <select
                   id="country"
@@ -274,7 +277,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
             className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
           />
           <label htmlFor="set-as-default-billing" className="ml-2 block text-sm text-gray-700">
-            Set as default payment method
+            {t('set_as_default_payment_method')}
           </label>
         </div>
       </div>
@@ -288,10 +291,10 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
           {isProcessing ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Adding...
+              {t('adding')}
             </>
           ) : (
-            'Add Payment Method'
+            t('add_payment_method')
           )}
         </button>
         <button
@@ -300,7 +303,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
           disabled={isProcessing}
           className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
         >
-          Cancel
+          {t('cancel')}
         </button>
       </div>
     </form>
@@ -325,6 +328,7 @@ function BillingPageContent() {
   
   const [cancelling, setCancelling] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -340,40 +344,40 @@ function BillingPageContent() {
   }, [isAuthenticated, isLoading, fetchBillingData, router]);
 
   const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
+    if (!confirm(t('confirm_cancel_subscription'))) {
       return;
     }
 
     setCancelling(true);
     try {
       await cancelSubscription();
-      toast.success('Subscription canceled successfully');
+      toast.success(t('subscription_canceled_successfully'));
     } catch {
-      toast.error('Failed to cancel subscription');
+      toast.error(t('failed_to_cancel_subscription'));
     } finally {
       setCancelling(false);
     }
   };
 
   const handleDeletePaymentMethod = async (id: number) => {
-    if (!confirm('Are you sure you want to remove this payment method?')) {
+    if (!confirm(t('confirm_remove_payment_method'))) {
       return;
     }
 
     try {
       await deletePaymentMethod(id);
-      toast.success('Payment method removed');
+      toast.success(t('payment_method_removed'));
     } catch {
-      toast.error('Failed to remove payment method');
+      toast.error(t('failed_to_remove_payment_method'));
     }
   };
 
   const handleSetDefaultPaymentMethod = async (id: number) => {
     try {
       await setDefaultPaymentMethod(id);
-      toast.success('Default payment method updated');
+      toast.success(t('default_payment_method_updated'));
     } catch {
-      toast.error('Failed to update default payment method');
+      toast.error(t('failed_to_update_default_payment_method'));
     }
   };
 
@@ -384,10 +388,10 @@ function BillingPageContent() {
   const handleDownloadInvoice = async (billingHistoryId: number) => {
     try {
       await downloadInvoice(billingHistoryId);
-      toast.success('Invoice downloaded successfully');
+      toast.success(t('invoice_downloaded_successfully'));
     } catch (error) {
       console.error('Download invoice error:', error);
-      toast.error('Failed to download invoice');
+      toast.error(t('failed_to_download_invoice'));
     }
   };
 
@@ -435,24 +439,24 @@ function BillingPageContent() {
     <div className="min-h-screen bg-gray-50">
       <PageHeader />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Billing & Subscription</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('billing_subscription')}</h1>
 
       {/* Current Subscription */}
       <div className="bg-white rounded-lg shadow mb-8 p-6">
-        <h2 className="text-xl font-semibold mb-4">Current Subscription</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('current_subscription')}</h2>
         {subscription ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Plan</p>
+                <p className="text-sm text-gray-600">{t('plan')}</p>
                 <p className="font-semibold">{formatPlanName(subscription.plan_type)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Billing Cycle</p>
+                <p className="text-sm text-gray-600">{t('billing_cycle')}</p>
                 <p className="font-semibold capitalize">{subscription.billing_cycle}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Status</p>
+                <p className="text-sm text-gray-600">{t('status')}</p>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   subscription.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
@@ -462,7 +466,7 @@ function BillingPageContent() {
                 </span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Next Billing Date</p>
+                <p className="text-sm text-gray-600">{t('next_billing_date')}</p>
                 <p className="font-semibold">{formatDate(subscription.next_billing_date)}</p>
               </div>
             </div>
@@ -472,25 +476,25 @@ function BillingPageContent() {
                 onClick={() => router.push('/pricing')}
                 className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
               >
-                Change Plan
+                {t('change_plan')}
               </button>
               <button
                 onClick={handleCancelSubscription}
                 disabled={cancelling}
                 className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
               >
-                {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                {cancelling ? t('cancelling') : t('cancel_subscription')}
               </button>
             </div>
           </div>
         ) : (
           <div>
-            <p className="text-gray-600 mb-4">You don&apos;t have an active subscription.</p>
+            <p className="text-gray-600 mb-4">{t('no_active_subscription')}</p>
             <button
               onClick={() => router.push('/pricing')}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
             >
-              View Plans
+              {t('view_plans')}
             </button>
           </div>
         )}
@@ -499,13 +503,13 @@ function BillingPageContent() {
       {/* Payment Methods */}
       <div className="bg-white rounded-lg shadow mb-8 p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Payment Methods</h2>
+          <h2 className="text-xl font-semibold">{t('payment_methods')}</h2>
           <button
             onClick={() => setShowAddPaymentForm(!showAddPaymentForm)}
             className="flex items-center text-green-600 hover:text-green-700 font-medium"
           >
             <Plus className="w-4 h-4 mr-1" />
-            Add New
+            {t('add_new')}
             {showAddPaymentForm ? (
               <ChevronUp className="w-4 h-4 ml-1" />
             ) : (
@@ -532,7 +536,7 @@ function BillingPageContent() {
                       {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Expires {method.exp_month}/{method.exp_year}
+                      {t('expires')} {method.exp_month}/{method.exp_year}
                     </p>
                   </div>
                 </div>
@@ -542,12 +546,12 @@ function BillingPageContent() {
                       onClick={() => handleSetDefaultPaymentMethod(method.id)}
                       className="text-sm text-green-600 hover:text-green-700"
                     >
-                      Set as default
+                      {t('set_as_default')}
                     </button>
                   )}
                   {method.is_default && (
                     <span className="ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Default
+                      {t('default')}
                     </span>
                   )}
                   <button
@@ -561,29 +565,29 @@ function BillingPageContent() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-600">No payment methods on file.</p>
+          <p className="text-gray-600">{t('no_payment_methods')}</p>
         )}
       </div>
 
       {/* Billing History */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Billing History</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('billing_history')}</h2>
         {billingHistory && billingHistory.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    {t('date')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    {t('amount')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t('status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Invoice
+                    {t('invoice')}
                   </th>
                 </tr>
               </thead>
@@ -611,7 +615,7 @@ function BillingPageContent() {
                       <button 
                         onClick={() => handleDownloadInvoice(record.id)}
                         className="text-green-600 hover:text-green-700"
-                        title="Download Invoice"
+                        title={t('download_invoice')}
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -622,7 +626,7 @@ function BillingPageContent() {
             </table>
           </div>
         ) : (
-          <p className="text-gray-600">No billing history available.</p>
+          <p className="text-gray-600">{t('no_billing_history')}</p>
         )}
       </div>
     </div>

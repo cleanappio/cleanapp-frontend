@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTranslations } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import PageHeader from '@/components/PageHeader';
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslations();
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
@@ -31,7 +33,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
-      toast.success('Welcome back!');
+      toast.success(t('welcomeBack'));
       
       // Check for stored redirect URL
       const redirectUrl = sessionStorage.getItem('authRedirect');
@@ -42,7 +44,7 @@ export default function LoginPage() {
         router.push('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Invalid credentials');
+      toast.error(error.response?.data?.error || t('invalidCredentials'));
     } finally {
       setIsLoading(false);
     }
@@ -55,12 +57,12 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+            {t('signInToAccount')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
+            {t('or')}{' '}
             <Link href="/signup" className="font-medium text-green-600 hover:text-green-500">
-              start your free trial
+              {t('startFreeTrial')}
             </Link>
           </p>
         </div>
@@ -68,20 +70,20 @@ export default function LoginPage() {
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                {t('emailAddress')}
               </label>
               <input
                 {...register('email', { 
-                  required: 'Email is required',
+                  required: t('emailRequired'),
                   pattern: {
                     value: /^\S+@\S+$/i,
-                    message: 'Invalid email address'
+                    message: t('invalidEmailAddress')
                   }
                 })}
                 type="email"
                 autoComplete="email"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                placeholder={t('emailAddress')}
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -89,14 +91,14 @@ export default function LoginPage() {
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                {t('password')}
               </label>
               <input
-                {...register('password', { required: 'Password is required' })}
+                {...register('password', { required: t('passwordRequired') })}
                 type="password"
                 autoComplete="current-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder={t('password')}
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -110,7 +112,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? t('signingIn') : t('signIn')}
             </button>
           </div>
         </form>

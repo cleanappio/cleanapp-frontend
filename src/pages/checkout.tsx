@@ -15,6 +15,7 @@ import { authApiClient } from '@/lib/auth-api-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
+import { useTranslations } from '@/lib/i18n';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -72,6 +73,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
+  const { t } = useTranslations();
   
 
 
@@ -104,10 +106,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     setIsAuthLoading(true);
     try {
       await login(email, password);
-      toast.success('Logged in!');
+      toast.success(t('loggedIn'));
       setIsAuthComplete(true);
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'Login failed');
+      toast.error(error?.response?.data?.error || t('loginFailed'));
     } finally {
       setIsAuthLoading(false);
     }
@@ -117,16 +119,16 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const handleConfirmPasswordBlur = async () => {
     if (userExists !== false || !email || !password || !confirmPassword) return;
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('passwordsDoNotMatch'));
       return;
     }
     setIsAuthLoading(true);
     try {
       await signup(email, email, password); // Use email as name for simplicity
-      toast.success('Account created!');
+      toast.success(t('accountCreated'));
       setIsAuthComplete(true);
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'Signup failed');
+      toast.error(error?.response?.data?.error || t('signupFailed'));
     } finally {
       setIsAuthLoading(false);
     }
@@ -198,7 +200,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         // Create new payment method
         const cardElement = elements.getElement(CardElement);
         if (!cardElement) {
-          toast.error('Card element not found');
+          toast.error(t('cardElementNotFound'));
           setIsProcessing(false);
           return;
         }
@@ -213,13 +215,13 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         });
 
         if (error) {
-          toast.error(error.message || 'Payment failed');
+          toast.error(error.message || t('paymentFailed'));
           setIsProcessing(false);
           return;
         }
 
         if (!paymentMethod) {
-          toast.error('Payment method creation failed');
+          toast.error(t('paymentMethodCreationFailed'));
           setIsProcessing(false);
           return;
         }
@@ -253,30 +255,30 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           }
         }
         await updateSubscription(planType, billingCycle);
-        toast.success('Subscription updated successfully!');
+        toast.success(t('subscriptionUpdatedSuccessfully'));
       } else {
         await createSubscription(planType, billingCycle, paymentMethodId);
-        toast.success('Subscription created successfully!');
+        toast.success(t('subscriptionCreatedSuccessfully'));
       }
       
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Subscription error:', error);
-      toast.error(error.message || 'Failed to create subscription');
+      toast.error(error.message || t('failedToCreateSubscription'));
     } finally {
       setIsProcessing(false);
     }
   };
 
   if (!planDetails) {
-    return <div>Invalid plan selected</div>;
+    return <div>{t('invalidPlanSelected')}</div>;
   }
 
   if (isAuthComplete && loadingPaymentMethods) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-        <span className="ml-2 text-sm text-gray-600">Loading payment methods...</span>
+        <span className="ml-2 text-sm text-gray-600">{t('loadingPaymentMethods')}</span>
       </div>
     );
   }
@@ -287,9 +289,9 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       <div className="max-w-2xl mx-auto">
         {/* Login/Signup Box */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Sign up or Log in to Continue</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('signUpOrLogInToContinue')}</h3>
           <div className="mb-4">
-            <label htmlFor="checkout-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="checkout-email" className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
             <input
               type="email"
               id="checkout-email"
@@ -302,7 +304,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="checkout-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="checkout-password" className="block text-sm font-medium text-gray-700 mb-1">{t('password')}</label>
             <input
               ref={passwordRef}
               type="password"
@@ -318,7 +320,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           {/* Show confirm password only if user does not exist */}
           {userExists === false && (
             <div className="mb-4">
-              <label htmlFor="checkout-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <label htmlFor="checkout-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">{t('confirmPassword')}</label>
               <input
                 type="password"
                 id="checkout-confirm-password"
@@ -335,7 +337,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             <div className="flex justify-center items-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
               <span className="ml-2 text-sm text-gray-600">
-                {userExists === null ? 'Checking...' : userExists ? 'Logging in...' : 'Creating account...'}
+                {userExists === null ? t('checking') : userExists ? t('loggingIn') : t('creatingAccount')}
               </span>
             </div>
           )}
@@ -344,18 +346,18 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         {/* Checkout Form - Disabled */}
         <form onSubmit={handleSubmit} className="opacity-50 pointer-events-none">
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Subscription Summary</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('subscriptionSummary')}</h3>
             <div className="border-b pb-4 mb-4">
               <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Plan</span>
+                <span className="text-gray-600">{t('plan')}</span>
                 <span className="font-medium">{planDetails.name}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Billing Cycle</span>
+                <span className="text-gray-600">{t('billingCycle')}</span>
                 <span className="font-medium capitalize">{billingCycle}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Total</span>
+                <span className="text-gray-600">{t('total')}</span>
                 <span className="font-bold text-lg">{planDetails.displayPrice}</span>
               </div>
             </div>
@@ -364,14 +366,14 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
               <CreditCard className="w-5 h-5 mr-2" />
-              Payment Information
+              {t('paymentInformation')}
             </h3>
-            <p className="text-gray-500 text-sm mb-4">Please complete authentication to continue with checkout</p>
+            <p className="text-gray-500 text-sm mb-4">{t('pleaseCompleteAuthenticationToContinueWithCheckout')}</p>
             
             {/* Existing Payment Methods */}
             {paymentMethods.length > 0 && (
               <div className="mb-6">
-                <p className="text-sm font-medium text-gray-700 mb-3">Select Payment Method</p>
+                <p className="text-sm font-medium text-gray-700 mb-3">{t('selectPaymentMethod')}</p>
                 <div className="space-y-2">
                   {paymentMethods.map((method) => (
                     <label
@@ -397,11 +399,11 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                           {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Expires {method.exp_month}/{method.exp_year}
+                          {t('expires')} {method.exp_month}/{method.exp_year}
                         </p>
                       </div>
                       {method.is_default && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Default</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{t('default')}</span>
                       )}
                     </label>
                   ))}
@@ -413,7 +415,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                     className="w-full flex items-center justify-center p-3 border rounded-lg transition-colors border-gray-200 text-gray-400 cursor-not-allowed"
                   >
                     <Plus className="w-5 h-5 mr-2" />
-                    Add New Payment Method
+                    {t('addNewPaymentMethod')}
                     <ChevronDown className="w-4 h-4 ml-auto" />
                   </button>
                 </div>
@@ -424,9 +426,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             {showNewPaymentForm && (
               <div className={`space-y-4 ${paymentMethods.length > 0 ? 'mt-4 pt-4 border-t' : ''}`}>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">
-                    Email
-                  </label>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">{t('email')}</label>
                   <input
                     type="email"
                     id="email"
@@ -439,9 +439,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 </div>
 
                 <div>
-                  <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-400 mb-1">
-                    Cardholder Name
-                  </label>
+                  <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-400 mb-1">{t('cardholderName')}</label>
                   <input
                     type="text"
                     id="cardholder-name"
@@ -454,9 +452,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Card Information
-                  </label>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">{t('cardInformation')}</label>
                   <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
                     <div className="h-6 bg-gray-200 rounded"></div>
                   </div>
@@ -470,12 +466,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               className="w-full mt-6 bg-gray-300 text-gray-500 py-3 px-4 rounded-md font-semibold cursor-not-allowed flex items-center justify-center"
             >
               <Lock className="w-5 h-5 mr-2" />
-              Subscribe {planDetails.displayPrice}
+              {t('subscribe')} {planDetails.displayPrice}
             </button>
 
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Your payment information is encrypted and secure. You can cancel your subscription at any time.
-            </p>
+            <p className="text-xs text-gray-500 text-center mt-4">{t('yourPaymentInformationIsEncryptedAndSecure')}</p>
           </div>
         </form>
       </div>
@@ -488,28 +482,28 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center text-green-600">
           <Check className="w-5 h-5 mr-2" />
-          Authentication Complete
+          {t('authenticationComplete')}
         </h3>
         <div className="space-y-2 text-sm text-gray-600">
-          <p><strong>Email:</strong> {email}</p>
-          <p><strong>Status:</strong> Ready to checkout</p>
+          <p><strong>{t('email')}:</strong> {email}</p>
+          <p><strong>{t('status')}:</strong> {t('readyToCheckout')}</p>
         </div>
       </div>
 
       {/* Subscription Summary */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Subscription Summary</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('subscriptionSummary')}</h3>
         <div className="border-b pb-4 mb-4">
           <div className="flex justify-between mb-2">
-            <span className="text-gray-600">Plan</span>
+            <span className="text-gray-600">{t('plan')}</span>
             <span className="font-medium">{planDetails.name}</span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-gray-600">Billing Cycle</span>
+            <span className="text-gray-600">{t('billingCycle')}</span>
             <span className="font-medium capitalize">{billingCycle}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Total</span>
+            <span className="text-gray-600">{t('total')}</span>
             <span className="font-bold text-lg">{planDetails.displayPrice}</span>
           </div>
         </div>
@@ -519,13 +513,13 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <CreditCard className="w-5 h-5 mr-2" />
-          Payment Information
+          {t('paymentInformation')}
         </h3>
         
         {/* Existing Payment Methods */}
         {paymentMethods.length > 0 && (
           <div className="mb-6">
-            <p className="text-sm font-medium text-gray-700 mb-3">Select Payment Method</p>
+            <p className="text-sm font-medium text-gray-700 mb-3">{t('selectPaymentMethod')}</p>
             <div className="space-y-2">
               {paymentMethods.map((method) => (
                 <label
@@ -554,11 +548,11 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                       {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Expires {method.exp_month}/{method.exp_year}
+                      {t('expires')} {method.exp_month}/{method.exp_year}
                     </p>
                   </div>
                   {method.is_default && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Default</span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{t('default')}</span>
                   )}
                 </label>
               ))}
@@ -580,7 +574,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 }`}
               >
                 <Plus className="w-5 h-5 mr-2" />
-                Add New Payment Method
+                {t('addNewPaymentMethod')}
                 {showNewPaymentForm ? (
                   <ChevronUp className="w-4 h-4 ml-auto" />
                 ) : (
@@ -595,9 +589,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         {showNewPaymentForm && (
           <div className={`space-y-4 ${paymentMethods.length > 0 ? 'mt-4 pt-4 border-t' : ''}`}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
               <input
                 type="email"
                 id="email"
@@ -609,9 +601,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             </div>
 
             <div>
-              <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Cardholder Name
-              </label>
+              <label htmlFor="cardholder-name" className="block text-sm font-medium text-gray-700 mb-1">{t('cardholderName')}</label>
               <input
                 type="text"
                 id="cardholder-name"
@@ -623,9 +613,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Card Information
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('cardInformation')}</label>
               <div className="border border-gray-300 rounded-md p-3">
                 <CardElement options={CARD_ELEMENT_OPTIONS} />
               </div>
@@ -641,9 +629,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 onChange={(e) => setSetAsDefault(e.target.checked)}
                 className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
               />
-              <label htmlFor="set-as-default" className="ml-2 block text-sm text-gray-700">
-                Set as default payment method
-              </label>
+              <label htmlFor="set-as-default" className="ml-2 block text-sm text-gray-700">{t('setAsDefaultPaymentMethod')}</label>
             </div>
           </div>
         )}
@@ -656,19 +642,17 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           {isProcessing ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Processing...
+              {t('processing')}
             </>
           ) : (
             <>
               <Lock className="w-5 h-5 mr-2" />
-              Subscribe {planDetails.displayPrice}
+              {t('subscribe')} {planDetails.displayPrice}
             </>
           )}
         </button>
 
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Your payment information is encrypted and secure. You can cancel your subscription at any time.
-        </p>
+        <p className="text-xs text-gray-500 text-center mt-4">{t('yourPaymentInformationIsEncryptedAndSecure')}</p>
       </div>
     </form>
   );
@@ -678,6 +662,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { plan, billing, displayPrice } = router.query;
+  const { t } = useTranslations();
 
   const handleLogout = () => {
     logout();
@@ -691,12 +676,12 @@ export default function CheckoutPage() {
 
         <div className="py-12 px-4">
           <div className="max-w-md mx-auto text-center">
-            <p className="text-gray-600 mb-4">No plan selected</p>
+            <p className="text-gray-600 mb-4">{t('noPlanSelected')}</p>
             <button
               onClick={() => router.push('/pricing')}
               className="text-green-600 hover:text-green-700 font-medium"
             >
-              ← Back to pricing
+              &larr; {t('backToPricing')}
             </button>
           </div>
         </div>
@@ -715,11 +700,11 @@ export default function CheckoutPage() {
             className="flex items-center text-gray-600 hover:text-gray-900 mb-8"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to pricing
+            {t('backToPricing')}
           </button>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Complete Your Subscription
+            {t('completeYourSubscription')}
           </h1>
 
           <Elements stripe={stripePromise}>
