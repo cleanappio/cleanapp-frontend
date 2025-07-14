@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -21,12 +21,29 @@ export default function SignupPage() {
   const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>();
   const password = watch('password');
 
+  // Handle redirect parameter
+  useEffect(() => {
+    const { redirect } = router.query;
+    if (redirect && typeof redirect === 'string') {
+      // Store the redirect URL in session storage
+      sessionStorage.setItem('authRedirect', redirect);
+    }
+  }, [router.query]);
+
   const onSubmit = async (data: SignupForm) => {
     setIsLoading(true);
     try {
       await signup(data.name, data.email, data.password);
       toast.success('Account created successfully!');
-      router.push('/dashboard');
+      
+      // Check for stored redirect URL
+      const redirectUrl = sessionStorage.getItem('authRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('authRedirect');
+        router.push(redirectUrl);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to create account');
     } finally {

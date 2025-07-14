@@ -482,7 +482,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-6 max-w-md text-center">
           <h3 className="text-lg font-medium text-red-800 mb-2">Authentication Required</h3>
           <p className="text-red-700 mb-4">You must be logged in to view report details.</p>
-          <Link href="/login" className="text-sm font-medium text-red-800 hover:text-red-600 underline">
+          <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="text-sm font-medium text-red-800 hover:text-red-600 underline">
             Go to Login →
           </Link>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -18,12 +18,29 @@ export default function LoginPage() {
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
+  // Handle redirect parameter
+  useEffect(() => {
+    const { redirect } = router.query;
+    if (redirect && typeof redirect === 'string') {
+      // Store the redirect URL in session storage
+      sessionStorage.setItem('authRedirect', redirect);
+    }
+  }, [router.query]);
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
       toast.success('Welcome back!');
-      router.push('/dashboard');
+      
+      // Check for stored redirect URL
+      const redirectUrl = sessionStorage.getItem('authRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('authRedirect');
+        router.push(redirectUrl);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Invalid credentials');
     } finally {

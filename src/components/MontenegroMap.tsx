@@ -365,7 +365,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               <p className="mt-1 text-sm text-red-700">{authError}</p>
               <div className="mt-3">
                 <Link
-                  href="/login"
+                  href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
                   className="text-sm font-medium text-red-800 hover:text-red-600 underline"
                 >
                   Go to Login →
