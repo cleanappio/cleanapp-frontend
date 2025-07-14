@@ -10,7 +10,7 @@ export default function MontenegroPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
     }
   }, [isAuthenticated, isLoading, router]);
 
