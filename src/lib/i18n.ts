@@ -3,9 +3,6 @@ import { useRouter } from 'next/router';
 // Translation keys and their English values
 export const translations: {
   en: { [K in string]: string };
-  es: Partial<typeof translations.en>;
-  fr: Partial<typeof translations.en>;
-  de: Partial<typeof translations.en>;
   me: Partial<typeof translations.en>;
 } = {
   en: {
@@ -126,6 +123,9 @@ export const translations: {
     status: 'Status',
     invoice: 'Invoice',
     checkout: 'Checkout',
+    monthly: 'Monthly',
+    annual: 'Annual',
+    discount: 'Discount',
     
     // Footer
     copyright: '© 2024 CleanApp. All rights reserved.',
@@ -399,16 +399,6 @@ export const translations: {
     gettingLocation: 'Getting location...',
     useMyLocation: 'Use My Location',
   },
-  // Add other languages here as needed
-  es: {
-    // Spanish translations would go here
-  },
-  fr: {
-    // French translations would go here
-  },
-  de: {
-    // German translations would go here
-  },
   me: {
     // Common
     loading: 'Učitavanje...',
@@ -527,6 +517,9 @@ export const translations: {
     status: 'Status',
     invoice: 'Faktura',
     checkout: 'Plaćanje',
+    monthly: 'Mesečno',
+    annual: 'Godišnje',
+    discount: 'Popust',
     
     // Footer
     copyright: '© 2024 CleanApp. Sva prava zadržana.',
