@@ -11,33 +11,46 @@ import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
 import { getColorByValue } from "@/lib/util";
-import { useTranslations } from '@/lib/i18n';
+import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 import LanguageSwitcher from "./LanguageSwitcher";
 
-// Type for latest reports
+// Type for report data
+export interface Report {
+  seq: number;
+  timestamp: string;
+  id: string;
+  latitude: number;
+  longitude: number;
+  image?: number[] | string | null; // Report image as bytes array, URL string, or null
+}
+
+// Type for report analysis
+export interface ReportAnalysis {
+  seq: number;
+  source: string;
+  analysis_text: string;
+  analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
+  title: string;
+  description: string;
+  litter_probability: number;
+  hazard_probability: number;
+  severity_level: number;
+  summary: string;
+  language: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Type for report with analysis (legacy compatibility)
 export interface LatestReport {
-  report: {
-    seq: number;
-    timestamp: string;
-    id: string;
-    latitude: number;
-    longitude: number;
-    image?: number[] | string | null; // Report image as bytes array, URL string, or null
-  };
-  analysis: {
-    seq: number;
-    source: string;
-    analysis_text: string;
-    analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
-    title: string;
-    description: string;
-    litter_probability: number;
-    hazard_probability: number;
-    severity_level: number;
-    summary: string;
-    created_at: string;
-    updated_at: string;
-  };
+  report: Report;
+  analysis: ReportAnalysis;
+}
+
+// Type for report with multiple analyses
+export interface ReportWithAnalysis {
+  report: Report;
+  analysis: ReportAnalysis[];
 }
 
 // Responsive hook for mobile detection
@@ -936,15 +949,21 @@ export default function GlobeView() {
       const message = JSON.parse(event.data);
       if (message.type === "reports") {
         const batch = message.data;
+        const currentLocale = getCurrentLocale();
+        const filteredReports = filterAnalysesByLanguage(batch.reports || [], currentLocale);
+        
         console.log(
-          `Received ${batch.count} reports with analysis (seq ${batch.from_seq}-${batch.to_seq})`
+          `Received ${batch.count} reports, filtered to ${filteredReports.length} for locale ${currentLocale} (seq ${batch.from_seq}-${batch.to_seq})`
         );
-        // Fly to new report location and animate the pin
-        handleNewReport(batch.reports[0]);
+        
+        // Fly to new report location and animate the pin (if any filtered reports)
+        if (filteredReports.length > 0) {
+          handleNewReport(filteredReports[0]);
+        }
         
         // Add new reports to the top of the list
         setLatestReports((prev) => {
-          const newReports = batch.reports || [];
+          const newReports = filteredReports;
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
           const combined = [...newReports, ...prev].filter((item) => {
@@ -976,12 +995,14 @@ export default function GlobeView() {
   useEffect(() => {
     async function fetchLastReports() {
       try {
+        const locale = getCurrentLocale();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
-        setLatestReports(data.reports || []);
+        const filteredReports = filterAnalysesByLanguage(data.reports || [], locale);
+        setLatestReports(filteredReports);
       } catch (err) {
         console.error("Error fetching last reports:", err);
       } finally {

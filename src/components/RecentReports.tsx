@@ -4,7 +4,7 @@ import Image from "next/image";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { useRouter } from "next/router";
-import { useTranslations } from '@/lib/i18n';
+import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 
 interface RecentReportsProps {
   reportItem?: LatestReport | null;
@@ -28,16 +28,18 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     setLoading(true);
     setError(null);
     try {
+      const locale = getCurrentLocale();
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       const url = reportItem?.report?.id
-        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-id?id=${reportItem.report.id}&n=10`
-        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10`;
+        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-id?id=${reportItem.report.id}&n=10&lang=${locale}`
+        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
 
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setRecentReports(data.reports || []);
+        const filteredReports = filterAnalysesByLanguage(data.reports || [], locale);
+        setRecentReports(filteredReports);
       } else {
         setError(`${t('failedToFetchReports')}: ${response.status}`);
       }

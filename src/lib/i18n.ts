@@ -830,4 +830,72 @@ export function getTranslation(locale: Locale, key: TranslationKey, params?: Rec
   }
   
   return translation;
+}
+
+// Utility function to get current locale for API calls
+export function getCurrentLocale(): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: get from router or URL
+    const pathname = window.location.pathname;
+    const localeMatch = pathname.match(/^\/(en|me)/);
+    return localeMatch ? localeMatch[1] : 'en';
+  }
+  // Server-side: default to English
+  return 'en';
+}
+
+// Function to filter analyses by language and convert to LatestReport format
+export function filterAnalysesByLanguage(
+  reportsWithAnalyses: any[],
+  currentLocale: string = 'en'
+): any[] {
+  // Handle edge cases where input is not an array
+  if (!Array.isArray(reportsWithAnalyses)) {
+    console.warn('filterAnalysesByLanguage: Input is not an array:', reportsWithAnalyses);
+    return [];
+  }
+
+  return reportsWithAnalyses.map(reportWithAnalysis => {
+    // Handle edge cases where reportWithAnalysis is null/undefined
+    if (!reportWithAnalysis || typeof reportWithAnalysis !== 'object') {
+      console.warn('filterAnalysesByLanguage: Invalid reportWithAnalysis:', reportWithAnalysis);
+      return null;
+    }
+
+    // Ensure analysis is an array
+    const analyses = Array.isArray(reportWithAnalysis.analysis) 
+      ? reportWithAnalysis.analysis 
+      : [];
+
+    // Filter analyses by current language
+    const filteredAnalyses = analyses.filter((analysis: any) => 
+      analysis && analysis.language && analysis.language.toLowerCase() === currentLocale.toLowerCase()
+    );
+    
+    // If no analysis found for current language, try to find English as fallback
+    if (filteredAnalyses.length === 0) {
+      const englishAnalyses = analyses.filter((analysis: any) => 
+        analysis && analysis.language && analysis.language.toLowerCase() === 'en'
+      );
+      
+      if (englishAnalyses.length > 0) {
+        // Return the first English analysis
+        return {
+          report: reportWithAnalysis.report,
+          analysis: englishAnalyses[0]
+        };
+      }
+    }
+    
+    // Return the first analysis in the current language
+    if (filteredAnalyses.length > 0) {
+      return {
+        report: reportWithAnalysis.report,
+        analysis: filteredAnalyses[0]
+      };
+    }
+    
+    // If no analysis found at all, return null (will be filtered out)
+    return null;
+  }).filter(Boolean); // Remove null entries
 } 
