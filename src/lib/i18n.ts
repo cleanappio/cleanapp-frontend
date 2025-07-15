@@ -72,6 +72,7 @@ export const translations: {
     invalidEmailAddress: 'Invalid email address',
     signingIn: 'Signing in...',
     signingUp: 'Signing up...',
+    signOut: 'Sign out',
     startFreeTrial: 'start your free trial',
     or: 'Or',
     
@@ -471,6 +472,7 @@ export const translations: {
     invalidEmailAddress: 'Nevažeća email adresa',
     signingIn: 'Prijavljivanje...',
     signingUp: 'Registracija...',
+    signOut: 'Odjavi se',
     startFreeTrial: 'započnite besplatnu probu',
     or: 'Ili',
     
