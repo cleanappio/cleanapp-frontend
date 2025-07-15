@@ -301,7 +301,7 @@ export default function PricingPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Monthly
+              {t('monthly')}
             </button>
             <button
               onClick={() => setBillingCycle('annual')}
@@ -311,7 +311,7 @@ export default function PricingPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Annual <span className='text-sm'>(Discount)</span>
+              {t('annual')} <span className='text-sm'>({t('discount')})</span>
             </button>
           </div>
         </div>
