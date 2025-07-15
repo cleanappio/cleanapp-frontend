@@ -14,7 +14,7 @@ export default function LanguageSwitcher() {
   const router = useRouter();
   const { t } = useTranslations();
 
-  const currentLanguage = languages.find(lang => lang.code === router.locale) || languages[0];
+  const currentLanguage = languages.find(lang => lang.code === (router.locale || 'en')) || languages[0];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -48,19 +48,19 @@ export default function LanguageSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[1000]">
           <div className="py-1">
             {languages.map((language) => (
               <button
                 key={language.code}
                 onClick={() => handleLanguageChange(language.code)}
                 className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3 ${
-                  router.locale === language.code ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                  (router.locale || 'en') === language.code ? 'bg-green-50 text-green-700' : 'text-gray-700'
                 }`}
               >
                 <span className="text-lg">{language.flag}</span>
                 <span>{language.name}</span>
-                {router.locale === language.code && (
+                {(router.locale || 'en') === language.code && (
                   <span className="ml-auto text-green-600">✓</span>
                 )}
               </button>
