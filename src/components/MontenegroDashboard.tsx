@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations } from '@/lib/i18n';
 import { LogOut } from "lucide-react";
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function MontenegroDashboard() {
   const [isClient, setIsClient] = useState(false);
@@ -79,6 +80,8 @@ export default function MontenegroDashboard() {
             >
               {t('backToMap')}
             </Link>
+            
+            <LanguageSwitcher />
             
             {/* Authentication Controls */}
             {isAuthenticated ? (

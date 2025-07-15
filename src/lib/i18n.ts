@@ -159,6 +159,7 @@ export const translations: {
     zoomIn: 'Zoom In',
     zoomOut: 'Zoom Out',
     fullscreen: 'Fullscreen',
+    selectLanguage: 'Select language',
     
     // Globe related
     globe: 'Globe',
@@ -559,6 +560,7 @@ export const translations: {
     zoomIn: 'Uvećaj',
     zoomOut: 'Umanji',
     fullscreen: 'Pun ekran',
+    selectLanguage: 'Izaberi jezik',
     
     // Globe related
     globe: 'Globus',

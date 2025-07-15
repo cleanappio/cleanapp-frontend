@@ -12,6 +12,7 @@ import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
 import { getColorByValue } from "@/lib/util";
 import { useTranslations } from '@/lib/i18n';
+import LanguageSwitcher from "./LanguageSwitcher";
 
 // Type for latest reports
 export interface LatestReport {
@@ -1060,6 +1061,11 @@ export default function GlobeView() {
               isMenuOpen ? "block" : "hidden"
             }`}
           >
+            {/* Language Switcher */}
+            <div className="px-4 py-2">
+              <LanguageSwitcher />
+            </div>
+            
             {[
               {
                 label: t('installAndroid'),

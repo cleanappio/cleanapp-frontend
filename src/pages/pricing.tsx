@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import Link from 'next/link';
 import { useTranslations } from '@/lib/i18n';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 interface BillingCycle {
   type: string;
@@ -230,7 +231,8 @@ export default function PricingPage() {
               </Link>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
+              <LanguageSwitcher />
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-700">{user?.email}</span>

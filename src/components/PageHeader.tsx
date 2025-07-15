@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations } from '@/lib/i18n';
 import { useRouter } from 'next/router';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const PageHeader: React.FC = () => {
   const router = useRouter();
@@ -33,7 +34,8 @@ const PageHeader: React.FC = () => {
             </Link>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
+            <LanguageSwitcher />
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-700">{user?.email}</span>
