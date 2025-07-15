@@ -11,6 +11,7 @@ import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
 import { getColorByValue } from "@/lib/util";
+import { useTranslations } from '@/lib/i18n';
 
 // Type for latest reports
 export interface LatestReport {
@@ -57,6 +58,7 @@ export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   const router = useRouter();
+  const { t } = useTranslations();
 
   const isMobile = useIsMobile();
 
@@ -1032,7 +1034,7 @@ export default function GlobeView() {
           <Link href="/" className="flex items-center">
             <Image
               src="/cleanapp-logo.png"
-              alt="CleanApp Logo"
+              alt={t('cleanAppLogo')}
               width={200}
               height={60}
               className="h-12 w-auto"
@@ -1060,20 +1062,20 @@ export default function GlobeView() {
           >
             {[
               {
-                label: "Install Android",
+                label: t('installAndroid'),
                 link: "https://play.google.com/store/apps/details/CleanApp?id=com.cleanapp&hl=ln",
               },
               {
-                label: "Install iOS",
+                label: t('installIOS'),
                 link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
               },
-              { label: "Subscribe", link: "/pricing" },
+              { label: t('subscribe'), link: "/pricing" },
               {
-                label: "CleanAppMap",
+                label: t('cleanAppMap'),
                 link: "https://cleanappmap.replit.app",
               },
               {
-                label: "CleanAppGPT",
+                label: t('cleanAppGPT'),
                 link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
               },
               { label: "STXN", link: "https://www.stxn.io" },
@@ -1104,7 +1106,7 @@ export default function GlobeView() {
             }`}
             onClick={() => setSelectedTab("physical")}
           >
-            PHYSICAL
+            {t('physical')}
           </p>
           <p
             className={`text-sm cursor-pointer rounded-full px-4 py-2 font-bold ${
@@ -1114,7 +1116,7 @@ export default function GlobeView() {
             }`}
             onClick={() => setSelectedTab("digital")}
           >
-            DIGITAL
+            {t('digital')}
           </p>
         </div>
       </div>
@@ -1148,7 +1150,7 @@ export default function GlobeView() {
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg"
           >
-            {locationLoading ? 'Getting location...' : 'Use My Location'}
+            {locationLoading ? t('gettingLocation') : t('useMyLocation')}
           </button>
         </div>
       )}
@@ -1173,7 +1175,7 @@ export default function GlobeView() {
         <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
           <Link href={"https://stxn.io/"} target="_blank">
             <div className="flex items-center justify-center gap-2">
-              <span>Powered by</span>
+              <span>{t('poweredBy')}</span>
               <span>
                 <Image
                   src={"/stxn.svg"}
@@ -1184,7 +1186,7 @@ export default function GlobeView() {
                 />
               </span>
               <span className="underline underline-offset-4">
-                Smart Transactions
+                {t('smartTransactions')}
               </span>
             </div>
           </Link>
