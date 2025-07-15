@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { getColorByValue } from '@/lib/util';
 import { authApiClient } from '@/lib/auth-api-client';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTranslations } from '@/lib/i18n';
 import LatestReports from './LatestReports';
 import MontenegroReportOverview from './MontenegroReportOverview';
 
@@ -85,6 +86,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [areaAggrData, setAreaAggrData] = useState<AreaAggrData[]>([]);
   const [municipalitiesRate, setMunicipalitiesRate] = useState<Map<number, ReportStats>>(new Map());
+  const { t } = useTranslations();
 
   // Helper function to create authenticated fetch requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -121,7 +123,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
   // Handle report click from LatestReports
   const handleReportClick = (report: Report) => {
     if (!isAuthenticated) {
-      setAuthError('Authentication required to view report details.');
+      setAuthError(t('authenticationRequired'));
       return;
     }
     setSelectedReport(report);
@@ -177,7 +179,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
     } catch (error) {
       console.error('Error fetching reports:', error);
       if (error instanceof Error && (error.message.includes('authentication') || error.message.includes('Authentication required'))) {
-        setAuthError('Authentication required. Please log in to view reports.');
+        setAuthError(t('authenticationRequired'));
       }
       setReports([]);
     } finally {
@@ -268,7 +270,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       fetchAreaAggrData();
     } else if (isClient && !isLoading && !isAuthenticated) {
       console.log('User not authenticated, setting auth error');
-      setAuthError('Authentication required. Please log in to view reports.');
+      setAuthError(t('authenticationRequired'));
     }
   }, [isClient, isAuthenticated, isLoading]);
 
@@ -361,14 +363,14 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Authentication Required</h3>
+              <h3 className="text-sm font-medium text-red-800">{t('authenticationRequired')}</h3>
               <p className="mt-1 text-sm text-red-700">{authError}</p>
               <div className="mt-3">
                 <Link
                   href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
                   className="text-sm font-medium text-red-800 hover:text-red-600 underline"
                 >
-                  Go to Login →
+                  {t('goToLogin')} →
                 </Link>
               </div>
             </div>
@@ -386,7 +388,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
                 : 'text-gray-600 hover:text-gray-800'
               }`}
           >
-            Stats
+            {t('statistics')}
           </button>
           <button
             onClick={() => setViewMode('Reports')}
@@ -395,7 +397,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
                 : 'text-gray-600 hover:text-gray-800'
               }`}
           >
-            Reports
+            {t('reports')}
           </button>
         </div>
       </div>
@@ -444,17 +446,17 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
                           ${a.name}
                         </h3>
                         <div style="margin-bottom: 8px;">
-                          <strong>Reports Count:</strong> ${stats.reportsNumber}
+                          <strong>${t('reportsCount')}:</strong> ${stats.reportsNumber}
                         </div>
                         <div style="margin-bottom: 8px;">
-                          <strong>Mean Severity:</strong> ${stats.averageSeverity.toFixed(3)}
+                          <strong>${t('meanSeverity')}:</strong> ${stats.averageSeverity.toFixed(3)}
                         </div>
                         ${areaData ? `
                         <div style="margin-bottom: 8px;">
-                          <strong>Mean Litter Probability:</strong> ${(areaData.mean_litter_probability * 100).toFixed(1)}%
+                          <strong>${t('meanLitterProbability')}:</strong> ${(areaData.mean_litter_probability * 100).toFixed(1)}%
                         </div>
                         <div style="margin-bottom: 8px;">
-                          <strong>Mean Hazard Probability:</strong> ${(areaData.mean_hazard_probability * 100).toFixed(1)}%
+                          <strong>${t('meanHazardProbability')}:</strong> ${(areaData.mean_hazard_probability * 100).toFixed(1)}%
                         </div>
                         ` : ''}
                       </div>
@@ -495,7 +497,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               eventHandlers={{
                 click: () => {
                   if (!isAuthenticated) {
-                    setAuthError('Authentication required to view report details.');
+                    setAuthError(t('authenticationRequired'));
                     return;
                   }
                   setSelectedReport(report);

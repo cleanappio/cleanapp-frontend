@@ -4,28 +4,28 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-
-// Dynamically import the entire map component to avoid SSR issues
-const MontenegroMap = dynamic(
-  () => import('./MontenegroMap'),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading map...</p>
-        </div>
-      </div>
-    )
-  }
-);
-
-
+import { useTranslations } from '@/lib/i18n';
 
 export default function MontenegroDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([42.7087, 19.3744]); // Montenegro center
+  const { t } = useTranslations();
+
+  // Dynamically import the entire map component to avoid SSR issues
+  const MontenegroMap = dynamic(
+    () => import('./MontenegroMap'),
+    { 
+      ssr: false,
+      loading: () => (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">{t('loading')} {t('map').toLowerCase()}...</p>
+          </div>
+        </div>
+      )
+    }
+  );
 
   useEffect(() => {
     setIsClient(true);
@@ -36,7 +36,7 @@ export default function MontenegroDashboard() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Montenegro Dashboard...</p>
+          <p className="mt-4 text-gray-600">{t('loading')} {t('montenegroDashboard').toLowerCase()}...</p>
         </div>
       </div>
     );
@@ -51,7 +51,7 @@ export default function MontenegroDashboard() {
             <Link href="/" className="flex items-center">
               <Image
                 src="/cleanapp-logo.png"
-                alt="CleanApp Logo"
+                alt={t('cleanAppLogo')}
                 width={150}
                 height={45}
                 className="h-9 w-auto"
@@ -59,15 +59,15 @@ export default function MontenegroDashboard() {
               />
             </Link>
             <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-900">Montenegro Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('montenegroDashboard')}</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">🇲🇪 Montenegro</span>
+            <span className="text-sm text-gray-500">🇲🇪 {t('montenegro')}</span>
             <Link 
               href="/"
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
             >
-              Back to Home
+              {t('backToMap')}
             </Link>
           </div>
         </div>

@@ -5,7 +5,7 @@ const nextConfig = {
     domains: ['localhost'], // Add your domain here if needed
   },
   i18n: {
-    locales: ['en', 'es', 'fr', 'de'],
+    locales: ['en', 'es', 'fr', 'de', 'me'],
     defaultLocale: 'en',
     localeDetection: false,
   },
