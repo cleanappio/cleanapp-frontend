@@ -3,6 +3,7 @@ import { Report } from "./MontenegroMap";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { authApiClient } from "@/lib/auth-api-client";
 import { useAuthStore } from "@/lib/auth-store";
+import { useTranslations } from "@/lib/i18n";
 import Link from 'next/link';
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -32,6 +33,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -59,11 +61,11 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         const data = await response.json();
         setFullReport(data);
       } else {
-        setError(`Failed to fetch report: ${response.status}`);
+        setError(`${t('failedToFetchReport')}: ${response.status}`);
       }
     } catch (error) {
       console.error("Error fetching full report:", error);
-      setError("Failed to fetch report data");
+      setError(t('failedToFetchReport'));
     } finally {
       setLoading(false);
     }
@@ -195,7 +197,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
 
       // Add title
       const title = document.createElement('h1');
-      title.textContent = reportItem.analysis?.title || `Report #${reportItem.report.seq}`;
+      title.textContent = reportItem.analysis?.title || `${t('report')} #${reportItem.report.seq}`;
       title.style.fontSize = '20px';
       title.style.fontWeight = 'bold';
       title.style.color = '#1f2937';
@@ -211,7 +213,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
 
       // Add timestamp
       const timestamp = document.createElement('p');
-      timestamp.textContent = `Report Date: ${formatTime(reportItem.report.timestamp)}`;
+      timestamp.textContent = `${t('reportDate')}: ${formatTime(reportItem.report.timestamp)}`;
       timestamp.style.fontSize = '10px';
       timestamp.style.color = '#6b7280';
       timestamp.style.marginBottom = '15px';
@@ -249,7 +251,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         imageContainer.appendChild(img);
       } else {
         const noImage = document.createElement('p');
-        noImage.textContent = 'No image available';
+        noImage.textContent = t('noImageAvailable');
         noImage.style.color = '#9ca3af';
         imageContainer.appendChild(noImage);
       }
@@ -271,7 +273,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       rightContainer.appendChild(locationSection);
 
       const locationTitle = document.createElement('h3');
-      locationTitle.textContent = 'Location';
+      locationTitle.textContent = t('location');
       locationTitle.style.fontSize = '14px';
       locationTitle.style.fontWeight = 'bold';
       locationTitle.style.marginBottom = '10px';
@@ -303,7 +305,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         pdfMapContainer.style.justifyContent = 'center';
         pdfMapContainer.style.fontSize = '10px';
         pdfMapContainer.style.color = '#6b7280';
-        pdfMapContainer.textContent = `Map: ${reportItem.report.latitude.toFixed(4)}, ${reportItem.report.longitude.toFixed(4)}`;
+        pdfMapContainer.textContent = `${t('map')}: ${reportItem.report.latitude.toFixed(4)}, ${reportItem.report.longitude.toFixed(4)}`;
       }
       locationSection.appendChild(pdfMapContainer);
 
@@ -311,8 +313,8 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       coords.style.fontSize = '12px';
       coords.style.color = '#6b7280';
       coords.innerHTML = `
-        <div style="margin-bottom: 5px;"><strong>Latitude:</strong> ${reportItem.report.latitude.toFixed(6)}</div>
-        <div><strong>Longitude:</strong> ${reportItem.report.longitude.toFixed(6)}</div>
+        <div style="margin-bottom: 5px;"><strong>${t('latitude')}:</strong> ${reportItem.report.latitude.toFixed(6)}</div>
+        <div><strong>${t('longitude')}:</strong> ${reportItem.report.longitude.toFixed(6)}</div>
       `;
       locationSection.appendChild(coords);
 
@@ -326,7 +328,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         rightContainer.appendChild(analysisSection);
 
         const analysisTitle = document.createElement('h3');
-        analysisTitle.textContent = 'Analysis';
+        analysisTitle.textContent = t('analysis');
         analysisTitle.style.fontSize = '14px';
         analysisTitle.style.fontWeight = 'bold';
         analysisTitle.style.marginBottom = '10px';
@@ -338,7 +340,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         severityDiv.style.marginBottom = '8px';
         severityDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <span style="font-size: 11px; color: #374151;">Severity Level</span>
+            <span style="font-size: 11px; color: #374151;">${t('severityLevel')}</span>
             <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.severity_level * 10).toFixed(0)}/10</span>
           </div>
           <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
@@ -353,7 +355,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           litterDiv.style.marginBottom = '8px';
           litterDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-              <span style="font-size: 11px; color: #374151;">Litter Probability</span>
+              <span style="font-size: 11px; color: #374151;">${t('litterProbability')}</span>
               <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.litter_probability * 100).toFixed(0)}%</span>
             </div>
             <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
@@ -369,7 +371,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           hazardDiv.style.marginBottom = '8px';
           hazardDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-              <span style="font-size: 11px; color: #374151;">Hazard Probability</span>
+              <span style="font-size: 11px; color: #374151;">${t('hazardProbability')}</span>
               <span style="font-size: 11px; font-weight: bold;">${(reportItem.analysis.hazard_probability * 100).toFixed(0)}%</span>
             </div>
             <div style="width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden;">
@@ -391,7 +393,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         tempContainer.appendChild(descriptionSection);
 
         const descriptionTitle = document.createElement('h3');
-        descriptionTitle.textContent = 'Description';
+        descriptionTitle.textContent = t('description');
         descriptionTitle.style.fontSize = '14px';
         descriptionTitle.style.fontWeight = 'bold';
         descriptionTitle.style.marginBottom = '10px';
@@ -466,13 +468,13 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       }
 
       // Save PDF
-      pdf.save(`report-${reportItem.report.seq}.pdf`);
+      pdf.save(`${t('report')}-${reportItem.report.seq}.pdf`);
 
       // Clean up
       document.body.removeChild(tempContainer);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      alert(t('failedToGeneratePDF'));
     }
   };
 
@@ -480,10 +482,10 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
     return (
       <div className="fixed inset-0 bg-white z-[2000] flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h3 className="text-lg font-medium text-red-800 mb-2">Authentication Required</h3>
-          <p className="text-red-700 mb-4">You must be logged in to view report details.</p>
+          <h3 className="text-lg font-medium text-red-800 mb-2">{t('authenticationRequired')}</h3>
+          <p className="text-red-700 mb-4">{t('mustBeLoggedInToViewReportDetails')}</p>
           <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="text-sm font-medium text-red-800 hover:text-red-600 underline">
-            Go to Login →
+            {t('goToLogin')} →
           </Link>
         </div>
       </div>
@@ -493,7 +495,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
   if (!reportItem) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">No report selected</p>
+        <p className="text-gray-500">{t('noReportSelected')}</p>
       </div>
     );
   }
@@ -503,7 +505,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading report...</p>
+          <p className="mt-4 text-gray-600">{t('loading')} {t('report').toLowerCase()}...</p>
         </div>
       </div>
     );
@@ -513,7 +515,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <p className="text-red-500 mb-2">Error loading report</p>
+          <p className="text-red-500 mb-2">{t('errorLoadingReport')}</p>
           <p className="text-gray-600 text-sm">{error}</p>
         </div>
       </div>
@@ -531,11 +533,11 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
         <div className="flex items-center space-x-4">
           <img 
             src="/cleanapp-logo.png" 
-            alt="CleanApp Logo" 
+            alt={t('cleanAppLogo')} 
             className="h-8 w-auto"
           />
           <h1 className="text-xl font-semibold text-gray-900">
-            {analysis?.title || `Report #${report.seq}`}
+            {analysis?.title || `${t('report')} #${report.seq}`}
           </h1>
           <span className="text-sm text-gray-500">
             {formatTime(report.timestamp)}
@@ -549,20 +551,20 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
             }}
             className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
           >
-            Mark as fixed
+            {t('markAsFixed')}
           </button>
           <button
             onClick={exportToPDF}
             className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
           >
-            Export as PDF
+            {t('exportAsPDF')}
           </button>
           {onClose && (
             <button
               onClick={onClose}
               className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
             >
-              Close
+              {t('close')}
             </button>
           )}
         </div>
@@ -576,7 +578,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
             {imageUrl ? (
               <img
                 src={imageUrl}
-                alt="Report"
+                alt={t('report')}
                 className="max-w-full max-h-full object-contain"
                 onError={(e) => {
                   console.error("Failed to load image:", imageUrl);
@@ -586,7 +588,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
               />
             ) : (
               <div className="text-gray-400 text-center">
-                <p>No image available</p>
+                <p>{t('noImageAvailable')}</p>
               </div>
             )}
           </div>
@@ -597,7 +599,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
           <div className="space-y-6">
             {/* Location Info */}
             <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Location</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">{t('location')}</h3>
               
               {/* Map */}
               <div className="h-80 mb-3 rounded-lg overflow-hidden border">
@@ -635,11 +637,11 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
               {/* Coordinates */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Latitude:</span>
+                  <span className="text-gray-600">{t('latitude')}:</span>
                   <span className="ml-2 font-medium">{report.latitude.toFixed(6)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Longitude:</span>
+                  <span className="text-gray-600">{t('longitude')}:</span>
                   <span className="ml-2 font-medium">{report.longitude.toFixed(6)}</span>
                 </div>
               </div>
@@ -648,12 +650,12 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
             {/* Analysis Stats */}
             {analysis && (
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-4">Analysis</h3>
+                <h3 className="font-semibold text-gray-900 mb-4">{t('analysis')}</h3>
                 
                 {/* Severity Level */}
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Severity Level</span>
+                    <span className="text-sm font-medium text-gray-700">{t('severityLevel')}</span>
                     <span className="text-sm font-semibold">{(analysis.severity_level * 10).toFixed(0)}/10</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -668,7 +670,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
                 {analysis.litter_probability !== undefined && (
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Litter Probability</span>
+                      <span className="text-sm font-medium text-gray-700">{t('litterProbability')}</span>
                       <span className="text-sm font-semibold">{(analysis.litter_probability * 100).toFixed(0)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -684,7 +686,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
                 {analysis.hazard_probability !== undefined && (
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Hazard Probability</span>
+                      <span className="text-sm font-medium text-gray-700">{t('hazardProbability')}</span>
                       <span className="text-sm font-semibold">{(analysis.hazard_probability * 100).toFixed(0)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -701,7 +703,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
             {/* Description */}
             {analysis && (
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Description</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('description')}</h3>
                 {analysis.title && (
                   <h4 className="font-medium text-gray-800 mb-2">{analysis.title}</h4>
                 )}

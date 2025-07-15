@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTranslations } from '@/lib/i18n';
 import MontenegroDashboard from '../components/MontenegroDashboard';
 import Head from 'next/head';
 
 export default function MontenegroPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthStore();
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -29,8 +31,8 @@ export default function MontenegroPage() {
   return (
     <>
       <Head>
-        <title>Montenegro Dashboard - CleanApp</title>
-        <meta name="description" content="Interactive map dashboard for Montenegro with city information and statistics" />
+        <title>{t('montenegroDashboard')} - CleanApp</title>
+        <meta name="description" content={t('montenegroReports')} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <MontenegroDashboard />
