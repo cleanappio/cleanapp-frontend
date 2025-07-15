@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { getColorByValue } from '@/lib/util';
 import { authApiClient } from '@/lib/auth-api-client';
 import { useAuthStore } from '@/lib/auth-store';
-import { useTranslations } from '@/lib/i18n';
+import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 import LatestReports from './LatestReports';
 import MontenegroReportOverview from './MontenegroReportOverview';
 
@@ -53,6 +53,7 @@ export interface Report {
     hazard_probability: number;
     severity_level: number;
     summary: string;
+    language: string;
     created_at: string;
     updated_at: string;
   };
@@ -171,7 +172,14 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       console.log('Fetched reports for Montenegro:', data);
 
       if (data.reports && Array.isArray(data.reports)) {
-        setReports(data.reports);
+        const locale = getCurrentLocale();
+        try {
+          const filteredReports = filterAnalysesByLanguage(data.reports, locale);
+          setReports(filteredReports);
+        } catch (filterError) {
+          console.error('Error filtering reports by language:', filterError);
+          setReports([]);
+        }
       } else {
         console.warn('No reports found in response or invalid format');
         setReports([]);
@@ -206,7 +214,14 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       console.log('Fetched reports for municipality:', osmId, data);
 
       if (data.reports && Array.isArray(data.reports)) {
-        setReports(data.reports);
+        const locale = getCurrentLocale();
+        try {
+          const filteredReports = filterAnalysesByLanguage(data.reports, locale);
+          setReports(filteredReports);
+        } catch (filterError) {
+          console.error('Error filtering reports by language:', filterError);
+          setReports([]);
+        }
       } else {
         console.warn('No reports found in response or invalid format');
         setReports([]);

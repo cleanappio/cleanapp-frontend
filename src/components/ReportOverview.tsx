@@ -3,7 +3,7 @@ import Image from "next/image";
 import router from "next/router";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
-import { useTranslations } from '@/lib/i18n';
+import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 
 interface ReportOverviewProps {
   reportItem?: LatestReport | null;
@@ -33,12 +33,15 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     setLoading(true);
     setError(null);
     try {
+      const locale = getCurrentLocale();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.report.seq}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.report.seq}&lang=${locale}`
       );
       if (response.ok) {
         const data = await response.json();
-        setFullReport(data);
+        // Filter analyses by language and convert to single analysis format
+        const filteredData = filterAnalysesByLanguage([data], locale);
+        setFullReport(filteredData[0] || data);
       } else {
         setError(`${t('failedToFetchReport')}: ${response.status}`);
       }
