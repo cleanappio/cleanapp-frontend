@@ -17,8 +17,16 @@ ENV NEXT_PUBLIC_AUTH_API_URL={{NEXT_PUBLIC_AUTH_API_URL}}
 COPY package.json package-lock.json* ./
 RUN npm install
 
+# Copy next.config.js first to ensure it's available
+COPY next.config.js ./
+
 # Copy all files and build the app
 COPY . .
+
+# Ensure next.config.js is properly copied and has correct permissions
+RUN ls -la next.config.js || echo "next.config.js not found"
+RUN cat next.config.js
+
 RUN npm run build
 
 # Stage 2: Run the application with minimal footprint
@@ -35,6 +43,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.js ./next.config.js
 
 # Expose the port Next.js will run on
 EXPOSE 3000
