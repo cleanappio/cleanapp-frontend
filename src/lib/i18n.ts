@@ -379,6 +379,15 @@ export const translations: {
     noReportsFound: 'No reports found',
     noSummary: 'No summary',
     
+    // MontenegroReportOverview specific
+    litterProbability: 'Litter Probability',
+    hazardProbability: 'Hazard Probability',
+    severityLevel: 'Severity Level',
+    analysis: 'Analysis',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    authenticationRequired: 'Authentication Required',
+    
     // GlobeView specific
     installAndroid: 'Install Android',
     installIOS: 'Install iOS',
@@ -768,6 +777,15 @@ export const translations: {
     latestReports: 'Najnoviji izveštaji',
     noReportsFound: 'Nema pronađenih izveštaja',
     noSummary: 'Nema sažetka',
+    
+    // MontenegroReportOverview specific
+    litterProbability: 'Verovatnoća smeća',
+    hazardProbability: 'Verovatnoća opasnosti',
+    severityLevel: 'Nivo ozbiljnosti',
+    analysis: 'Analiza',
+    latitude: 'Geografska širina',
+    longitude: 'Geografska dužina',
+    authenticationRequired: 'Potrebna je autentifikacija',
     
     // GlobeView specific
     installAndroid: 'Instaliraj Android',
