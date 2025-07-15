@@ -4,6 +4,7 @@ import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
 import { LatestReport } from "@/components/GlobeView";
 import { X } from "lucide-react";
+import { useTranslations } from '@/lib/i18n';
 
 interface CleanAppProModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
 }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useTranslations();
 
   // Mobile detection
   useEffect(() => {
@@ -71,6 +73,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             <button
               onClick={handleCloseModal}
               className="fixed top-4 right-4 z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
+              aria-label={t('close')}
             >
               <X className="w-6 h-6" />
             </button>
@@ -93,6 +96,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
               <button
                 onClick={handleCloseModal}
                 className="fixed top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+                aria-label={t('close')}
               >
                 <X className="w-6 h-6" />
               </button>

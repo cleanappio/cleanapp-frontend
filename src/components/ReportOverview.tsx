@@ -3,6 +3,7 @@ import Image from "next/image";
 import router from "next/router";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
+import { useTranslations } from '@/lib/i18n';
 
 interface ReportOverviewProps {
   reportItem?: LatestReport | null;
@@ -15,6 +16,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (reportItem?.report?.seq) {
@@ -38,11 +40,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
         const data = await response.json();
         setFullReport(data);
       } else {
-        setError(`Failed to fetch report: ${response.status}`);
+        setError(`${t('failedToFetchReport')}: ${response.status}`);
       }
     } catch (error) {
       console.error("Error fetching full report:", error);
-      setError("Failed to fetch report data");
+      setError(t('failedToFetchReport'));
     } finally {
       setLoading(false);
     }
@@ -67,17 +69,17 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     return (
       <div className="border rounded-md bg-white shadow-md">
         <div className="p-4">
-          <p className="text-lg font-medium">Select a Report</p>
+          <p className="text-lg font-medium">{t('selectAReport')}</p>
           <p className="text-sm text-gray-500">
-            Select a report from the map to view detailed analysis
+            {t('selectAReportFromMapToViewDetailedAnalysis')}
           </p>
         </div>
         <div className="relative min-h-[400px] sm:h-96 bg-gray-100 rounded-b-md flex items-center justify-center">
           <div className="text-center">
             <div className="text-gray-400 text-4xl sm:text-6xl mb-4">📊</div>
-            <p className="text-gray-500">No report selected</p>
+            <p className="text-gray-500">{t('noReportSelected')}</p>
             <p className="text-sm text-gray-400 mt-2">
-              Click on a report from the map to see detailed information
+              {t('clickOnAReportFromTheMapToSeeDetailedInformation')}
             </p>
           </div>
         </div>
@@ -93,7 +95,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          {analysis?.title || `Report ${report.seq}`}
+          {analysis?.title || `${t('report')} ${report.seq}`}
         </h1>
       </div>
 
@@ -102,14 +104,14 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           <div className="w-full h-full bg-red-50 rounded-b-md flex items-center justify-center">
             <div className="text-center">
               <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
-              <p className="text-red-600 font-medium">Error loading report</p>
+              <p className="text-red-600 font-medium">{t('errorLoadingReport')}</p>
               <p className="text-sm text-red-500 mt-1">{error}</p>
             </div>
           </div>
         ) : imageUrl ? (
           <Image
             src={imageUrl}
-            alt="Report Analysis"
+            alt={t('reportAnalysis')}
             width={1000}
             height={1000}
             className="w-full h-full rounded-b-md object-cover"
@@ -121,7 +123,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           />
         ) : (
           <div className="w-full h-full bg-gray-200 rounded-b-md flex items-center justify-center">
-            <p className="text-gray-500">No image available</p>
+            <p className="text-gray-500">{t('noImageAvailable')}</p>
           </div>
         )}
 
@@ -137,7 +139,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 <div className="flex gap-4">
                   {/* Location */}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Location</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('location')}</h3>
                     <a 
                       href={getGoogleMapsUrl(report.latitude, report.longitude)}
                       target="_blank"
@@ -150,7 +152,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
                   {/* Time */}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Time</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('time')}</h3>
                     <p className="text-sm text-gray-600">{formatTime(report.timestamp)}</p>
                   </div>
                 </div>
@@ -158,7 +160,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 {/* Litter Probability */}
                 {analysis?.litter_probability !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Litter</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('litter')}</h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
                         <div 
@@ -176,7 +178,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 {/* Hazard Probability */}
                 {analysis?.hazard_probability !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Hazard</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('hazard')}</h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
                         <div 
@@ -194,16 +196,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 {/* Severity Level */}
                 {analysis?.severity_level !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">Severity</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('severity')}</h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
                         <div 
-                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
-                          style={{ width: `${(analysis.severity_level) * 100}%` }}
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level)}`}
+                          style={{ width: `${analysis.severity_level * 100}%` }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700">
-                        {(analysis.severity_level*10).toFixed(0)}/10
+                        {(analysis.severity_level * 10).toFixed(0)}/10
                       </span>
                     </div>
                   </div>
@@ -211,66 +213,40 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               </div>
             </div>
 
-            {/* Bottom section with description */}
+            {/* Description */}
             {analysis?.description && (
               <div className="bg-gray-100 p-4 rounded-lg">
-                <h3 className="font-semibold text-sm mb-2 text-gray-800">Description</h3>
-                <p className="text-sm leading-relaxed text-gray-700">{analysis.description}</p>
+                <h3 className="font-semibold text-sm mb-2 text-gray-800">{t('description')}</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {analysis.description}
+                </p>
               </div>
             )}
 
-            {/* Subscribe Button */}
-            {!isEmbeddedMode && (
-              <div className="flex justify-center pt-2">
-                <div className="relative">
-                  <div
-                    className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
-                    style={{ animationDuration: "3s" }}
-                  ></div>
-                  <div
-                    className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
-                    style={{ animationDuration: "4s" }}
-                  ></div>
-                  <button
-                    className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-2 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
-                    onClick={() => router.push("/pricing")}
-                  >
-                    <span className="flex items-center">
-                      <svg
-                        className="mr-2 h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M5 3l14 9-14 9V3z"
-                        ></path>
-                      </svg>
-                      Subscribe for Full Access
-                    </span>
-                  </button>
-                </div>
+            {/* Summary */}
+            {analysis?.summary && (
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <h3 className="font-semibold text-sm mb-2 text-gray-800">{t('summary')}</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {analysis.summary}
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Desktop Layout - Original positioning */}
+        {/* Desktop Layout - Content overlay on image */}
         <div className="hidden sm:block">
-          {/* Left Panel - Report Details */}
-          <div className="absolute top-4 left-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
-            <div className="space-y-3">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-white">
               {/* Location */}
               <div>
-                <h3 className="font-semibold text-sm mb-1">Location</h3>
+                <h3 className="font-semibold text-sm mb-1">{t('location')}</h3>
                 <a 
                   href={getGoogleMapsUrl(report.latitude, report.longitude)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-300 hover:text-blue-200 text-xs underline"
+                  className="text-blue-300 hover:text-blue-200 text-sm underline"
                 >
                   {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
                 </a>
@@ -278,22 +254,22 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
               {/* Time */}
               <div>
-                <h3 className="font-semibold text-sm mb-1">Time</h3>
-                <p className="text-xs text-gray-300">{formatTime(report.timestamp)}</p>
+                <h3 className="font-semibold text-sm mb-1">{t('time')}</h3>
+                <p className="text-sm">{formatTime(report.timestamp)}</p>
               </div>
 
               {/* Litter Probability */}
               {analysis?.litter_probability !== undefined && (
                 <div>
-                  <h3 className="font-semibold text-sm mb-1">Litter</h3>
+                  <h3 className="font-semibold text-sm mb-1">{t('litter')}</h3>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div className="flex-1 bg-white/20 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
                         style={{ width: `${analysis.litter_probability * 100}%` }}
                       ></div>
                     </div>
-                    <span className="text-xs font-medium">
+                    <span className="text-sm font-medium">
                       {(analysis.litter_probability * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -303,95 +279,23 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               {/* Hazard Probability */}
               {analysis?.hazard_probability !== undefined && (
                 <div>
-                  <h3 className="font-semibold text-sm mb-1">Hazard</h3>
+                  <h3 className="font-semibold text-sm mb-1">{t('hazard')}</h3>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div className="flex-1 bg-white/20 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
                         style={{ width: `${analysis.hazard_probability * 100}%` }}
                       ></div>
                     </div>
-                    <span className="text-xs font-medium">
+                    <span className="text-sm font-medium">
                       {(analysis.hazard_probability * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>
               )}
-
-              {/* Severity Level */}
-              {analysis?.severity_level !== undefined && (
-                <div>
-                  <h3 className="font-semibold text-sm mb-1">Severity</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-700 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level*10, 10)}`}
-                        style={{ width: `${(analysis.severity_level) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs font-medium">
-                      {(analysis.severity_level*10).toFixed(0)}/10
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Right Bottom Panel - Description */}
-          {analysis?.description && (
-            <div className="absolute bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg max-w-xs backdrop-blur-sm">
-              <p className="text-xs leading-relaxed">{analysis.description}</p>
-            </div>
-          )}
-
-          {/* Subscribe Button - Desktop */}
-          {!isEmbeddedMode && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="relative">
-                <div
-                  className="absolute inset-0 bg-white rounded-xl opacity-20 animate-ping"
-                  style={{ animationDuration: "3s" }}
-                ></div>
-                <div
-                  className="absolute inset-0 bg-white rounded-xl opacity-15 animate-pulse"
-                  style={{ animationDuration: "4s" }}
-                ></div>
-                <button
-                  className="subscribe-button relative bg-gradient-to-r from-green-500 to-green-700 hover:from-green-500/90 hover:to-green-700/90 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 z-10 text-base"
-                  onClick={() => router.push("/pricing")}
-                >
-                  <span className="flex items-center">
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 3l14 9-14 9V3z"
-                      ></path>
-                    </svg>
-                    Subscribe for Full Access
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-
-        {/* Loading Overlay */}
-        {loading && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-b-md">
-            <div className="text-white flex items-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
-              <span className="text-sm sm:text-base">Loading full report...</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { useRouter } from "next/router";
+import { useTranslations } from '@/lib/i18n';
 
 interface RecentReportsProps {
   reportItem?: LatestReport | null;
@@ -17,6 +18,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { t } = useTranslations();
 
   useEffect(() => {
     fetchRecentReports();
@@ -37,11 +39,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         const data = await response.json();
         setRecentReports(data.reports || []);
       } else {
-        setError(`Failed to fetch reports: ${response.status}`);
+        setError(`${t('failedToFetchReports')}: ${response.status}`);
       }
     } catch (error) {
       console.error("Error fetching recent reports:", error);
-      setError("Failed to fetch recent reports");
+      setError(t('failedToFetchRecentReports'));
     } finally {
       setLoading(false);
     }
@@ -54,25 +56,25 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   };
 
   const getPriorityText = (severityLevel: number) => {
-    if (severityLevel >= 0.7) return "High Priority";
-    if (severityLevel >= 0.4) return "Medium Priority";
-    return "Low Priority";
+    if (severityLevel >= 0.7) return t('highPriority');
+    if (severityLevel >= 0.4) return t('mediumPriority');
+    return t('lowPriority');
   };
 
   const getCategory = (analysis: any) => {
-    if (analysis?.litter_probability > 0.5) return "Litter";
-    if (analysis?.hazard_probability > 0.5) return "Hazard";
-    return "General";
+    if (analysis?.litter_probability > 0.5) return t('litter');
+    if (analysis?.hazard_probability > 0.5) return t('hazard');
+    return t('general');
   };
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
-        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">Recent Reports</h1>
+        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">{t('recentReports')}</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
-            <p className="text-gray-500 text-sm sm:text-base">Loading recent reports...</p>
+            <p className="text-gray-500 text-sm sm:text-base">{t('loading')} {t('recentReports').toLowerCase()}...</p>
           </div>
         </div>
       </div>
@@ -82,17 +84,17 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
-        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">Recent Reports</h1>
+        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">{t('recentReports')}</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <div className="text-center">
             <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
-            <p className="text-red-600 font-medium text-sm sm:text-base">Error loading reports</p>
+            <p className="text-red-600 font-medium text-sm sm:text-base">{t('errorLoadingReports')}</p>
             <p className="text-sm text-red-500 mt-1">{error}</p>
             <button
               onClick={fetchRecentReports}
               className="mt-4 sm:mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-4 sm:py-2 rounded-md transition-colors text-sm"
             >
-              Retry
+              {t('retry')}
             </button>
           </div>
         </div>
@@ -107,7 +109,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
   return (
     <div className="max-w-7xl mx-auto my-6 sm:my-8">
-      <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">Recent Reports</h1>
+      <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">{t('recentReports')}</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {firstRow.map((item, index) => {
           const report = item.report;
@@ -122,7 +124,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 {imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={analysis?.title || "Report"}
+                    alt={analysis?.title || t('report')}
                     width={400}
                     height={160}
                     className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
@@ -136,7 +138,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   />
                 ) : (
                   <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">No Image</p>
+                    <p className="text-gray-500 text-sm sm:text-sm">{t('noImage')}</p>
                   </div>
                 )}
                 {analysis?.severity_level !== undefined &&
@@ -153,13 +155,13 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {analysis?.title || `Report ${report?.seq || index + 1}`}
+                    {analysis?.title || `${t('report')} ${report?.seq || index + 1}`}
                   </h2>
                   <p className="text-gray-500 text-xs sm:text-sm mb-2">
-                    Reported:{" "}
+                    {t('reported')}:{" "}
                     {report?.timestamp
                       ? new Date(report.timestamp).toLocaleString()
-                      : "Unknown"}
+                      : t('unknown')}
                   </p>
                   <p
                     className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 overflow-hidden text-ellipsis"
@@ -171,7 +173,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   >
                     {analysis?.summary ||
                       analysis?.description ||
-                      "No description available"}
+                      t('noDescriptionAvailable')}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-auto">
@@ -188,7 +190,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
                     onClick={() => router.push("/pricing")}
                   >
-                    Subscribe
+                    {t('subscribe')}
                   </button>
                 )}
               </div>
@@ -201,21 +203,36 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           const imageUrl = getDisplayableImage(report?.image || null);
           return (
             <div
-              key={report?.seq || `blurred-${index}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full relative overflow-hidden"
+              key={report?.seq || index}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden"
             >
+              {/* Blur overlay */}
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-10 flex items-center justify-center">
+                <div className="text-center">
+                  <FaLock className="text-white text-2xl mb-2" />
+                  <p className="text-white text-sm font-medium">{t('upgradeToPro')}</p>
+                </div>
+              </div>
+
               <div className="relative">
                 {imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={analysis?.title || "Report"}
+                    alt={analysis?.title || t('report')}
                     width={400}
                     height={160}
                     className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
+                    onError={(e) => {
+                      console.error("Failed to load image:", imageUrl);
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling?.classList.remove(
+                        "hidden"
+                      );
+                    }}
                   />
                 ) : (
                   <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">No Image</p>
+                    <p className="text-gray-500 text-sm sm:text-sm">{t('noImage')}</p>
                   </div>
                 )}
                 {analysis?.severity_level !== undefined &&
@@ -232,13 +249,13 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {analysis?.title || `Report ${report?.seq || index + 4}`}
+                    {analysis?.title || `${t('report')} ${report?.seq || index + 1}`}
                   </h2>
                   <p className="text-gray-500 text-xs sm:text-sm mb-2">
-                    Reported:{" "}
+                    {t('reported')}:{" "}
                     {report?.timestamp
                       ? new Date(report.timestamp).toLocaleString()
-                      : "Unknown"}
+                      : t('unknown')}
                   </p>
                   <p
                     className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 overflow-hidden text-ellipsis"
@@ -250,7 +267,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   >
                     {analysis?.summary ||
                       analysis?.description ||
-                      "No description available"}
+                      t('noDescriptionAvailable')}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-auto">
@@ -262,15 +279,12 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     {report?.longitude?.toFixed(4)}
                   </span>
                 </div>
-              </div>
-              {/* Blur overlay */}
-              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col justify-end items-center">
                 {!isEmbeddedMode && (
                   <button
-                    className="mb-3 sm:mb-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
+                    className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
                     onClick={() => router.push("/pricing")}
                   >
-                    Subscribe
+                    {t('subscribe')}
                   </button>
                 )}
               </div>
@@ -283,7 +297,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">Locations</h1>
+            <h1 className="text-base sm:text-lg font-medium text-white">{t('locations')}</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
@@ -294,30 +308,30 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               <div>
                 <div className="text-gray-700 text-xs sm:text-sm mb-2 flex justify-between items-center">
                   <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    Monitoring Zone
+                    {t('monitoringZone')}
                   </h2>
                   <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-md">
-                    Active
+                    {t('active')}
                   </span>
                 </div>
 
                 <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
                   <span className="font-semibold text-gray-700">
-                    Reports Today:
+                    {t('reportsToday')}:
                   </span>
                   <span>{recentReports.length}</span>
                 </div>
                 <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Status:</span>
-                  <span>Live Monitoring</span>
+                  <span className="font-semibold text-gray-700">{t('status')}:</span>
+                  <span>{t('liveMonitoring')}</span>
                 </div>
                 <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Coverage:</span>
-                  <span>24/7</span>
+                  <span className="font-semibold text-gray-700">{t('coverage')}:</span>
+                  <span>{t('twentyFourSeven')}</span>
                 </div>
                 <div className="text-xs sm:text-sm text-green-500 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">System:</span>
-                  <span>Operational</span>
+                  <span className="font-semibold text-gray-700">{t('system')}:</span>
+                  <span>{t('operational')}</span>
                 </div>
               </div>
             </div>
@@ -326,7 +340,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">Statistics</h1>
+            <h1 className="text-base sm:text-lg font-medium text-white">{t('statistics')}</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full p-3 sm:p-4">
@@ -335,7 +349,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 <div className="text-xl sm:text-2xl font-bold text-blue-600">
                   {recentReports.length}
                 </div>
-                <div className="text-xs sm:text-sm text-gray-500">Total Reports</div>
+                <div className="text-xs sm:text-sm text-gray-500">{t('totalReports')}</div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -347,7 +361,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       ).length
                     }
                   </div>
-                  <div className="text-xs text-gray-500">High Priority</div>
+                  <div className="text-xs text-gray-500">{t('highPriority')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-yellow-600">
@@ -359,7 +373,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       ).length
                     }
                   </div>
-                  <div className="text-xs text-gray-500">Medium Priority</div>
+                  <div className="text-xs text-gray-500">{t('mediumPriority')}</div>
                 </div>
               </div>
 
@@ -371,7 +385,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     ).length
                   }
                 </div>
-                <div className="text-xs text-gray-500">Litter Issues</div>
+                <div className="text-xs text-gray-500">{t('litterIssues')}</div>
               </div>
             </div>
           </div>
@@ -379,7 +393,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
         <div className="flex flex-col gap-4">
           <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">AI Insights</h1>
+            <h1 className="text-base sm:text-lg font-medium text-white">{t('aiInsights')}</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-dashed border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-4 sm:p-6 h-full">
@@ -387,19 +401,18 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               <div className="bg-green-100 rounded-full p-3 sm:p-4 mb-3 sm:mb-4">
                 <FaLock className="text-green-600 text-xl sm:text-2xl" />
               </div>
-              <h2 className="font-semibold text-base sm:text-lg mb-2">Premium Features</h2>
+              <h2 className="font-semibold text-base sm:text-lg mb-2">{t('premiumFeatures')}</h2>
               <ul className="text-gray-700 text-xs mb-3 sm:mb-4 list-none space-y-1 text-center">
                 <li>
                   <span className="text-green-600 mr-2">&#10003;</span>{" "}
-                  Predictive Risk Assessment
+                  {t('predictiveRiskAssessment')}
                 </li>
                 <li>
-                  <span className="text-green-600 mr-2">&#10003;</span> Cost
-                  Impact Analysis
+                  <span className="text-green-600 mr-2">&#10003;</span> {t('costImpactAnalysis')}
                 </li>
                 <li>
                   <span className="text-green-600 mr-2">&#10003;</span>{" "}
-                  AI-Powered Recommendations
+                  {t('aiPoweredRecommendations')}
                 </li>
               </ul>
               {!isEmbeddedMode && (
@@ -407,7 +420,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-md transition-colors text-sm"
                   onClick={() => router.push("/pricing")}
                 >
-                  Subscribe
+                  {t('subscribe')}
                 </button>
               )}
             </div>
