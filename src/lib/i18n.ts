@@ -105,6 +105,15 @@ export const translations: {
     montenegroReports: 'Montenegro Reports',
     montenegroMap: 'Montenegro Map',
     
+    // Brand specific
+    brandDashboard: 'Brand Dashboard',
+    brandReports: 'Brand Reports',
+    brandMap: 'Brand Map',
+    selectBrand: 'Select Brand',
+    allBrands: 'All Brands',
+    brandReportsCount: 'Reports Count',
+    worldwideReports: 'Worldwide Reports',
+    
     // CleanApp Pro
     cleanAppPro: 'CleanApp Pro',
     upgradeToPro: 'Upgrade to Pro',
@@ -505,6 +514,15 @@ export const translations: {
     montenegroDashboard: 'Kontrolna tabla Crne Gore',
     montenegroReports: 'Izveštaji Crne Gore',
     montenegroMap: 'Mapa Crne Gore',
+    
+    // Brand specific
+    brandDashboard: 'Kontrolna tabla brenda',
+    brandReports: 'Izveštaji brenda',
+    brandMap: 'Mapa brenda',
+    selectBrand: 'Izaberi brend',
+    allBrands: 'Svi brendovi',
+    brandReportsCount: 'Broj izveštaja',
+    worldwideReports: 'Izveštaji širom sveta',
     
     // CleanApp Pro
     cleanAppPro: 'CleanApp Pro',

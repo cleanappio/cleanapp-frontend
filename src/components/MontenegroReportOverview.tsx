@@ -531,6 +531,17 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
 
   return (
     <div className="fixed inset-0 bg-white z-[2000] overflow-hidden">
+      {/* Custom CSS for zoom controls z-index */}
+      <style jsx>{`
+        :global(.leaflet-control-zoom) {
+          z-index: 1000 !important;
+        }
+        :global(.leaflet-control-zoom-in),
+        :global(.leaflet-control-zoom-out) {
+          z-index: 1000 !important;
+        }
+      `}</style>
+      
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 h-16 bg-gray-50 border-b border-gray-200 flex items-center justify-between px-6 z-10">
         <div className="flex items-center space-x-4">
@@ -610,7 +621,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
                   center={[report.latitude, report.longitude]}
                   zoom={16}
                   style={{ height: '100%', width: '100%' }}
-                  zoomControl={true}
+                  zoomControl={false}
                   scrollWheelZoom={true}
                   dragging={true}
                   touchZoom={true}

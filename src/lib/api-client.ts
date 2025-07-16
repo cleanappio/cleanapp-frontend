@@ -118,7 +118,7 @@ export interface UpdatePaymentMethodRequest {
   is_default: boolean;
 }
 
-// ==================== BRAND ENDPOINTS ====================
+// ==================== CUSTOMER BRAND ENDPOINTS ====================
 
 export interface CustomerBrandsResponse {
   customer_id: string;
@@ -136,6 +136,8 @@ export interface RemoveCustomerBrandsRequest {
 export interface UpdateCustomerBrandsRequest {
   brand_names: string[];
 }
+
+
 
 // ==================== API CLIENT ====================
 
@@ -295,7 +297,7 @@ export class ApiClient {
     return data;
   }
 
-  // ==================== BRAND ENDPOINTS ====================
+  // ==================== CUSTOMER BRAND ENDPOINTS ====================
 
   async getCustomerBrands(): Promise<CustomerBrandsResponse> {
     const { data } = await this.axios.get<CustomerBrandsResponse>('/api/v3/customers/me/brands');
@@ -324,6 +326,8 @@ export class ApiClient {
     });
     return data;
   }
+
+
 
   // ==================== UTILITY ENDPOINTS ====================
 
