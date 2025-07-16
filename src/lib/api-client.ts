@@ -118,6 +118,25 @@ export interface UpdatePaymentMethodRequest {
   is_default: boolean;
 }
 
+// ==================== BRAND ENDPOINTS ====================
+
+export interface CustomerBrandsResponse {
+  customer_id: string;
+  brand_names: string[];
+}
+
+export interface AddCustomerBrandsRequest {
+  brand_names: string[];
+}
+
+export interface RemoveCustomerBrandsRequest {
+  brand_names: string[];
+}
+
+export interface UpdateCustomerBrandsRequest {
+  brand_names: string[];
+}
+
 // ==================== API CLIENT ====================
 
 export class ApiClient {
@@ -273,6 +292,36 @@ export class ApiClient {
 
   async deletePaymentMethod(id: number): Promise<MessageResponse> {
     const { data } = await this.axios.delete<MessageResponse>(`/api/v3/payment-methods/${id}`);
+    return data;
+  }
+
+  // ==================== BRAND ENDPOINTS ====================
+
+  async getCustomerBrands(): Promise<CustomerBrandsResponse> {
+    const { data } = await this.axios.get<CustomerBrandsResponse>('/api/v3/customers/me/brands');
+    return data;
+  }
+
+  async addCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
+    const { data } = await this.axios.post<MessageResponse>('/api/v3/customers/me/brands', {
+      brand_names: brandNames
+    });
+    return data;
+  }
+
+  async updateCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>('/api/v3/customers/me/brands', {
+      brand_names: brandNames
+    });
+    return data;
+  }
+
+  async removeCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
+    const { data } = await this.axios.delete<MessageResponse>('/api/v3/customers/me/brands', {
+      data: {
+        brand_names: brandNames
+      }
+    });
     return data;
   }
 
