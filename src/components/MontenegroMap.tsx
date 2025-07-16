@@ -158,7 +158,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         return;
       }
 
-      const fullUrl = `${apiUrl}/reports?osm_id=-53296&n=100`;
+      const fullUrl = `${apiUrl}/reports?osm_id=-53296&n=1000`;
       console.log('Full URL:', fullUrl);
       const response = await authenticatedFetch(fullUrl);
       if (!response.ok) {
@@ -205,7 +205,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         return;
       }
 
-      const response = await authenticatedFetch(`${apiUrl}/reports?osm_id=${osmId}&n=100`);
+      const response = await authenticatedFetch(`${apiUrl}/reports?osm_id=${osmId}&n=`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

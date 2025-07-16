@@ -997,7 +997,7 @@ export default function GlobeView() {
       try {
         const locale = getCurrentLocale();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=1000&lang=${locale}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
