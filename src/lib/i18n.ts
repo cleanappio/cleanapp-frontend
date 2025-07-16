@@ -198,6 +198,13 @@ export const translations: {
     setUpFirstMonitoringLocation: 'Set up your first monitoring location',
     upgradeToAccessRealtimeMonitoring: 'Upgrade to access real-time monitoring',
     createYourAccount: 'Create your account',
+    
+    // Brand name
+    brandName: 'Brand Name',
+    brandNamePlaceholder: 'Enter your brand name (optional)',
+    brandNameDescription: 'Add your brand name to personalize your experience',
+    brandNameAdded: 'Brand name added successfully',
+    brandNameError: 'Failed to add brand name',
     signInToExistingAccount: 'sign in to your existing account',
     fullName: 'Full Name',
     nameRequired: 'Name is required',
@@ -592,6 +599,14 @@ export const translations: {
     setUpFirstMonitoringLocation: 'Podesite svoju prvu lokaciju za praćenje',
     upgradeToAccessRealtimeMonitoring: 'Nadogradi za pristup praćenju u realnom vremenu',
     createYourAccount: 'Kreirajte svoj račun',
+    
+    // Brand name
+    brandName: 'Naziv brenda',
+    brandNamePlaceholder: 'Unesite naziv vašeg brenda (opciono)',
+    brandNameDescription: 'Dodajte naziv brenda da personalizujete svoje iskustvo',
+    brandNameAdded: 'Naziv brenda uspešno dodat',
+    brandNameError: 'Greška pri dodavanju naziva brenda',
+    
     signInToExistingAccount: 'prijavite se na svoj postojeći račun',
     fullName: 'Puno ime',
     nameRequired: 'Ime je obavezno',

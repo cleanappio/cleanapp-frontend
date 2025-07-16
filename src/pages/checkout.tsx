@@ -9,7 +9,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check } from 'lucide-react';
+import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check, Globe } from 'lucide-react';
 
 import { authApiClient } from '@/lib/auth-api-client';
 import Image from 'next/image';
@@ -60,6 +60,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     createSubscription,
     updateSubscription,
     addPaymentMethod,
+    addCustomerBrands,
   } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
@@ -73,6 +74,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
+  const [brandName, setBrandName] = useState('');
   const { t } = useTranslations();
   
 
@@ -259,6 +261,17 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       } else {
         await createSubscription(planType, billingCycle, paymentMethodId);
         toast.success(t('subscriptionCreatedSuccessfully'));
+        
+        // Add brand name if provided
+        if (brandName.trim()) {
+          try {
+            await addCustomerBrands([brandName.trim()]);
+            toast.success(t('brandNameAdded'));
+          } catch (error) {
+            console.error('Failed to add brand name:', error);
+            toast.error(t('brandNameError'));
+          }
+        }
       }
       
       router.push('/dashboard');
@@ -345,6 +358,27 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
 
         {/* Checkout Form - Disabled */}
         <form onSubmit={handleSubmit} className="opacity-50 pointer-events-none">
+          {/* Brand Name Information - Disabled */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <Globe className="w-5 h-5 mr-2" />
+              {t('brandName')}
+            </h3>
+            <p className="text-gray-500 text-sm mb-4">{t('brandNameDescription')}</p>
+            <div>
+              <label htmlFor="brand-name-disabled" className="block text-sm font-medium text-gray-400 mb-1">{t('brandName')}</label>
+              <input
+                type="text"
+                id="brand-name-disabled"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder={t('brandNamePlaceholder')}
+                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                disabled
+              />
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h3 className="text-lg font-semibold mb-4">{t('subscriptionSummary')}</h3>
             <div className="border-b pb-4 mb-4">
@@ -506,6 +540,26 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             <span className="text-gray-600">{t('total')}</span>
             <span className="font-bold text-lg">{planDetails.displayPrice}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Brand Name Information */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center">
+          <Globe className="w-5 h-5 mr-2" />
+          {t('brandName')}
+        </h3>
+        <p className="text-gray-500 text-sm mb-4">{t('brandNameDescription')}</p>
+        <div>
+          <label htmlFor="brand-name" className="block text-sm font-medium text-gray-700 mb-1">{t('brandName')}</label>
+          <input
+            type="text"
+            id="brand-name"
+            value={brandName}
+            onChange={(e) => setBrandName(e.target.value)}
+            placeholder={t('brandNamePlaceholder')}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
         </div>
       </div>
 

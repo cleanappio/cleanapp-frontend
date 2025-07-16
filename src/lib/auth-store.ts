@@ -47,6 +47,9 @@ interface AuthState {
 
   // Pricing actions
   fetchPrices: () => Promise<void>;
+  
+  // Brand actions
+  addCustomerBrands: (brandNames: string[]) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -333,6 +336,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error fetching prices:', error);
       set({ prices: [] });
+      throw error;
+    }
+  },
+
+  // Brand actions
+  addCustomerBrands: async (brandNames: string[]) => {
+    if (brandNames.length === 0) return;
+    try {
+      await apiClient.addCustomerBrands(brandNames);
+    } catch (error) {
+      console.error('Failed to add customer brands:', error);
       throw error;
     }
   }
