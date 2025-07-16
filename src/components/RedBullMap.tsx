@@ -11,7 +11,7 @@ import { authApiClient } from '@/lib/auth-api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 import LatestReports from './LatestReports';
-import MontenegroReportOverview from './MontenegroReportOverview';
+import CustomDashboardReport from './CustomDashboardReport';
 
 // Report interface from MontenegroMap
 export interface Report {
@@ -275,7 +275,7 @@ export default function RedBullMap({ mapCenter, selectedBrand }: RedBullMapProps
 
       {/* Report Overview Modal */}
       {isCleanAppProOpen && selectedReport && (
-        <MontenegroReportOverview
+        <CustomDashboardReport
           reportItem={selectedReport}
           onClose={() => setIsCleanAppProOpen(false)}
         />

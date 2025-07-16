@@ -22,12 +22,12 @@ function MapController({ center }: { center: [number, number] }) {
   return null;
 }
 
-interface MontenegroReportOverviewProps {
+interface CustomDashboardReportProps {
   reportItem: Report | null;
   onClose?: () => void;
 }
 
-const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ reportItem, onClose }) => {
+const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportItem, onClose }) => {
   const { isAuthenticated } = useAuthStore();
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -283,7 +283,7 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
       locationTitle.style.color = '#374151';
       locationSection.appendChild(locationTitle);
 
-      // Add map for PDF - matching MontenegroReportOverview exactly
+      // Add map for PDF - matching CustomDashboardReport exactly
       const pdfMapContainer = document.createElement('div');
       pdfMapContainer.style.width = '100%';
       pdfMapContainer.style.height = 'auto';
@@ -737,4 +737,4 @@ const MontenegroReportOverview: React.FC<MontenegroReportOverviewProps> = ({ rep
   );
 };
 
-export default MontenegroReportOverview; 
+export default CustomDashboardReport; 

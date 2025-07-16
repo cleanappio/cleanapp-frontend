@@ -11,7 +11,7 @@ import { authApiClient } from '@/lib/auth-api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
 import LatestReports from './LatestReports';
-import MontenegroReportOverview from './MontenegroReportOverview';
+import CustomDashboardReport from './CustomDashboardReport';
 
 // ReportStats structure
 interface ReportStats {
@@ -564,9 +564,9 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         </div>
       )}
 
-      {/* Montenegro Report Overview */}
+      {/* Custom Dashboard Report Overview */}
       {isCleanAppProOpen && selectedReport && (
-        <MontenegroReportOverview
+        <CustomDashboardReport
           reportItem={selectedReport}
           onClose={() => setIsCleanAppProOpen(false)}
         />
