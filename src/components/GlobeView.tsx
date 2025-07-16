@@ -1098,6 +1098,10 @@ export default function GlobeView() {
               },
               { label: t('subscribe'), link: "/pricing" },
               {
+                label: t('brandDashboard'),
+                link: "/redbull",
+              },
+              {
                 label: t('cleanAppMap'),
                 link: "https://cleanappmap.replit.app",
               },

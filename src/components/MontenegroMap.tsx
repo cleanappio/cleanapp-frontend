@@ -368,6 +368,17 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
 
   return (
     <div className="relative h-full w-full">
+      {/* Custom CSS for zoom controls z-index */}
+      <style jsx>{`
+        :global(.leaflet-control-zoom) {
+          z-index: 1000 !important;
+        }
+        :global(.leaflet-control-zoom-in),
+        :global(.leaflet-control-zoom-out) {
+          z-index: 1000 !important;
+        }
+      `}</style>
+      
       {/* Authentication Error Display */}
       {authError && (
         <div className="absolute top-4 right-4 z-[1000] bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 max-w-sm">
@@ -421,7 +432,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         center={mapCenter}
         zoom={8}
         style={{ height: '100%', width: '100%' }}
-        zoomControl={true}
+        zoomControl={false}
         scrollWheelZoom={true}
       >
         <TileLayer

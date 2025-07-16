@@ -10,11 +10,14 @@ import { useTranslations } from '@/lib/i18n';
 import { LogOut } from "lucide-react";
 import LanguageSwitcher from './LanguageSwitcher';
 
-export default function MontenegroDashboard() {
+export default function RedBullDashboard() {
   const [isClient, setIsClient] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([42.7087, 19.3744]); // Montenegro center
+  const [mapCenter, setMapCenter] = useState<[number, number]>([0, 0]); // World center
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(false);
   const { t } = useTranslations();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, getBrands } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -23,8 +26,8 @@ export default function MontenegroDashboard() {
   };
 
   // Dynamically import the entire map component to avoid SSR issues
-  const MontenegroMap = dynamic(
-    () => import('./MontenegroMap'),
+  const RedBullMap = dynamic(
+    () => import('./RedBullMap'),
     { 
       ssr: false,
       loading: () => (
@@ -38,6 +41,29 @@ export default function MontenegroDashboard() {
     }
   );
 
+  // Fetch brands on mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      if (isAuthenticated) {
+        try {
+          setBrandsLoading(true);
+          const brandsData = await getBrands();
+          setBrands(brandsData);
+          // Set the first brand as selected by default
+          if (brandsData.length > 0 && !selectedBrand) {
+            setSelectedBrand(brandsData[0].id);
+          }
+        } catch (error) {
+          console.error('Error fetching brands:', error);
+        } finally {
+          setBrandsLoading(false);
+        }
+      }
+    };
+
+    fetchBrands();
+  }, [isAuthenticated, getBrands, selectedBrand]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -47,7 +73,7 @@ export default function MontenegroDashboard() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{t('loading')} {t('montenegroDashboard').toLowerCase()}...</p>
+          <p className="mt-4 text-gray-600">{t('loading')} {t('brandDashboard').toLowerCase()}...</p>
         </div>
       </div>
     );
@@ -70,10 +96,32 @@ export default function MontenegroDashboard() {
               />
             </Link>
             <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('montenegroDashboard')}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('brandDashboard')}</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">🇲🇪 {t('montenegro')}</span>
+            {/* Brand Selector */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">{t('selectBrand')}:</span>
+              <select
+                value={selectedBrand || ''}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={brandsLoading}
+              >
+                {brandsLoading ? (
+                  <option>{t('loading')}...</option>
+                ) : (
+                  <>
+                    <option value="">{t('allBrands')}</option>
+                    {brands.map((brand, index) => (
+                      <option key={`${brand.id}-${index}`} value={brand.id}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
             
             <LanguageSwitcher />
             
@@ -113,8 +161,9 @@ export default function MontenegroDashboard() {
       <div className="flex-1">
         {/* Map Container */}
         <div className="h-full relative">
-          <MontenegroMap 
+          <RedBullMap 
             mapCenter={mapCenter}
+            selectedBrand={selectedBrand}
           />
         </div>
       </div>

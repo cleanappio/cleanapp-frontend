@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { apiClient, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
 import { authApiClient, User } from './auth-api-client';
+import { redbullApiClient, Brand } from './redbull-api-client';
 
 interface AuthState {
   // User state
@@ -50,6 +51,8 @@ interface AuthState {
   
   // Brand actions
   addCustomerBrands: (brandNames: string[]) => Promise<void>;
+  getBrands: () => Promise<Brand[]>;
+  getBrandReports: (brandId: string, params?: { page?: number; limit?: number }) => Promise<any[]>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -347,6 +350,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await apiClient.addCustomerBrands(brandNames);
     } catch (error) {
       console.error('Failed to add customer brands:', error);
+      throw error;
+    }
+  },
+
+  getBrands: async () => {
+    try {
+      const response = await redbullApiClient.getBrands();
+      return response.brands;
+    } catch (error) {
+      console.error('Failed to get Red Bulls:', error);
+      throw error;
+    }
+  },
+
+  getBrandReports: async (brandId: string, params?: { page?: number; limit?: number }) => {
+    try {
+      const response = await redbullApiClient.getBrandReports(brandId, params);
+      return response.reports;
+    } catch (error) {
+      console.error('Failed to get Red Bull reports:', error);
       throw error;
     }
   }
