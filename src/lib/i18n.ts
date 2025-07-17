@@ -884,6 +884,7 @@ export function filterAnalysesByLanguage(
   reportsWithAnalyses: any[],
   currentLocale: string = 'en'
 ): any[] {
+  console.log(reportsWithAnalyses);
   // Handle edge cases where input is not an array
   if (!Array.isArray(reportsWithAnalyses)) {
     console.warn('filterAnalysesByLanguage: Input is not an array:', reportsWithAnalyses);
