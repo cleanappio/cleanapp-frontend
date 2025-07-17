@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { apiClient, Subscription, PaymentMethod, BillingHistory, Price } from './api-client';
 import { authApiClient, User } from './auth-api-client';
-import { redbullApiClient, Brand } from './redbull-api-client';
+import { redbullApiClient, Brand } from './brand-api-client';
 
 interface AuthState {
   // User state

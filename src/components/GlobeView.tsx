@@ -38,6 +38,7 @@ export interface ReportAnalysis {
   summary: string;
   language: string;
   brand_name?: string; // Optional brand name
+  brand_display_name?: string; // Optional brand display name
   created_at: string;
   updated_at: string;
 }

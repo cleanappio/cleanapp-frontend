@@ -327,7 +327,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
       locationSection.appendChild(coords);
 
       // Brand section for PDF
-      if (reportItem.analysis?.brand_name) {
+      if (reportItem.analysis?.brand_display_name || reportItem.analysis?.brand_name) {
         const brandSection = document.createElement('div');
         brandSection.style.backgroundColor = '#eff6ff';
         brandSection.style.padding = '15px';
@@ -348,7 +348,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
         brandName.style.fontSize = '12px';
         brandName.style.fontWeight = 'bold';
         brandName.style.color = '#1e40af';
-        brandName.textContent = reportItem.analysis.brand_name;
+        brandName.textContent = reportItem.analysis.brand_display_name || reportItem.analysis.brand_name || '';
         brandSection.appendChild(brandName);
       }
 
@@ -693,7 +693,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
             </div>
 
             {/* Brand Info */}
-            {analysis?.brand_name && (
+            {(analysis?.brand_display_name || analysis?.brand_name) && (
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 className="font-semibold text-blue-900 mb-2">{t('brand')}</h3>
                 <div className="flex items-center">
@@ -702,7 +702,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
                   </div>
-                  <span className="text-lg font-medium text-blue-900">{analysis.brand_name}</span>
+                  <span className="text-lg font-medium text-blue-900">{analysis.brand_display_name || analysis.brand_name}</span>
                 </div>
               </div>
             )}

@@ -36,17 +36,17 @@ export interface MessageResponse {
   success?: boolean;
 }
 
-// ==================== RED BULL API CLIENT ====================
+// ==================== BRAND API CLIENT ====================
 
-export class RedBullApiClient {
+export class BrandApiClient {
   private axios: AxiosInstance;
 
-  constructor() {
-    if (!process.env.NEXT_PUBLIC_REDBULL_API_URL) {
-      throw 'NEXT_PUBLIC_REDBULL_API_URL is not set.';
+  constructor(apiUrl: string) {
+    if (!apiUrl) {
+      throw 'API URL is not set.';
     }
     this.axios = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_REDBULL_API_URL,
+      baseURL: apiUrl,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -125,4 +125,4 @@ export class RedBullApiClient {
 }
 
 // Export singleton instance
-export const redbullApiClient = new RedBullApiClient(); 
+export const redbullApiClient = new BrandApiClient(process.env.NEXT_PUBLIC_REDBULL_API_URL || ''); 

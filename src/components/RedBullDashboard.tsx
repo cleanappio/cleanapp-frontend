@@ -14,7 +14,7 @@ export default function RedBullDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([0, 0]); // World center
   // Fixed brand configuration - set to a default brand ID
-  const selectedBrand = process.env.NEXT_PUBLIC_REDBULL_BRAND_ID || "redbull"; // Configurable via environment variable
+  const selectedBrand = "redbull"; // Configurable via environment variable
   const { t } = useTranslations();
   const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
