@@ -74,7 +74,17 @@ export default function RedBullDashboard() {
               />
             </Link>
             <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('brandDashboard')}</h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-2xl font-bold text-gray-900">Red Bull</h1>
+              <Image
+                src="/redbull-logo.png"
+                alt="Red Bull Logo"
+                width={150}
+                height={40}
+                className="h-8 w-auto"
+                priority
+              />
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
