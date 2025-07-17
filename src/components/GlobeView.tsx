@@ -37,6 +37,7 @@ export interface ReportAnalysis {
   severity_level: number;
   summary: string;
   language: string;
+  brand_name?: string; // Optional brand name
   created_at: string;
   updated_at: string;
 }

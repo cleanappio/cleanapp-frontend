@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Report } from "./MontenegroMap";
+import { LatestReport } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { authApiClient } from "@/lib/auth-api-client";
 import { useAuthStore } from "@/lib/auth-store";
@@ -23,7 +23,7 @@ function MapController({ center }: { center: [number, number] }) {
 }
 
 interface CustomDashboardReportProps {
-  reportItem: Report | null;
+  reportItem: LatestReport | null;
   onClose?: () => void;
 }
 
@@ -219,8 +219,13 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
       timestamp.textContent = `${t('reportDate')}: ${formatTime(reportItem.report.timestamp)}`;
       timestamp.style.fontSize = '10px';
       timestamp.style.color = '#6b7280';
-      timestamp.style.marginBottom = '15px';
+      timestamp.style.marginBottom = '5px';
       tempContainer.appendChild(timestamp);
+
+      // Add spacing after timestamp
+      const spacing = document.createElement('div');
+      spacing.style.marginBottom = '15px';
+      tempContainer.appendChild(spacing);
 
       // Create main content container
       const mainContainer = document.createElement('div');
@@ -320,6 +325,32 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
         <div><strong>${t('longitude')}:</strong> ${reportItem.report.longitude.toFixed(6)}</div>
       `;
       locationSection.appendChild(coords);
+
+      // Brand section for PDF
+      if (reportItem.analysis?.brand_name) {
+        const brandSection = document.createElement('div');
+        brandSection.style.backgroundColor = '#eff6ff';
+        brandSection.style.padding = '15px';
+        brandSection.style.borderRadius = '8px';
+        brandSection.style.border = '1px solid #bfdbfe';
+        brandSection.style.marginBottom = '15px';
+        rightContainer.appendChild(brandSection);
+
+        const brandTitle = document.createElement('h3');
+        brandTitle.textContent = t('brand');
+        brandTitle.style.fontSize = '14px';
+        brandTitle.style.fontWeight = 'bold';
+        brandTitle.style.marginBottom = '10px';
+        brandTitle.style.color = '#1e40af';
+        brandSection.appendChild(brandTitle);
+
+        const brandName = document.createElement('div');
+        brandName.style.fontSize = '12px';
+        brandName.style.fontWeight = 'bold';
+        brandName.style.color = '#1e40af';
+        brandName.textContent = reportItem.analysis.brand_name;
+        brandSection.appendChild(brandName);
+      }
 
       // Analysis section
       if (reportItem.analysis) {
@@ -660,6 +691,21 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
                 </div>
               </div>
             </div>
+
+            {/* Brand Info */}
+            {analysis?.brand_name && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-2">{t('brand')}</h3>
+                <div className="flex items-center">
+                  <div className="bg-blue-100 rounded-full p-2 mr-3">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <span className="text-lg font-medium text-blue-900">{analysis.brand_name}</span>
+                </div>
+              </div>
+            )}
 
             {/* Analysis Stats */}
             {analysis && (
