@@ -209,6 +209,7 @@ export const translations: {
     createYourAccount: 'Create your account',
     
     // Brand name
+    brand: 'Brand',
     brandName: 'Brand Name',
     brandNamePlaceholder: 'Enter your brand name (optional)',
     brandNameDescription: 'Add your brand name to personalize your experience',
@@ -619,6 +620,7 @@ export const translations: {
     createYourAccount: 'Kreirajte svoj račun',
     
     // Brand name
+    brand: 'Brend',
     brandName: 'Naziv brenda',
     brandNamePlaceholder: 'Unesite naziv vašeg brenda (opciono)',
     brandNameDescription: 'Dodajte naziv brenda da personalizujete svoje iskustvo',

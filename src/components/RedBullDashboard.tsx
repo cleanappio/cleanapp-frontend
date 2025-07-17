@@ -13,11 +13,10 @@ import LanguageSwitcher from './LanguageSwitcher';
 export default function RedBullDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([0, 0]); // World center
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [brandsLoading, setBrandsLoading] = useState(false);
+  // Fixed brand configuration - set to a default brand ID
+  const selectedBrand = process.env.NEXT_PUBLIC_REDBULL_BRAND_ID || "redbull"; // Configurable via environment variable
   const { t } = useTranslations();
-  const { user, isAuthenticated, logout, getBrands } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -39,30 +38,9 @@ export default function RedBullDashboard() {
         </div>
       )
     }
-  );
+  ) as any;
 
-  // Fetch brands on mount
-  useEffect(() => {
-    const fetchBrands = async () => {
-      if (isAuthenticated) {
-        try {
-          setBrandsLoading(true);
-          const brandsData = await getBrands();
-          setBrands(brandsData);
-          // Set the first brand as selected by default
-          if (brandsData.length > 0 && !selectedBrand) {
-            setSelectedBrand(brandsData[0].id);
-          }
-        } catch (error) {
-          console.error('Error fetching brands:', error);
-        } finally {
-          setBrandsLoading(false);
-        }
-      }
-    };
-
-    fetchBrands();
-  }, [isAuthenticated, getBrands, selectedBrand]);
+  // No brand fetching needed - using fixed configuration
 
   useEffect(() => {
     setIsClient(true);
@@ -99,30 +77,6 @@ export default function RedBullDashboard() {
             <h1 className="text-2xl font-bold text-gray-900">{t('brandDashboard')}</h1>
           </div>
           <div className="flex items-center space-x-4">
-            {/* Brand Selector */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">{t('selectBrand')}:</span>
-              <select
-                value={selectedBrand || ''}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={brandsLoading}
-              >
-                {brandsLoading ? (
-                  <option>{t('loading')}...</option>
-                ) : (
-                  <>
-                    <option value="">{t('allBrands')}</option>
-                    {brands.map((brand, index) => (
-                      <option key={`${brand.id}-${index}`} value={brand.id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-            
             <LanguageSwitcher />
             
             {/* Authentication Controls */}
