@@ -514,7 +514,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               center={[report.report.latitude, report.report.longitude]}
               radius={baseRadius}
               pathOptions={{
-                color: color,
+                color: '#555555',
                 fillColor: color,
                 fillOpacity: 0.8,
                 weight: 2,
@@ -543,7 +543,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
               color: '#333333',
               weight: 5,
               opacity: 0.8,
-              fillOpacity: 0.3
+              fillOpacity: 0.0
             }}
           />
         ))}
