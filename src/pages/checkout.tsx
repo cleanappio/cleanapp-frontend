@@ -9,12 +9,13 @@ import {
 } from '@stripe/react-stripe-js';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check, Globe } from 'lucide-react';
+import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check, Globe, MapPin } from 'lucide-react';
 
 import { authApiClient } from '@/lib/auth-api-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
+import AreasSelection from '@/components/AreasSelection';
 import { useTranslations } from '@/lib/i18n';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
@@ -42,6 +43,16 @@ interface CheckoutFormProps {
   planType: string;
   billingCycle: 'monthly' | 'annual';
   displayPrice: string;
+}
+
+// Area interface for the checkout form
+interface Area {
+  id: string;
+  name: string;
+  description: string;
+  coordinates: [number, number];
+  polygon?: any;
+  isSelected: boolean;
 }
 
 function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProps) {
@@ -75,6 +86,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [brandName, setBrandName] = useState('');
+  const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
+  const [showAreasSelection, setShowAreasSelection] = useState(false);
   const { t } = useTranslations();
   
 
@@ -272,6 +285,15 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             toast.error(t('brandNameError'));
           }
         }
+
+        // Handle selected areas
+        if (selectedAreas.length > 0) {
+          console.log('Selected areas for subscription:', selectedAreas);
+          // TODO: Integrate with backend API to save selected areas
+          // This would typically involve calling an API endpoint to save the areas
+          // associated with the user's subscription
+          toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
+        }
       }
       
       router.push('/dashboard');
@@ -377,6 +399,27 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 disabled
               />
             </div>
+          </div>
+
+          {/* Areas Selection - Disabled */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <MapPin className="w-5 h-5 mr-2" />
+                {t('serviceAreas')}
+              </h3>
+              <button
+                type="button"
+                disabled
+                className="text-gray-400 text-sm font-medium cursor-not-allowed"
+              >
+                {t('selectServiceAreas')}
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-500">
+              {t('pleaseCompleteAuthenticationToSelectAreas')}
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -561,6 +604,52 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
+      </div>
+
+              {/* Areas Selection */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center">
+              <MapPin className="w-5 h-5 mr-2" />
+              {t('serviceAreas')}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowAreasSelection(!showAreasSelection)}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              {showAreasSelection ? t('hide') : t('selectServiceAreas')}
+            </button>
+          </div>
+          
+          {selectedAreas.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-3">
+                {t('areasSelected', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' })}
+              </p>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {selectedAreas.map((area) => (
+                  <div key={area.id} className="flex items-center space-x-2 text-sm">
+                    <MapPin className="w-3 h-3 text-green-600" />
+                    <span className="text-gray-700">{area.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              {t('noAreasSelectedCheckout')}
+            </p>
+          )}
+        
+        {showAreasSelection && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <AreasSelection
+              onAreasChange={setSelectedAreas}
+              initialSelectedAreas={selectedAreas.map(area => area.id)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Payment Information */}
