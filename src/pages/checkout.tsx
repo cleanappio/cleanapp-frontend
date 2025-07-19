@@ -18,6 +18,24 @@ import PageHeader from '@/components/PageHeader';
 import AreasSelection from '@/components/AreasSelection';
 import { useTranslations } from '@/lib/i18n';
 
+// GeoJSON Polygon interface
+interface GeoJSONPolygon {
+  type: 'Feature';
+  geometry: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  };
+  properties?: {
+    name?: string;
+    color?: string;
+    fillColor?: string;
+    fillOpacity?: number;
+    weight?: number;
+    opacity?: number;
+    [key: string]: any;
+  };
+}
+
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const CARD_ELEMENT_OPTIONS = {
@@ -87,6 +105,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
+  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
   const [showAreasSelection, setShowAreasSelection] = useState(false);
   const { t } = useTranslations();
   
@@ -286,13 +305,15 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           }
         }
 
-        // Handle selected areas
-        if (selectedAreas.length > 0) {
+        // Handle selected areas and drawn polygons
+        if (selectedAreas.length > 0 || drawnPolygons.length > 0) {
           console.log('Selected areas for subscription:', selectedAreas);
-          // TODO: Integrate with backend API to save selected areas
+          console.log('Drawn polygons for subscription:', drawnPolygons);
+          // TODO: Integrate with backend API to save selected areas and drawn polygons
           // This would typically involve calling an API endpoint to save the areas
-          // associated with the user's subscription
-          toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
+          // and polygons associated with the user's subscription
+          const totalItems = selectedAreas.length + drawnPolygons.length;
+          toast.success(t('areasSelectedForSubscription', { count: totalItems, plural: totalItems !== 1 ? 's' : '' }));
         }
       }
       
@@ -646,7 +667,9 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           <div className="mt-4 pt-4 border-t border-gray-200">
             <AreasSelection
               onAreasChange={setSelectedAreas}
+              onDrawnPolygonsChange={setDrawnPolygons}
               initialSelectedAreas={selectedAreas.map(area => area.id)}
+              initialDrawnPolygons={drawnPolygons}
             />
           </div>
         )}

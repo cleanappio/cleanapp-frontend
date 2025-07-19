@@ -13,9 +13,28 @@ interface Area {
   isSelected: boolean;
 }
 
+// GeoJSON Polygon interface
+interface GeoJSONPolygon {
+  type: 'Feature';
+  geometry: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  };
+  properties?: {
+    name?: string;
+    color?: string;
+    fillColor?: string;
+    fillOpacity?: number;
+    weight?: number;
+    opacity?: number;
+    [key: string]: any;
+  };
+}
+
 export default function AreasSelectionDemo() {
   const { t } = useTranslations();
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
+  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -50,7 +69,9 @@ export default function AreasSelectionDemo() {
 
           <AreasSelection
             onAreasChange={setSelectedAreas}
+            onDrawnPolygonsChange={setDrawnPolygons}
             initialSelectedAreas={[]}
+            initialDrawnPolygons={[]}
           />
 
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
