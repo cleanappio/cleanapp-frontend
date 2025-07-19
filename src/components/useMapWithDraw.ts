@@ -132,10 +132,10 @@ export function DrawControl({
       properties: {
         name: `Polygon ${Date.now()}`,
         description: 'Custom drawn polygon',
-        color: '#ff8800',
-        fillColor: '#ff8800',
+        color: '#ae11c6',
+        fillColor: '#ae11c6',
         fillOpacity: 0.3,
-        weight: 2
+        weight: 3
       }
     };
 
@@ -156,10 +156,10 @@ export function DrawControl({
         properties: {
           name: `Edited Polygon`,
           description: 'Custom drawn polygon',
-          color: '#ff8800',
-          fillColor: '#ff8800',
+          color: '#ae11c6',
+          fillColor: '#ae11c6',
           fillOpacity: 0.3,
-          weight: 2
+          weight: 3
         }
       };
       
@@ -193,10 +193,10 @@ export function DrawControl({
             message: '<strong>Oh snap!<strong> you can\'t draw that!'
           },
           shapeOptions: {
-            color: '#ff8800',
-            fillColor: '#ff8800',
-            fillOpacity: 0.3,
-            weight: 2
+            color: '#ae11c6',
+            fillColor: '#ae11c6',
+            fillOpacity: 0.5,
+            weight: 3
           }
         }
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SearchableMap from './SearchableMap';
 import { MapPin, Plus, Trash2, Edit3, Save, X } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
@@ -44,6 +44,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
   const { t } = useTranslations();
   const [areas, setAreas] = useState<Area[]>([]);
   const [polygons, setPolygons] = useState<GeoJSONPolygon[]>([]);
+  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
   const [editingArea, setEditingArea] = useState<string | null>(null);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaDescription, setNewAreaDescription] = useState('');
@@ -65,7 +66,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
 
   const handlePolygonCreated = (polygon: GeoJSONPolygon) => {
     console.log('Polygon created:', polygon);
-    setPolygons(prev => [...prev, polygon]);
+    setDrawnPolygons(prev => [...prev, polygon]);
     
     // If we're editing an area, assign the polygon to it and select it
     if (editingArea) {
@@ -88,7 +89,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
 
   const handlePolygonEdited = (polygon: GeoJSONPolygon, index: number) => {
     console.log('Polygon edited:', polygon, 'at index:', index);
-    setPolygons(prev => {
+    setDrawnPolygons(prev => {
       const newPolygons = [...prev];
       newPolygons[index] = polygon;
       return newPolygons;
@@ -97,7 +98,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
 
   const handlePolygonDeleted = (index: number) => {
     console.log('Polygon deleted at index:', index);
-    setPolygons(prev => prev.filter((_, i) => i !== index));
+    setDrawnPolygons(prev => prev.filter((_, i) => i !== index));
   };
 
   const startEditingArea = (areaId: string) => {

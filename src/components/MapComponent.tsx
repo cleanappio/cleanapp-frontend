@@ -197,31 +197,6 @@ export default function MapComponent({
           }}
         />
       ))}
-
-      {/* Render drawn polygons */}
-      {drawnPolygons.map((polygon, index) => (
-        <GeoJSON
-          key={`drawn-polygon-${index}`}
-          data={polygon}
-          style={{
-            color: polygon.properties?.color || '#ff8800',
-            fillColor: polygon.properties?.fillColor || '#ff8800',
-            fillOpacity: polygon.properties?.fillOpacity || 0.3,
-            weight: polygon.properties?.weight || 2,
-            opacity: polygon.properties?.opacity || 1,
-          }}
-          onEachFeature={(feature, layer) => {
-            if (polygon.properties?.name) {
-              layer.bindPopup(`
-                <div class="p-2">
-                  <h3 class="font-semibold text-gray-900">${polygon.properties.name}</h3>
-                  ${polygon.properties.description ? `<p class="text-sm text-gray-600">${polygon.properties.description}</p>` : ''}
-                </div>
-              `);
-            }
-          }}
-        />
-      ))}
     </MapContainer>
   );
 } 
