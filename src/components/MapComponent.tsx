@@ -137,7 +137,7 @@ export default function MapComponent({
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
-      minZoom={6}
+      minZoom={4}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -200,16 +200,17 @@ export default function MapComponent({
       {/* Render GeoJSON polygons */}
       {areas.map((area, index) => (
         <GeoJSON
-          key={`area-${index}`}
+          key={`area-${area.id}`}
           data={area.coordinates}
           style={{
-            color: area.coordinates.properties?.color || '#ff8800',
-            fillColor: area.coordinates.properties?.fillColor || '#ff8800',
-            fillOpacity: area.coordinates.properties?.fillOpacity || 0.3,
-            weight: area.coordinates.properties?.weight || 2,
-            opacity: area.coordinates.properties?.opacity || 1,
+            color: '#0023d6',
+            fillColor: '#0023d6',
+            fillOpacity: 0.3,
+            weight: 2,
+            opacity: 1,
           }}
           onEachFeature={(feature, layer) => {
+            console.log('feature', feature.type);
             if (area.name) {
               layer.bindPopup(`
                 <div class="p-2">
