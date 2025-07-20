@@ -19,6 +19,25 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
   const [fetchedAreas, setFetchedAreas] = useState<Area[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
 
+  // Handle area click for selection/deselection
+  const handleAreaClick = (area: Area) => {
+    console.log('Area clicked:', area);
+    setSelectedAreas(prev => {
+      const isSelected = prev.some(selectedArea => selectedArea.id === area.id);
+      if (isSelected) {
+        // Remove from selection
+        const newSelection = prev.filter(selectedArea => selectedArea.id !== area.id);
+        onAreasChange?.(newSelection);
+        return newSelection;
+      } else {
+        // Add to selection
+        const newSelection = [...prev, area];
+        onAreasChange?.(newSelection);
+        return newSelection;
+      }
+    });
+  };
+
   const handleAreaCreated = (area: Area) => {
     console.log('Area created:', area);
     setDrawnAreas(prev => [...prev, area]);
@@ -76,29 +95,8 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h2 className="text-lg font-semibold text-blue-900 mb-2">
-          {t('selectServiceAreas')}
-        </h2>
-        <p className="text-blue-800 text-sm">
-          {t('areasSelectionDescription')}
-        </p>
-      </div>
-
-      {/* Editing Form */}
 
       <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-md font-semibold text-gray-900">
-            {t('mapView')}
-          </h3>
-          {isLoadingAreas && (
-            <div className="text-sm text-blue-600">
-              Loading areas...
-            </div>
-          )}
-        </div>
 
         {/* Map */}
                 <SearchableMap 
@@ -111,6 +109,8 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
           onAreaDeleted={handleAreaDeleted}
           onBoundsChange={handleBoundsChange}
           areas={allAreas}
+          onAreaClick={handleAreaClick}
+          selectedAreas={selectedAreas}
         />
       </div>
 
