@@ -157,9 +157,9 @@ export default function MapComponent({
       {/* Draw Control for drawing tools */}
       <DrawControl 
         enableDrawing={enableDrawing}
-        onPolygonCreated={handlePolygonCreated}
-        onPolygonEdited={handlePolygonEdited}
-        onPolygonDeleted={handlePolygonDeleted}
+        onAreaCreated={handlePolygonCreated}
+        onAreaEdited={handlePolygonEdited}
+        onAreaDeleted={handlePolygonDeleted}
       />
 
       {/* Render markers for search results */}
