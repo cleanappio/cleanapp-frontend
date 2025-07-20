@@ -1,39 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import SearchableMap from './SearchableMap';
-import { MapPin, Plus, Trash2, Edit3, Save, X } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
-
-// GeoJSON Polygon interface
-interface GeoJSONPolygon {
-  type: 'Feature';
-  geometry: {
-    type: 'Polygon';
-    coordinates: number[][][];
-  };
-  properties?: {
-    name?: string;
-    color?: string;
-    fillColor?: string;
-    fillOpacity?: number;
-    weight?: number;
-    opacity?: number;
-    [key: string]: any;
-  };
-}
-
-// Area interface for the dummy data
-interface Area {
-  id: string;
-  name: string;
-  description: string;
-  coordinates: [number, number];
-  polygon?: GeoJSONPolygon;
-  isSelected: boolean;
-}
-
-
+import { Area } from '@/lib/areas-api-client';
+import { areasApiClient } from '@/lib/areas-api-client';
 
 interface AreasSelectionProps {
   onAreasChange?: (selectedAreas: Area[]) => void;
@@ -42,103 +14,65 @@ interface AreasSelectionProps {
 
 export default function AreasSelection({ onAreasChange, initialSelectedAreas = [] }: AreasSelectionProps) {
   const { t } = useTranslations();
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [polygons, setPolygons] = useState<GeoJSONPolygon[]>([]);
-  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
-  const [editingArea, setEditingArea] = useState<string | null>(null);
-  const [newAreaName, setNewAreaName] = useState('');
-  const [newAreaDescription, setNewAreaDescription] = useState('');
+  const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
+  const [fetchedAreas, setFetchedAreas] = useState<Area[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(false);
 
-  const handleAreaToggle = (areaId: string) => {
-    const updatedAreas = areas.map(area => 
-      area.id === areaId ? { ...area, isSelected: !area.isSelected } : area
-    );
-    setAreas(updatedAreas);
-    
-    if (onAreasChange) {
-      onAreasChange(updatedAreas.filter(area => area.isSelected));
-    }
+  const handleAreaCreated = (area: Area) => {
+    console.log('Area created:', area);
+    setDrawnAreas(prev => [...prev, area]);
   };
 
-  const toggleAreaSelection = (areaId: string) => {
-    handleAreaToggle(areaId);
-  };
-
-  const handlePolygonCreated = (polygon: GeoJSONPolygon) => {
-    console.log('Polygon created:', polygon);
-    setDrawnPolygons(prev => [...prev, polygon]);
-    
-    // If we're editing an area, assign the polygon to it and select it
-    if (editingArea) {
-      const updatedAreas = areas.map(area => 
-        area.id === editingArea 
-          ? { ...area, polygon, isSelected: true } 
-          : area
-      );
-      setAreas(updatedAreas);
-      setEditingArea(null);
-      setNewAreaName('');
-      setNewAreaDescription('');
-      
-      // Notify parent component of the change
-      if (onAreasChange) {
-        onAreasChange(updatedAreas.filter(area => area.isSelected));
-      }
-    }
-  };
-
-  const handlePolygonEdited = (polygon: GeoJSONPolygon, index: number) => {
-    console.log('Polygon edited:', polygon, 'at index:', index);
-    setDrawnPolygons(prev => {
-      const newPolygons = [...prev];
-      newPolygons[index] = polygon;
-      return newPolygons;
+  const handleAreaEdited = (area: Area, index: number) => {
+    console.log('Area edited:', area, 'at index:', index);
+    setDrawnAreas(prev => {
+      const newAreas = [...prev];
+      newAreas[index] = area;
+      return newAreas;
     });
   };
 
-  const handlePolygonDeleted = (index: number) => {
-    console.log('Polygon deleted at index:', index);
-    setDrawnPolygons(prev => prev.filter((_, i) => i !== index));
+  const handleAreaDeleted = (index: number) => {
+    console.log('Area deleted at index:', index);
+    setDrawnAreas(prev => prev.filter((_, i) => i !== index));
   };
 
-  const startEditingArea = (areaId: string) => {
-    setEditingArea(areaId);
-    const area = areas.find(a => a.id === areaId);
-    if (area) {
-      setNewAreaName(area.name);
-      setNewAreaDescription(area.description);
-    }
-  };
-
-  const cancelEditing = () => {
-    setEditingArea(null);
-    setNewAreaName('');
-    setNewAreaDescription('');
-  };
-
-  const saveAreaChanges = () => {
-    if (editingArea && newAreaName.trim()) {
-      const updatedAreas = areas.map(area => 
-        area.id === editingArea 
-          ? { 
-              ...area, 
-              name: newAreaName.trim(),
-              description: newAreaDescription.trim() || area.description
-            } 
-          : area
+  // Fetch areas based on map bounds
+  const fetchAreasInBounds = useCallback(async (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => {
+    try {
+      setIsLoadingAreas(true);
+      console.log('Fetching areas in bounds:', bounds);
+      
+      const response = await areasApiClient.getAreasInBounds(
+        bounds.latMin,
+        bounds.lonMin,
+        bounds.latMax,
+        bounds.lonMax
       );
-      setAreas(updatedAreas);
-      setEditingArea(null);
-      setNewAreaName('');
-      setNewAreaDescription('');
+      
+      console.log('Fetched areas:', response.areas);
+      setFetchedAreas(response.areas);
+    } catch (error: any) {
+      console.error('Error fetching areas in bounds:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      setFetchedAreas([]);
+    } finally {
+      setIsLoadingAreas(false);
     }
-  };
+  }, []);
 
-  const deleteArea = (areaId: string) => {
-    setAreas(prev => prev.filter(area => area.id !== areaId));
-  };
+  // Handle bounds change from map
+  const handleBoundsChange = useCallback((bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => {
+    fetchAreasInBounds(bounds);
+  }, [fetchAreasInBounds]);
 
-  const selectedAreas = areas.filter(area => area.isSelected);
+  // Combine fetched areas and drawn areas for display
+  const allAreas = [...fetchedAreas, ...drawnAreas];
 
   return (
     <div className="w-full space-y-6">
@@ -152,74 +86,31 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
         </p>
       </div>
 
-
-
       {/* Editing Form */}
-      {editingArea && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="text-md font-semibold text-yellow-900 mb-3">
-            {areas.find(a => a.id === editingArea)?.name === 'New Custom Area' 
-              ? t('createNewArea') 
-              : t('editArea')
-            }
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-md font-semibold text-gray-900">
+            {t('mapView')}
           </h3>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-yellow-800 mb-1">
-                {t('areaName')}
-              </label>
-              <input
-                type="text"
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder={t('areaNamePlaceholder')}
-              />
+          {isLoadingAreas && (
+            <div className="text-sm text-blue-600">
+              Loading areas...
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-yellow-800 mb-1">
-                {t('areaDescription')}
-              </label>
-              <input
-                type="text"
-                value={newAreaDescription}
-                onChange={(e) => setNewAreaDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder={t('areaDescriptionPlaceholder')}
-              />
-            </div>
-            
-            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3">
-              <p className="text-yellow-800 text-sm">
-                {t('drawingInstructions')}
-              </p>
-            </div>
-          </div>
+          )}
         </div>
-      )}
-
-              {/* Map Controls */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-md font-semibold text-gray-900">
-              {t('mapView')}
-            </h3>
-            
-
-          </div>
 
         {/* Map */}
-        <SearchableMap 
+                <SearchableMap 
           initialCenter={[40.7128, -74.0060]} // New York
           initialZoom={12}
           height="400px"
-          polygons={polygons}
           enableDrawing={true}
-          onPolygonCreated={handlePolygonCreated}
-          onPolygonEdited={handlePolygonEdited}
-          onPolygonDeleted={handlePolygonDeleted}
+          onAreaCreated={handleAreaCreated}
+          onAreaEdited={handleAreaEdited}
+          onAreaDeleted={handleAreaDeleted}
+          onBoundsChange={handleBoundsChange}
+          areas={allAreas}
         />
       </div>
 

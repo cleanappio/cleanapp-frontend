@@ -12,29 +12,13 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Check, Globe, MapPin } from 'lucide-react';
 
 import { authApiClient } from '@/lib/auth-api-client';
+import { areasApiClient, Area } from '@/lib/areas-api-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import AreasSelection from '@/components/AreasSelection';
 import { useTranslations } from '@/lib/i18n';
-
-// GeoJSON Polygon interface
-interface GeoJSONPolygon {
-  type: 'Feature';
-  geometry: {
-    type: 'Polygon';
-    coordinates: number[][][];
-  };
-  properties?: {
-    name?: string;
-    color?: string;
-    fillColor?: string;
-    fillOpacity?: number;
-    weight?: number;
-    opacity?: number;
-    [key: string]: any;
-  };
-}
+import { Feature } from 'geojson';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -63,15 +47,7 @@ interface CheckoutFormProps {
   displayPrice: string;
 }
 
-// Area interface for the checkout form
-interface Area {
-  id: string;
-  name: string;
-  description: string;
-  coordinates: [number, number];
-  polygon?: any;
-  isSelected: boolean;
-}
+// Using Area type from areas-api-client
 
 function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProps) {
   const stripe = useStripe();
@@ -105,7 +81,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
-  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
+  const [drawnPolygons, setDrawnPolygons] = useState<Feature[]>([]);
   const [showAreasSelection, setShowAreasSelection] = useState(false);
   const { t } = useTranslations();
   
@@ -305,15 +281,28 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           }
         }
 
-        // Handle selected areas and drawn polygons
-        if (selectedAreas.length > 0 || drawnPolygons.length > 0) {
+        // Handle selected areas
+        if (selectedAreas.length > 0) {
           console.log('Selected areas for subscription:', selectedAreas);
-          console.log('Drawn polygons for subscription:', drawnPolygons);
-          // TODO: Integrate with backend API to save selected areas and drawn polygons
-          // This would typically involve calling an API endpoint to save the areas
-          // and polygons associated with the user's subscription
-          const totalItems = selectedAreas.length + drawnPolygons.length;
-          toast.success(t('areasSelectedForSubscription', { count: totalItems, plural: totalItems !== 1 ? 's' : '' }));
+          
+          try {
+            // Save selected areas to the areas backend
+            const customerId = user?.id;
+            if (!customerId) {
+              throw new Error('User ID not available');
+            }
+            
+            // Save each selected area to the backend
+            for (const area of selectedAreas) {
+              await areasApiClient.createArea(area);
+            }
+            
+            console.log(`Successfully saved ${selectedAreas.length} selected areas to areas backend`);
+            toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
+          } catch (error) {
+            console.error('Error saving areas to backend:', error);
+            toast.error('Failed to save service areas. Please try again.');
+          }
         }
       }
       
@@ -667,9 +656,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           <div className="mt-4 pt-4 border-t border-gray-200">
             <AreasSelection
               onAreasChange={setSelectedAreas}
-              onDrawnPolygonsChange={setDrawnPolygons}
-              initialSelectedAreas={selectedAreas.map(area => area.id)}
-              initialDrawnPolygons={drawnPolygons}
+              initialSelectedAreas={selectedAreas.map(area => area.id?.toString() || '')}
             />
           </div>
         )}

@@ -137,8 +137,6 @@ export interface UpdateCustomerBrandsRequest {
   brand_names: string[];
 }
 
-
-
 // ==================== API CLIENT ====================
 
 export class ApiClient {
