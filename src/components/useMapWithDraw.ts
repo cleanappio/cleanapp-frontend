@@ -3,6 +3,7 @@ import { useMap } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 import { FeatureGroup } from 'react-leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { Area } from '@/lib/areas-api-client';
 
 // CSS styles to fix z-index issues
 const drawStyles = `
@@ -73,9 +74,9 @@ const injectStyles = () => {
 
 export function useMapWithDraw(
   enableDrawing: boolean,
-  onPolygonCreated?: (polygon: any) => void,
-  onPolygonEdited?: (polygon: any, index: number) => void,
-  onPolygonDeleted?: (index: number) => void
+  onAreaCreated?: (area: Area) => void,
+  onAreaEdited?: (area: Area, index: number) => void,
+  onAreaDeleted?: (index: number) => void
 ) {
   const map = useMap();
   const initialized = useRef(false);
@@ -100,14 +101,14 @@ export function useMapWithDraw(
 // Draw control component
 export function DrawControl({
   enableDrawing,
-  onPolygonCreated,
-  onPolygonEdited,
-  onPolygonDeleted,
+  onAreaCreated,
+  onAreaEdited,
+  onAreaDeleted,
 }: {
   enableDrawing: boolean;
-  onPolygonCreated?: (polygon: any) => void;
-  onPolygonEdited?: (polygon: any, index: number) => void;
-  onPolygonDeleted?: (index: number) => void;
+  onAreaCreated?: (area: Area) => void;
+  onAreaEdited?: (area: Area, index: number) => void;
+  onAreaDeleted?: (index: number) => void;
 }) {
   const featureGroupRef = useRef<any>(null);
 
@@ -119,27 +120,36 @@ export function DrawControl({
   if (!enableDrawing) return null;
 
   const handleCreated = (e: any) => {
-    console.log('Polygon created:', e);
     const layer = e.layer;
     const coordinates = layer.toGeoJSON().geometry.coordinates;
     
-    const newPolygon = {
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: coordinates
+    const newArea: Area = {
+      id: undefined, // Will be set by backend
+      name: `Custom Area ${Date.now()}`,
+      description: 'Custom drawn area',
+      is_custom: true,
+      contact_name: '',
+      contact_emails: [],
+      coordinates: {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: coordinates
+        },
+        properties: {
+          name: `Custom Area ${Date.now()}`,
+          description: 'Custom drawn area',
+          color: '#ae11c6',
+          fillColor: '#ae11c6',
+          fillOpacity: 0.3,
+          weight: 3
+        }
       },
-      properties: {
-        name: `Polygon ${Date.now()}`,
-        description: 'Custom drawn polygon',
-        color: '#ae11c6',
-        fillColor: '#ae11c6',
-        fillOpacity: 0.3,
-        weight: 3
-      }
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    onPolygonCreated?.(newPolygon);
+    onAreaCreated?.(newArea);
   };
 
   const handleEdited = (e: any) => {
@@ -147,29 +157,39 @@ export function DrawControl({
     const layers = e.layers;
     layers.eachLayer((layer: any) => {
       const coordinates = layer.toGeoJSON().geometry.coordinates;
-      const newPolygon = {
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: coordinates
+      const editedArea: Area = {
+        id: undefined, // Will be set by backend
+        name: `Edited Custom Area`,
+        description: 'Custom drawn area',
+        is_custom: true,
+        contact_name: '',
+        contact_emails: [],
+        coordinates: {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: coordinates
+          },
+          properties: {
+            name: `Edited Custom Area`,
+            description: 'Custom drawn area',
+            color: '#ae11c6',
+            fillColor: '#ae11c6',
+            fillOpacity: 0.3,
+            weight: 3
+          }
         },
-        properties: {
-          name: `Edited Polygon`,
-          description: 'Custom drawn polygon',
-          color: '#ae11c6',
-          fillColor: '#ae11c6',
-          fillOpacity: 0.3,
-          weight: 3
-        }
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
-      onPolygonEdited?.(newPolygon, 0);
+      onAreaEdited?.(editedArea, 0);
     });
   };
 
   const handleDeleted = (e: any) => {
     console.log('Polygon deleted:', e);
-    onPolygonDeleted?.(0);
+    onAreaDeleted?.(0);
   };
 
   return React.createElement(FeatureGroup, {
