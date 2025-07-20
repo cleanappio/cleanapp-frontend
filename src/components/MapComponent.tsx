@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-l
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 import { DrawControl } from './useMapWithDraw';
+import { Area } from '@/lib/areas-api-client';
 
 // Fix for default markers in react-leaflet
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -23,24 +24,6 @@ interface SearchResult {
   lng: number;
 }
 
-// GeoJSON Polygon interface
-interface GeoJSONPolygon {
-  type: 'Feature';
-  geometry: {
-    type: 'Polygon';
-    coordinates: number[][][];
-  };
-  properties?: {
-    name?: string;
-    color?: string;
-    fillColor?: string;
-    fillOpacity?: number;
-    weight?: number;
-    opacity?: number;
-    [key: string]: any;
-  };
-}
-
 // Map controller component to handle map updates
 function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
@@ -52,17 +35,51 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
+// Bounds change handler component
+function BoundsChangeHandler({ onBoundsChange }: { onBoundsChange?: (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!onBoundsChange) return;
+
+    const handleBoundsChange = () => {
+      const bounds = map.getBounds();
+      onBoundsChange({
+        latMin: bounds.getSouth(),
+        lonMin: bounds.getWest(),
+        latMax: bounds.getNorth(),
+        lonMax: bounds.getEast(),
+      });
+    };
+
+    // Initial bounds
+    handleBoundsChange();
+
+    // Listen for bounds changes
+    map.on('moveend', handleBoundsChange);
+    map.on('zoomend', handleBoundsChange);
+
+    return () => {
+      map.off('moveend', handleBoundsChange);
+      map.off('zoomend', handleBoundsChange);
+    };
+  }, [map, onBoundsChange]);
+
+  return null;
+}
+
 interface MapComponentProps {
   center: [number, number];
   zoom: number;
   searchResults: SearchResult[];
   selectedMarker: SearchResult | null;
   onMarkerClick: (result: SearchResult) => void;
-  polygons?: GeoJSONPolygon[];
   enableDrawing?: boolean;
-  onPolygonCreated?: (polygon: GeoJSONPolygon) => void;
-  onPolygonEdited?: (polygon: GeoJSONPolygon, index: number) => void;
-  onPolygonDeleted?: (index: number) => void;
+  onAreaCreated?: (area: Area) => void;
+  onAreaEdited?: (area: Area, index: number) => void;
+  onAreaDeleted?: (index: number) => void;
+  onBoundsChange?: (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => void;
+  areas?: Area[];
 }
 
 export default function MapComponent({
@@ -71,37 +88,38 @@ export default function MapComponent({
   searchResults,
   selectedMarker,
   onMarkerClick,
-  polygons = [],
   enableDrawing = false,
-  onPolygonCreated,
-  onPolygonEdited,
-  onPolygonDeleted,
+  onAreaCreated,
+  onAreaEdited,
+  onAreaDeleted,
+  onBoundsChange,
+  areas = [],
 }: MapComponentProps) {
   const [isClient, setIsClient] = useState(false);
-  const [drawnPolygons, setDrawnPolygons] = useState<GeoJSONPolygon[]>([]);
+  const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   // Handle polygon events
-  const handlePolygonCreated = (polygon: GeoJSONPolygon) => {
-    setDrawnPolygons(prev => [...prev, polygon]);
-    onPolygonCreated?.(polygon);
+  const handlePolygonCreated = (area: Area) => {
+    setDrawnAreas(prev => [...prev, area]);
+    onAreaCreated?.(area);
   };
 
-  const handlePolygonEdited = (polygon: GeoJSONPolygon, index: number) => {
-    setDrawnPolygons(prev => {
-      const newPolygons = [...prev];
-      newPolygons[index] = polygon;
-      return newPolygons;
+  const handlePolygonEdited = (area: Area, index: number) => {
+    setDrawnAreas(prev => {
+      const newAreas = [...prev];
+      newAreas[index] = area;
+      return newAreas;
     });
-    onPolygonEdited?.(polygon, index);
+    onAreaEdited?.(area, index);
   };
 
   const handlePolygonDeleted = (index: number) => {
-    setDrawnPolygons(prev => prev.filter((_, i) => i !== index));
-    onPolygonDeleted?.(index);
+    setDrawnAreas(prev => prev.filter((_, i) => i !== index));
+    onAreaDeleted?.(index);
   };
 
   if (!isClient) {
@@ -112,11 +130,14 @@ export default function MapComponent({
     );
   }
 
+  console.log('areas in map component', areas);
+
   return (
     <MapContainer
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
+      minZoom={6}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -125,6 +146,9 @@ export default function MapComponent({
       
       {/* Map Controller for programmatic updates */}
       <MapController center={center} zoom={zoom} />
+
+      {/* Bounds Change Handler */}
+      <BoundsChangeHandler onBoundsChange={onBoundsChange} />
 
       {/* Draw Control for drawing tools */}
       <DrawControl 
@@ -174,23 +198,23 @@ export default function MapComponent({
       )}
 
       {/* Render GeoJSON polygons */}
-      {polygons.map((polygon, index) => (
+      {areas.map((area, index) => (
         <GeoJSON
-          key={`polygon-${index}`}
-          data={polygon}
+          key={`area-${index}`}
+          data={area.coordinates}
           style={{
-            color: polygon.properties?.color || '#ff8800',
-            fillColor: polygon.properties?.fillColor || '#ff8800',
-            fillOpacity: polygon.properties?.fillOpacity || 0.3,
-            weight: polygon.properties?.weight || 2,
-            opacity: polygon.properties?.opacity || 1,
+            color: area.coordinates.properties?.color || '#ff8800',
+            fillColor: area.coordinates.properties?.fillColor || '#ff8800',
+            fillOpacity: area.coordinates.properties?.fillOpacity || 0.3,
+            weight: area.coordinates.properties?.weight || 2,
+            opacity: area.coordinates.properties?.opacity || 1,
           }}
           onEachFeature={(feature, layer) => {
-            if (polygon.properties?.name) {
+            if (area.name) {
               layer.bindPopup(`
                 <div class="p-2">
-                  <h3 class="font-semibold text-gray-900">${polygon.properties.name}</h3>
-                  ${polygon.properties.description ? `<p class="text-sm text-gray-600">${polygon.properties.description}</p>` : ''}
+                  <h3 class="font-semibold text-gray-900">${area.name}</h3>
+                  ${area.description ? `<p class="text-sm text-gray-600">${area.description}</p>` : ''}
                 </div>
               `);
             }
