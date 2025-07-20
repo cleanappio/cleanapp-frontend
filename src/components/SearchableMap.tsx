@@ -59,6 +59,8 @@ interface SearchableMapProps {
   onAreaDeleted?: (index: number) => void;
   onBoundsChange?: (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => void;
   areas?: Area[];
+  onAreaClick?: (area: Area) => void;
+  selectedAreas?: Area[];
 }
 
 export default function SearchableMap({ 
@@ -70,7 +72,9 @@ export default function SearchableMap({
   onAreaEdited,
   onAreaDeleted,
   onBoundsChange,
-  areas = []
+  areas = [],
+  onAreaClick,
+  selectedAreas = []
 }: SearchableMapProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -256,6 +260,8 @@ export default function SearchableMap({
             onAreaDeleted={onAreaDeleted}
             onBoundsChange={onBoundsChange}
             areas={areas}
+            onAreaClick={onAreaClick}
+            selectedAreas={selectedAreas}
           />
         ) : (
           <div className="flex items-center justify-center h-full bg-gray-100">

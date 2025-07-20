@@ -82,9 +82,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [brandName, setBrandName] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [drawnPolygons, setDrawnPolygons] = useState<Feature[]>([]);
-  const [showAreasSelection, setShowAreasSelection] = useState(false);
   const { t } = useTranslations();
-  
+
 
 
   // Check if user exists on email blur
@@ -147,7 +146,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const fetchPaymentMethodsData = async () => {
     try {
       await fetchPaymentMethods();
-      
+
       // If there are existing payment methods, select the default one or the first one
       if (paymentMethods && paymentMethods.length > 0) {
         const defaultMethod = paymentMethods.find(m => m.is_default);
@@ -269,7 +268,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
       } else {
         await createSubscription(planType, billingCycle, paymentMethodId);
         toast.success(t('subscriptionCreatedSuccessfully'));
-        
+
         // Add brand name if provided
         if (brandName.trim()) {
           try {
@@ -284,19 +283,19 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         // Handle selected areas
         if (selectedAreas.length > 0) {
           console.log('Selected areas for subscription:', selectedAreas);
-          
+
           try {
             // Save selected areas to the areas backend
             const customerId = user?.id;
             if (!customerId) {
               throw new Error('User ID not available');
             }
-            
+
             // Save each selected area to the backend
             for (const area of selectedAreas) {
               await areasApiClient.createArea(area);
             }
-            
+
             console.log(`Successfully saved ${selectedAreas.length} selected areas to areas backend`);
             toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
           } catch (error) {
@@ -305,7 +304,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           }
         }
       }
-      
+
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Subscription error:', error);
@@ -426,7 +425,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 {t('selectServiceAreas')}
               </button>
             </div>
-            
+
             <p className="text-sm text-gray-500">
               {t('pleaseCompleteAuthenticationToSelectAreas')}
             </p>
@@ -456,7 +455,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               {t('paymentInformation')}
             </h3>
             <p className="text-gray-500 text-sm mb-4">{t('pleaseCompleteAuthenticationToContinueWithCheckout')}</p>
-            
+
             {/* Existing Payment Methods */}
             {paymentMethods.length > 0 && (
               <div className="mb-6">
@@ -465,18 +464,17 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                   {paymentMethods.map((method) => (
                     <label
                       key={method.id}
-                      className={`flex items-center p-3 border rounded-lg cursor-not-allowed transition-colors ${
-                        selectedPaymentMethod === method.stripe_payment_method_id 
-                          ? 'border-green-500 bg-green-50' 
+                      className={`flex items-center p-3 border rounded-lg cursor-not-allowed transition-colors ${selectedPaymentMethod === method.stripe_payment_method_id
+                          ? 'border-green-500 bg-green-50'
                           : 'border-gray-200'
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
                         name="paymentMethod"
                         value={method.stripe_payment_method_id}
                         checked={selectedPaymentMethod === method.stripe_payment_method_id}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         disabled
                         className="mr-3 text-green-600 focus:ring-green-500"
                       />
@@ -494,7 +492,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                       )}
                     </label>
                   ))}
-                  
+
                   {/* Add New Payment Method Option */}
                   <button
                     type="button"
@@ -616,50 +614,25 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         </div>
       </div>
 
-              {/* Areas Selection */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <MapPin className="w-5 h-5 mr-2" />
-              {t('serviceAreas')}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setShowAreasSelection(!showAreasSelection)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              {showAreasSelection ? t('hide') : t('selectServiceAreas')}
-            </button>
-          </div>
-          
-          {selectedAreas.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-3">
-                {t('areasSelected', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' })}
-              </p>
-              <div className="max-h-32 overflow-y-auto space-y-1">
-                {selectedAreas.map((area) => (
-                  <div key={area.id} className="flex items-center space-x-2 text-sm">
-                    <MapPin className="w-3 h-3 text-green-600" />
-                    <span className="text-gray-700">{area.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              {t('noAreasSelectedCheckout')}
-            </p>
-          )}
-        
-        {showAreasSelection && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <AreasSelection
-              onAreasChange={setSelectedAreas}
-              initialSelectedAreas={selectedAreas.map(area => area.id?.toString() || '')}
-            />
-          </div>
-        )}
+      {/* Areas Selection */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center">
+            <MapPin className="w-5 h-5 mr-2" />
+            {t('serviceAreas')}
+          </h3>
+        </div>
+
+        <p className="text-sm text-gray-500">
+          {t('noAreasSelectedCheckout')}
+        </p>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <AreasSelection
+            onAreasChange={setSelectedAreas}
+            initialSelectedAreas={selectedAreas.map(area => area.id?.toString() || '')}
+          />
+        </div>
       </div>
 
       {/* Payment Information */}
@@ -668,7 +641,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           <CreditCard className="w-5 h-5 mr-2" />
           {t('paymentInformation')}
         </h3>
-        
+
         {/* Existing Payment Methods */}
         {paymentMethods.length > 0 && (
           <div className="mb-6">
@@ -677,11 +650,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               {paymentMethods.map((method) => (
                 <label
                   key={method.id}
-                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPaymentMethod === method.stripe_payment_method_id 
-                      ? 'border-green-500 bg-green-50' 
+                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${selectedPaymentMethod === method.stripe_payment_method_id
+                      ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -709,7 +681,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                   )}
                 </label>
               ))}
-              
+
               {/* Add New Payment Method Option */}
               <button
                 type="button"
@@ -720,11 +692,10 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                     setSetAsDefault(false);
                   }
                 }}
-                className={`w-full flex items-center justify-center p-3 border rounded-lg transition-colors ${
-                  showNewPaymentForm 
-                    ? 'border-green-500 bg-green-50 text-green-700' 
+                className={`w-full flex items-center justify-center p-3 border rounded-lg transition-colors ${showNewPaymentForm
+                    ? 'border-green-500 bg-green-50 text-green-700'
                     : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <Plus className="w-5 h-5 mr-2" />
                 {t('addNewPaymentMethod')}
@@ -861,9 +832,9 @@ export default function CheckoutPage() {
           </h1>
 
           <Elements stripe={stripePromise}>
-            <CheckoutForm 
-              planType={plan as string} 
-              billingCycle={billing as 'monthly' | 'annual'} 
+            <CheckoutForm
+              planType={plan as string}
+              billingCycle={billing as 'monthly' | 'annual'}
               displayPrice={displayPrice as string}
             />
           </Elements>

@@ -80,6 +80,8 @@ interface MapComponentProps {
   onAreaDeleted?: (index: number) => void;
   onBoundsChange?: (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => void;
   areas?: Area[];
+  onAreaClick?: (area: Area) => void;
+  selectedAreas?: Area[];
 }
 
 export default function MapComponent({
@@ -94,6 +96,8 @@ export default function MapComponent({
   onAreaDeleted,
   onBoundsChange,
   areas = [],
+  onAreaClick,
+  selectedAreas = [],
 }: MapComponentProps) {
   const [isClient, setIsClient] = useState(false);
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
@@ -198,30 +202,34 @@ export default function MapComponent({
       )}
 
       {/* Render GeoJSON polygons */}
-      {areas.map((area, index) => (
-        <GeoJSON
-          key={`area-${area.id}`}
-          data={area.coordinates}
-          style={{
-            color: '#0023d6',
-            fillColor: '#0023d6',
-            fillOpacity: 0.3,
-            weight: 2,
-            opacity: 1,
-          }}
-          onEachFeature={(feature, layer) => {
-            console.log('feature', feature.type);
-            if (area.name) {
-              layer.bindPopup(`
-                <div class="p-2">
-                  <h3 class="font-semibold text-gray-900">${area.name}</h3>
-                  ${area.description ? `<p class="text-sm text-gray-600">${area.description}</p>` : ''}
-                </div>
-              `);
-            }
-          }}
-        />
-      ))}
+      {areas.map((area, index) => {
+        const isSelected = selectedAreas.some(selectedArea => selectedArea.id === area.id);
+        return (
+          <GeoJSON
+            key={`area-${area.id}`}
+            data={area.coordinates}
+            style={{
+              color: isSelected ? '#10b981' : '#0023d6',
+              fillColor: isSelected ? '#10b981' : '#0023d6',
+              fillOpacity: isSelected ? 0.5 : 0.3,
+              weight: isSelected ? 3 : 2,
+              opacity: 1,
+            }}
+            onEachFeature={(feature, layer) => {
+              // Add click handler for area selection
+              if (onAreaClick) {
+                layer.on('click', () => {
+                  onAreaClick(area);
+                });
+              }
+              
+              // Remove tooltip/popup - no longer showing popup on hover
+              layer.off('mouseover');
+              layer.off('mouseout');
+            }}
+          />
+        );
+      })}
     </MapContainer>
   );
 } 
