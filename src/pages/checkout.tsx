@@ -293,7 +293,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
 
             // Save each selected area to the backend
             for (const area of selectedAreas) {
-              await areasApiClient.createArea(area);
+              const response = await areasApiClient.createArea(area);
+              console.log(`Area created with ID: ${response.area_id}, message: ${response.message}`);
             }
 
             console.log(`Successfully saved ${selectedAreas.length} selected areas to areas backend`);
