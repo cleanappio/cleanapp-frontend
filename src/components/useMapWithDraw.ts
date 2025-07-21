@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 import { FeatureGroup } from 'react-leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Area } from '@/lib/areas-api-client';
+import AreaCreationModal from './AreaCreationModal';
 
 // CSS styles to fix z-index issues
 const drawStyles = `
@@ -46,7 +47,7 @@ const drawStyles = `
   
   /* Ensure control pane is always on top */
   .leaflet-control-container {
-    z-index: 10000 !important;
+    z-index: 1000 !important;
     position: relative !important;
   }
 `;
@@ -111,6 +112,9 @@ export function DrawControl({
   onAreaDeleted?: (index: number) => void;
 }) {
   const featureGroupRef = useRef<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingArea, setPendingArea] = useState<Area | null>(null);
+  const [pendingLayer, setPendingLayer] = useState<any>(null);
 
   // Inject styles when component mounts (as backup)
   useEffect(() => {
@@ -149,7 +153,10 @@ export function DrawControl({
       updated_at: new Date().toISOString()
     };
 
-    onAreaCreated?.(newArea);
+    // Store the area and layer, then open modal
+    setPendingArea(newArea);
+    setPendingLayer(layer);
+    setIsModalOpen(true);
   };
 
   const handleEdited = (e: any) => {
@@ -192,44 +199,71 @@ export function DrawControl({
     onAreaDeleted?.(0);
   };
 
-  return React.createElement(FeatureGroup, {
-    ref: featureGroupRef
-  }, 
-    React.createElement(EditControl, {
-      position: "topright",
-      onCreated: handleCreated,
-      onEdited: handleEdited,
-      onDeleted: handleDeleted,
-      draw: {
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false,
-        polyline: false,
-        polygon: {
-          allowIntersection: false,
-          drawError: {
-            color: '#e1e100',
-            message: '<strong>Oh snap!<strong> you can\'t draw that!'
-          },
-          shapeOptions: {
-            color: '#ae11c6',
-            fillColor: '#ae11c6',
-            fillOpacity: 0.5,
-            weight: 3
+  const handleModalSubmit = (area: Area) => {
+    onAreaCreated?.(area);
+    // Close modal without removing the polygon
+    setIsModalOpen(false);
+    setPendingArea(null);
+    setPendingLayer(null);
+  };
+
+  const handleModalClose = () => {
+    // Remove the drawn polygon from the map if it exists
+    if (pendingLayer && featureGroupRef.current) {
+      featureGroupRef.current.removeLayer(pendingLayer);
+    }
+    
+    setIsModalOpen(false);
+    setPendingArea(null);
+    setPendingLayer(null);
+  };
+
+  return React.createElement(React.Fragment, null,
+    React.createElement(FeatureGroup, {
+      ref: featureGroupRef
+    }, 
+      React.createElement(EditControl, {
+        position: "topright",
+        onCreated: handleCreated,
+        onEdited: handleEdited,
+        onDeleted: handleDeleted,
+        draw: {
+          rectangle: false,
+          circle: false,
+          circlemarker: false,
+          marker: false,
+          polyline: false,
+          polygon: {
+            allowIntersection: false,
+            drawError: {
+              color: '#e1e100',
+              message: '<strong>Oh snap!<strong> you can\'t draw that!'
+            },
+            shapeOptions: {
+              color: '#ae11c6',
+              fillColor: '#ae11c6',
+              fillOpacity: 0.5,
+              weight: 3
+            }
           }
-        }
-      },
-      edit: {
-        featureGroup: featureGroupRef.current,
-        remove: true,
+        },
         edit: {
-          selectedPathOptions: {
-            maintainColor: true,
-            dashArray: '10, 10'
+          featureGroup: featureGroupRef.current,
+          remove: true,
+          edit: {
+            selectedPathOptions: {
+              maintainColor: true,
+              dashArray: '10, 10'
+            }
           }
         }
-      }
+      })
+    ),
+    pendingArea && React.createElement(AreaCreationModal, {
+      isOpen: isModalOpen,
+      onClose: handleModalClose,
+      onSubmit: handleModalSubmit,
+      initialArea: pendingArea
     })
   );
 } 

@@ -90,9 +90,6 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
     fetchAreasInBounds(bounds);
   }, [fetchAreasInBounds]);
 
-  // Combine fetched areas and drawn areas for display
-  const allAreas = [...fetchedAreas, ...drawnAreas];
-
   return (
     <div className="w-full space-y-6">
 
@@ -108,7 +105,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
           onAreaEdited={handleAreaEdited}
           onAreaDeleted={handleAreaDeleted}
           onBoundsChange={handleBoundsChange}
-          areas={allAreas}
+          areas={fetchedAreas}
           onAreaClick={handleAreaClick}
           selectedAreas={selectedAreas}
         />
