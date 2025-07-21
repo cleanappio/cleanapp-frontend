@@ -134,8 +134,6 @@ export default function MapComponent({
     );
   }
 
-  console.log('areas in map component', areas);
-
   return (
     <MapContainer
       center={center}

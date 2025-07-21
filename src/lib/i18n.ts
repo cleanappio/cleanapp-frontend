@@ -436,6 +436,9 @@ export const translations: {
     noAreasSelectedCheckout: 'Click on areas on the map to select areas to get reports for.',
     pleaseCompleteAuthenticationToSelectAreas: 'No areas selected. Please complete authentication to select service areas.',
     areasSelectedForSubscription: '{count} service area{plural} selected',
+    drawnAreasCreatedForSubscription: '{count} drawn area{plural} created',
+    drawnAreas: 'Drawn Areas',
+    custom: 'Custom',
   },
   me: {
     // Common
@@ -869,6 +872,9 @@ export const translations: {
     noAreasSelectedCheckout: 'Kliknite na zone na mapi da izaberete zone za dobijanje izvještaja.',
     pleaseCompleteAuthenticationToSelectAreas: 'Nema izabranih zona. Molimo završite autentifikaciju da izaberete zone usluga.',
     areasSelectedForSubscription: '{count} zona{plural} usluga izabrano',
+    drawnAreasCreatedForSubscription: '{count} nacrtana zona{plural} kreirana',
+    drawnAreas: 'Nacrtane zone',
+    custom: 'Prilagođeno',
   },
 };
 
