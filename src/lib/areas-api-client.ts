@@ -66,8 +66,7 @@ export interface ApiError {
 // ==================== AREAS API CLIENT ====================
 
 export class AreasApiClient {
-  private directAxios: AxiosInstance;
-  private apiAxios: AxiosInstance;
+  private axios: AxiosInstance;
 
   constructor() {
     if (!process.env.NEXT_PUBLIC_AREAS_API_URL) {
@@ -75,7 +74,7 @@ export class AreasApiClient {
     }
 
     // Direct client - communicates directly with the areas backend
-    this.directAxios = axios.create({
+    this.axios = axios.create({
       baseURL: process.env.NEXT_PUBLIC_AREAS_API_URL,
       headers: {
         'Content-Type': 'application/json',
@@ -84,32 +83,8 @@ export class AreasApiClient {
       timeout: 30000 // 30 second timeout
     });
 
-    // API client - uses local Next.js API proxy (only for getAreas on localhost)
-    this.apiAxios = axios.create({
-      baseURL: '/api/areas',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout: 30000 // 30 second timeout
-    });
-
     // Request interceptor for direct client
-    this.directAxios.interceptors.request.use(
-      (config) => {
-        const token = authApiClient.getAuthToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    // Request interceptor for API client
-    this.apiAxios.interceptors.request.use(
+    this.axios.interceptors.request.use(
       (config) => {
         const token = authApiClient.getAuthToken();
         if (token) {
@@ -123,25 +98,7 @@ export class AreasApiClient {
     );
 
     // Response interceptor for direct client
-    this.directAxios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Clear token on unauthorized
-          authApiClient.setAuthToken(null);
-          // Only redirect if in browser context and not on login or checkout pages
-          if (typeof window !== 'undefined' &&
-            window.location.pathname !== '/login' &&
-            window.location.pathname !== '/checkout') {
-            window.location.href = '/login';
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    // Response interceptor for API client
-    this.apiAxios.interceptors.response.use(
+    this.axios.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
@@ -166,7 +123,7 @@ export class AreasApiClient {
    * GET /health
    */
   async healthCheck(): Promise<HealthCheckResponse> {
-    const { data } = await this.directAxios.get<HealthCheckResponse>('/health');
+    const { data } = await this.axios.get<HealthCheckResponse>('/health');
     return data;
   }
 
@@ -180,7 +137,7 @@ export class AreasApiClient {
     console.log('Creating/updating area:', request);
     
     try {
-      const response = await this.directAxios.post<CreateAreaResponse>('/api/v3/create_or_update_area', request);
+      const response = await this.axios.post<CreateAreaResponse>('/api/v3/create_or_update_area', request);
       console.log('Area created/updated successfully:', response.data);
       return response.data;
     } catch (error: any) {
@@ -213,13 +170,8 @@ export class AreasApiClient {
       params.type = type;
     }
 
-    // Use API client (proxy) on localhost, direct client otherwise
-    const isLocalhost = process.env.NODE_ENV === 'development';
-    const axiosClient = isLocalhost ? this.apiAxios : this.directAxios;
-    const endpoint = isLocalhost ? '/' : '/api/v3/get_areas';
-
     try {
-      const { data } = await axiosClient.get<AreasResponse>(endpoint, { params });
+      const { data } = await this.axios.get<AreasResponse>('/api/v3/get_areas', { params });
       return data;
     } catch (error: any) {
       console.error('Areas API Error:', {
@@ -240,7 +192,7 @@ export class AreasApiClient {
   async getAreasCount(): Promise<AreasCountResponse> {
     
     try {
-      const { data } = await this.directAxios.get<AreasCountResponse>('/api/v3/get_areas_count');
+      const { data } = await this.axios.get<AreasCountResponse>('/api/v3/get_areas_count');
       console.log('Areas count fetched successfully:', data);
       return data;
     } catch (error: any) {
@@ -269,7 +221,7 @@ export class AreasApiClient {
     console.log('Updating consent:', request);
     
     try {
-      const response = await this.directAxios.post('/api/v3/update_consent', request);
+      const response = await this.axios.post('/api/v3/update_consent', request);
       console.log('Consent updated successfully:', response.data);
     } catch (error: any) {
       console.error('Error updating consent:', {

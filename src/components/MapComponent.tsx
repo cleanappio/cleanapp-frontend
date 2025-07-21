@@ -221,9 +221,20 @@ export default function MapComponent({
                 });
               }
               
-              // Remove tooltip/popup - no longer showing popup on hover
-              layer.off('mouseover');
-              layer.off('mouseout');
+              // Add tooltip for area name on hover
+              layer.on('mouseover', (e) => {
+                const layer = e.target;
+                layer.bindTooltip(area.name, {
+                  permanent: false,
+                  direction: 'top',
+                  className: 'area-tooltip'
+                }).openTooltip();
+              });
+              
+              layer.on('mouseout', (e) => {
+                const layer = e.target;
+                layer.closeTooltip();
+              });
             }}
           />
         );
