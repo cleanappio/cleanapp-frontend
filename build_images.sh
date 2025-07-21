@@ -56,8 +56,17 @@ case ${OPT} in
     ;;
 esac
 
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiY2xlYW5hcHAiLCJhIjoiY21jM3Zsb2s4MDlsbjJqb2ZzZGtpOWZvYSJ9.YIy8EXQ9IFtmGs55z71-NQ
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyB-jjxGzdKREb-318-xNvrCpMmw4FCLBw4
+CLOUD_REGION="us-central1"
+PROJECT_NAME="cleanup-mysql-v2"
+CURRENT_PROJECT=$(gcloud config get project)
+echo ${CURRENT_PROJECT}
+if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
+  gcloud auth login
+  gcloud config set project ${PROJECT_NAME}
+fi
+
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=$(gcloud secrets versions access 1 --secret="MAPBOX_ACCESS_TOKEN")
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$(gcloud secrets versions access 1 --secret="GOOGLE_MAPS_API_KEY")
 
 . .version
 
@@ -75,8 +84,6 @@ set -e
 # Build the full and embedded images
 
 for MODE in "full" "embedded"; do
-  CLOUD_REGION="us-central1"
-  PROJECT_NAME="cleanup-mysql-v2"
   if [ "${MODE}" == "full" ]; then
     DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image"
   else
@@ -108,13 +115,6 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" \
   > Dockerfile
-
-  CURRENT_PROJECT=$(gcloud config get project)
-  echo ${CURRENT_PROJECT}
-  if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
-    gcloud auth login
-    gcloud config set project ${PROJECT_NAME}
-  fi
 
   echo "Building and pushing docker image..."
   gcloud builds submit \
