@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import SearchableMap from './SearchableMap';
-import { MapPin } from 'lucide-react';
+import { MapPin, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { Area } from '@/lib/areas-api-client';
 import { areasApiClient } from '@/lib/areas-api-client';
@@ -38,6 +38,16 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
     });
   };
 
+  // Handle area deletion from selected areas list
+  const handleAreaDelete = (areaToDelete: Area) => {
+    console.log('Deleting area from selection:', areaToDelete);
+    setSelectedAreas(prev => {
+      const newSelection = prev.filter(area => area.id !== areaToDelete.id);
+      onAreasChange?.(newSelection);
+      return newSelection;
+    });
+  };
+
   const handleAreaCreated = (area: Area) => {
     console.log('Area created:', area);
     setDrawnAreas(prev => [...prev, area]);
@@ -63,7 +73,7 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
       setIsLoadingAreas(true);
       console.log('Fetching areas in bounds:', bounds);
       
-      const response = await areasApiClient.getAreasInBounds(
+      const response = await areasApiClient.getPOIAreasInBounds(
         bounds.latMin,
         bounds.lonMin,
         bounds.latMax,
@@ -119,9 +129,19 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
           </h3>
           <div className="space-y-1">
             {selectedAreas.map((area) => (
-              <div key={area.id} className="flex items-center space-x-2">
-                <MapPin className="w-3 h-3 text-green-600" />
-                <span className="text-sm text-green-800">{area.name}</span>
+              <div key={area.id} className="flex items-center justify-between group">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-3 h-3 text-green-600" />
+                  <span className="text-sm text-green-800">{area.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAreaDelete(area)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                  title="Remove area from selection"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>

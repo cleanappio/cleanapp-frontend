@@ -45,6 +45,11 @@ export interface UpdateConsentRequest {
   contact_email: ContactEmail;
 }
 
+export interface CreateAreaResponse {
+  area_id: number;
+  message: string;
+}
+
 export interface HealthCheckResponse {
   status: string;
   service: string;
@@ -141,15 +146,30 @@ export class AreasApiClient {
    * Create or update an area
    * POST /api/v3/create_or_update_area
    */
-  async createOrUpdateArea(request: CreateOrUpdateAreaRequest): Promise<void> {
-    await this.axios.post('/api/v3/create_or_update_area', request);
+  async createOrUpdateArea(request: CreateOrUpdateAreaRequest): Promise<CreateAreaResponse> {
+    console.log('Creating/updating area:', request);
+    
+    try {
+      const response = await this.axios.post<CreateAreaResponse>('/api/v3/create_or_update_area', request);
+      console.log('Area created/updated successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating/updating area:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        area: request.area
+      });
+      throw error;
+    }
   }
 
   /**
    * Get areas with optional viewport filtering
    * GET /api/v3/get_areas
    */
-  async getAreas(viewport?: ViewPort): Promise<AreasResponse> {
+  async getAreas(viewport?: ViewPort, type?: 'admin' | 'poi'): Promise<AreasResponse> {
     const params: Record<string, string> = {};
 
     if (viewport) {
@@ -157,6 +177,10 @@ export class AreasApiClient {
       params.sw_lon = viewport.lon_min.toString();
       params.ne_lat = viewport.lat_max.toString();
       params.ne_lon = viewport.lon_max.toString();
+    }
+
+    if (type) {
+      params.type = type;
     }
 
     // In development, we use our local proxy, so the endpoint is just '/'
@@ -189,8 +213,21 @@ export class AreasApiClient {
    * GET /api/v3/get_areas_count
    */
   async getAreasCount(): Promise<AreasCountResponse> {
-    const { data } = await this.axios.get<AreasCountResponse>('/api/v3/get_areas_count');
-    return data;
+    console.log('Fetching areas count');
+    
+    try {
+      const { data } = await this.axios.get<AreasCountResponse>('/api/v3/get_areas_count');
+      console.log('Areas count fetched successfully:', data);
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching areas count:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   /**
@@ -198,13 +235,29 @@ export class AreasApiClient {
    * POST /api/v3/update_consent
    */
   async updateConsent(contactEmail: string, consentReport: boolean): Promise<void> {
-    await this.axios.post('/api/v3/update_consent',
-      {
-        contact_email: {
-          email: contactEmail,
-          consent_report: consentReport
-        }
+    const request = {
+      contact_email: {
+        email: contactEmail,
+        consent_report: consentReport
+      }
+    };
+    
+    console.log('Updating consent:', request);
+    
+    try {
+      const response = await this.axios.post('/api/v3/update_consent', request);
+      console.log('Consent updated successfully:', response.data);
+    } catch (error: any) {
+      console.error('Error updating consent:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        contactEmail,
+        consentReport
       });
+      throw error;
+    }
   }
 
   // ==================== CONVENIENCE METHODS ====================
@@ -212,31 +265,31 @@ export class AreasApiClient {
   /**
    * Create a new area with default version
    */
-  async createArea(area: Area): Promise<void> {
+  async createArea(area: Area): Promise<CreateAreaResponse> {
     const request: CreateOrUpdateAreaRequest = {
       area
     };
 
-    await this.createOrUpdateArea(request);
+    return await this.createOrUpdateArea(request);
   }
 
   /**
    * Update an existing area
    */
-  async updateArea(area: Area): Promise<void> {
+  async updateArea(area: Area): Promise<CreateAreaResponse> {
     const request: CreateOrUpdateAreaRequest = {
       area
     };
 
     // Note: The backend may need to be updated to handle area updates properly
     // For now, we'll use the same endpoint as create
-    await this.createOrUpdateArea(request);
+    return await this.createOrUpdateArea(request);
   }
 
   /**
-   * Get areas within a bounding box
+   * Get POI areas within a bounding box
    */
-  async getAreasInBounds(
+  async getPOIAreasInBounds(
     latMin: number,
     lonMin: number,
     latMax: number,
@@ -249,7 +302,26 @@ export class AreasApiClient {
       lon_max: lonMax
     };
 
-    return await this.getAreas(viewport);
+    return await this.getAreas(viewport, 'poi');
+  }
+
+  /**
+   * Get admin areas within a bounding box
+   */
+  async getAdminAreasInBounds(
+    latMin: number,
+    lonMin: number,
+    latMax: number,
+    lonMax: number
+  ): Promise<AreasResponse> {
+    const viewport: ViewPort = {
+      lat_min: latMin,
+      lon_min: lonMin,
+      lat_max: latMax,
+      lon_max: lonMax
+    };
+
+    return await this.getAreas(viewport, 'admin');
   }
 }
 
