@@ -34,6 +34,7 @@ case ${OPT} in
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://devapimontenegro.cleanapp.io"
       NEXT_PUBLIC_REDBULL_API_URL="https://devapiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://devauth.cleanapp.io"
+      NEXT_PUBLIC_AREAS_API_URL="https://devareas.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       break
       ;;
@@ -45,6 +46,7 @@ case ${OPT} in
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://apimontenegro.cleanapp.io"
       NEXT_PUBLIC_REDBULL_API_URL="https://apiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://auth.cleanapp.io"
+      NEXT_PUBLIC_AREAS_API_URL="https://areas.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       break
       ;;
@@ -87,6 +89,7 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL=$(echo ${NEXT_PUBLIC_MONTENEGRO_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_REDBULL_API_URL=$(echo ${NEXT_PUBLIC_REDBULL_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_AUTH_API_URL=$(echo ${NEXT_PUBLIC_AUTH_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_AREAS_API_URL=$(echo ${NEXT_PUBLIC_AREAS_API_URL} | sed 's/\//\\\//g')
   if [ "${MODE}" == "full" ]; then
     NEXT_PUBLIC_EMBEDDED_MODE="false"
   else
@@ -100,7 +103,8 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_EMBEDDED_MODE}}/${NEXT_PUBLIC_EMBEDDED_MODE}/" | \
   sed "s/{{NEXT_PUBLIC_MONTENEGRO_API_URL}}/${ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_REDBULL_API_URL}}/${ESCAPED_NEXT_PUBLIC_REDBULL_API_URL}/" | \
-  sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" \
+  sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" \
   > Dockerfile
 
   CURRENT_PROJECT=$(gcloud config get project)
