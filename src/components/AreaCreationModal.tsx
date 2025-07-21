@@ -22,7 +22,7 @@ export default function AreaCreationModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         handleCancel();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      } else if (e.key === 'Enter' && areaName.trim() && contactEmail.trim()) {
         handleSubmit();
       }
     };
@@ -39,7 +39,7 @@ export default function AreaCreationModal({
     };
   }, [isOpen, areaName, contactEmail]);
 
-  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+  const handleSubmit = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
     
@@ -77,7 +77,7 @@ export default function AreaCreationModal({
       >
         <h2 className="text-xl font-semibold mb-4">Create Custom Area</h2>
         
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="space-y-4">
           <div>
             <label htmlFor="areaName" className="block text-sm font-medium text-gray-700 mb-1">
               Area Name *
@@ -91,7 +91,6 @@ export default function AreaCreationModal({
                 areaName.trim() ? 'border-green-300' : 'border-gray-300'
               }`}
               placeholder="Enter area name"
-              required
             />
           </div>
           
@@ -108,7 +107,6 @@ export default function AreaCreationModal({
                 contactEmail.trim() ? 'border-green-300' : 'border-gray-300'
               }`}
               placeholder="Enter contact email"
-              required
             />
           </div>
           
@@ -133,7 +131,7 @@ export default function AreaCreationModal({
               Create Area
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

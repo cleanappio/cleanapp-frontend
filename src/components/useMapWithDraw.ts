@@ -132,6 +132,7 @@ export function DrawControl({
       name: `Custom Area ${Date.now()}`,
       description: 'Custom drawn area',
       is_custom: true,
+      type: 'poi' as const,
       contact_name: '',
       contact_emails: [],
       coordinates: {
@@ -169,6 +170,7 @@ export function DrawControl({
         name: `Edited Custom Area`,
         description: 'Custom drawn area',
         is_custom: true,
+        type: 'poi' as const,
         contact_name: '',
         contact_emails: [],
         coordinates: {

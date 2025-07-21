@@ -14,6 +14,7 @@ export interface Area {
   name: string;
   description?: string;
   is_custom?: boolean;
+  type: 'poi' | 'admin';
   contact_name?: string;
   contact_emails?: ContactEmail[];
   coordinates: Feature;
@@ -65,20 +66,17 @@ export interface ApiError {
 // ==================== AREAS API CLIENT ====================
 
 export class AreasApiClient {
-  private axios: AxiosInstance;
+  private directAxios: AxiosInstance;
+  private apiAxios: AxiosInstance;
 
   constructor() {
     if (!process.env.NEXT_PUBLIC_AREAS_API_URL) {
       throw new Error('NEXT_PUBLIC_AREAS_API_URL is not set.');
     }
 
-    // Use local API proxy in development to avoid CORS issues
-    const baseURL = process.env.NODE_ENV === 'development' 
-      ? '/api/areas'  // Use our Next.js API route
-      : process.env.NEXT_PUBLIC_AREAS_API_URL;
-
-    this.axios = axios.create({
-      baseURL: baseURL,
+    // Direct client - communicates directly with the areas backend
+    this.directAxios = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_AREAS_API_URL,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -86,8 +84,18 @@ export class AreasApiClient {
       timeout: 30000 // 30 second timeout
     });
 
-    // Request interceptor
-    this.axios.interceptors.request.use(
+    // API client - uses local Next.js API proxy (only for getAreas on localhost)
+    this.apiAxios = axios.create({
+      baseURL: '/api/areas',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    // Request interceptor for direct client
+    this.directAxios.interceptors.request.use(
       (config) => {
         const token = authApiClient.getAuthToken();
         if (token) {
@@ -100,8 +108,40 @@ export class AreasApiClient {
       }
     );
 
-    // Response interceptor
-    this.axios.interceptors.response.use(
+    // Request interceptor for API client
+    this.apiAxios.interceptors.request.use(
+      (config) => {
+        const token = authApiClient.getAuthToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor for direct client
+    this.directAxios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Clear token on unauthorized
+          authApiClient.setAuthToken(null);
+          // Only redirect if in browser context and not on login or checkout pages
+          if (typeof window !== 'undefined' &&
+            window.location.pathname !== '/login' &&
+            window.location.pathname !== '/checkout') {
+            window.location.href = '/login';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor for API client
+    this.apiAxios.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
@@ -126,17 +166,7 @@ export class AreasApiClient {
    * GET /health
    */
   async healthCheck(): Promise<HealthCheckResponse> {
-    // In development, we can't use the proxy for health check, so use direct URL
-    if (process.env.NODE_ENV === 'development') {
-      const directAxios = axios.create({
-        baseURL: process.env.NEXT_PUBLIC_AREAS_API_URL,
-        timeout: 10000
-      });
-      const { data } = await directAxios.get<HealthCheckResponse>('/health');
-      return data;
-    }
-    
-    const { data } = await this.axios.get<HealthCheckResponse>('/health');
+    const { data } = await this.directAxios.get<HealthCheckResponse>('/health');
     return data;
   }
 
@@ -150,7 +180,7 @@ export class AreasApiClient {
     console.log('Creating/updating area:', request);
     
     try {
-      const response = await this.axios.post<CreateAreaResponse>('/api/v3/create_or_update_area', request);
+      const response = await this.directAxios.post<CreateAreaResponse>('/api/v3/create_or_update_area', request);
       console.log('Area created/updated successfully:', response.data);
       return response.data;
     } catch (error: any) {
@@ -183,18 +213,13 @@ export class AreasApiClient {
       params.type = type;
     }
 
-    // In development, we use our local proxy, so the endpoint is just '/'
-    const endpoint = process.env.NODE_ENV === 'development' ? '/' : '/api/v3/get_areas';
-
-    console.log('Areas API Request:', {
-      url: `${this.axios.defaults.baseURL}${endpoint}`,
-      params,
-      headers: this.axios.defaults.headers
-    });
+    // Use API client (proxy) on localhost, direct client otherwise
+    const isLocalhost = process.env.NODE_ENV === 'development';
+    const axiosClient = isLocalhost ? this.apiAxios : this.directAxios;
+    const endpoint = isLocalhost ? '/' : '/api/v3/get_areas';
 
     try {
-      const { data } = await this.axios.get<AreasResponse>(endpoint, { params });
-      console.log('Areas API Response:', data);
+      const { data } = await axiosClient.get<AreasResponse>(endpoint, { params });
       return data;
     } catch (error: any) {
       console.error('Areas API Error:', {
@@ -213,10 +238,9 @@ export class AreasApiClient {
    * GET /api/v3/get_areas_count
    */
   async getAreasCount(): Promise<AreasCountResponse> {
-    console.log('Fetching areas count');
     
     try {
-      const { data } = await this.axios.get<AreasCountResponse>('/api/v3/get_areas_count');
+      const { data } = await this.directAxios.get<AreasCountResponse>('/api/v3/get_areas_count');
       console.log('Areas count fetched successfully:', data);
       return data;
     } catch (error: any) {
@@ -245,7 +269,7 @@ export class AreasApiClient {
     console.log('Updating consent:', request);
     
     try {
-      const response = await this.axios.post('/api/v3/update_consent', request);
+      const response = await this.directAxios.post('/api/v3/update_consent', request);
       console.log('Consent updated successfully:', response.data);
     } catch (error: any) {
       console.error('Error updating consent:', {

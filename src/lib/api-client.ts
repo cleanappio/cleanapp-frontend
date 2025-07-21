@@ -137,6 +137,33 @@ export interface UpdateCustomerBrandsRequest {
   brand_names: string[];
 }
 
+// ==================== CUSTOMER AREAS ENDPOINTS ====================
+
+export interface CustomerAreasResponse {
+  customer_id: string;
+  area_ids: number[];
+  count: number;
+}
+
+export interface AddCustomerAreasRequest {
+  customer_id: string;
+  area_ids: number[];
+}
+
+export interface DeleteCustomerAreasRequest {
+  customer_id: string;
+  area_ids: number[];
+}
+
+export interface UpdateCustomerAreasRequest {
+  customer_id: string;
+  area_ids: number[];
+}
+
+export interface GetCustomerAreasRequest {
+  customer_id: string;
+}
+
 // ==================== API CLIENT ====================
 
 export class ApiClient {
@@ -325,7 +352,35 @@ export class ApiClient {
     return data;
   }
 
+  // ==================== CUSTOMER AREAS ENDPOINTS ====================
 
+  async getCustomerAreas(): Promise<CustomerAreasResponse> {
+    const { data } = await this.axios.get<CustomerAreasResponse>(`/api/v3/customers/me/areas`);
+    return data;
+  }
+
+  async addCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
+    const { data } = await this.axios.post<MessageResponse>(`/api/v3/customers/me/areas`, {
+      area_ids: area_ids
+    });
+    return data;
+  }
+
+  async deleteCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
+    const { data } = await this.axios.delete<MessageResponse>(`/api/v3/customers/me/areas`, {
+      data: {
+        area_ids: area_ids
+      }
+    });
+    return data;
+  }
+
+  async updateCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>(`/api/v3/customers/me/areas`, {
+      area_ids: area_ids
+    });
+    return data;
+  }
 
   // ==================== UTILITY ENDPOINTS ====================
 

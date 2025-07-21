@@ -9,10 +9,11 @@ import { areasApiClient } from '@/lib/areas-api-client';
 
 interface AreasSelectionProps {
   onAreasChange?: (selectedAreas: Area[]) => void;
+  onDrawnAreasChange?: (drawnAreas: Area[]) => void;
   initialSelectedAreas?: string[];
 }
 
-export default function AreasSelection({ onAreasChange, initialSelectedAreas = [] }: AreasSelectionProps) {
+export default function AreasSelection({ onAreasChange, onDrawnAreasChange, initialSelectedAreas = [] }: AreasSelectionProps) {
   const { t } = useTranslations();
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
@@ -50,7 +51,11 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
 
   const handleAreaCreated = (area: Area) => {
     console.log('Area created:', area);
-    setDrawnAreas(prev => [...prev, area]);
+    setDrawnAreas(prev => {
+      const newDrawnAreas = [...prev, area];
+      onDrawnAreasChange?.(newDrawnAreas);
+      return newDrawnAreas;
+    });
   };
 
   const handleAreaEdited = (area: Area, index: number) => {
@@ -58,20 +63,24 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
     setDrawnAreas(prev => {
       const newAreas = [...prev];
       newAreas[index] = area;
+      onDrawnAreasChange?.(newAreas);
       return newAreas;
     });
   };
 
   const handleAreaDeleted = (index: number) => {
     console.log('Area deleted at index:', index);
-    setDrawnAreas(prev => prev.filter((_, i) => i !== index));
+    setDrawnAreas(prev => {
+      const newDrawnAreas = prev.filter((_, i) => i !== index);
+      onDrawnAreasChange?.(newDrawnAreas);
+      return newDrawnAreas;
+    });
   };
 
   // Fetch areas based on map bounds
   const fetchAreasInBounds = useCallback(async (bounds: { latMin: number; lonMin: number; latMax: number; lonMax: number }) => {
     try {
       setIsLoadingAreas(true);
-      console.log('Fetching areas in bounds:', bounds);
       
       const response = await areasApiClient.getPOIAreasInBounds(
         bounds.latMin,
@@ -80,7 +89,6 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
         bounds.lonMax
       );
       
-      console.log('Fetched areas:', response.areas);
       setFetchedAreas(response.areas);
     } catch (error: any) {
       console.error('Error fetching areas in bounds:', {
@@ -142,6 +150,26 @@ export default function AreasSelection({ onAreasChange, initialSelectedAreas = [
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Drawn Areas Summary */}
+      {drawnAreas.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h3 className="text-md font-semibold text-purple-900 mb-2">
+            {t('drawnAreas')} ({drawnAreas.length})
+          </h3>
+          <div className="space-y-1">
+            {drawnAreas.map((area, index) => (
+              <div key={`drawn-${index}`} className="flex items-center space-x-2">
+                <MapPin className="w-3 h-3 text-purple-600" />
+                <span className="text-sm text-purple-800">{area.name}</span>
+                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                  {t('custom')}
+                </span>
               </div>
             ))}
           </div>

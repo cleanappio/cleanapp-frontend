@@ -13,6 +13,7 @@ import { ArrowLeft, Lock, CreditCard, Plus, ChevronDown, ChevronUp, LogOut, Chec
 
 import { authApiClient } from '@/lib/auth-api-client';
 import { areasApiClient, Area } from '@/lib/areas-api-client';
+import { apiClient } from '@/lib/api-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
@@ -81,7 +82,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
-  const [drawnPolygons, setDrawnPolygons] = useState<Feature[]>([]);
+  const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const { t } = useTranslations();
 
 
@@ -253,6 +254,50 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         paymentMethodId = selectedPaymentMethod;
       }
 
+      // Handle areas for subscription
+      const hasSelectedAreas = selectedAreas.length > 0;
+      const hasDrawnAreas = drawnAreas.length > 0;
+
+      if (hasSelectedAreas || hasDrawnAreas) {
+        console.log('Areas for subscription:', { selected: selectedAreas.length, drawn: drawnAreas.length });
+
+        try {
+
+          // Step 1: Collect existing selected area IDs
+          const selectedAreaIds: number[] = selectedAreas.map(area => area.id!).filter(id => id !== undefined);
+          console.log('Existing selected area IDs:', selectedAreaIds);
+
+          // Step 2: Create only drawn areas and collect their IDs
+          const drawnAreaIds: number[] = [];
+          if (hasDrawnAreas) {
+            for (const area of drawnAreas) {
+              const response = await areasApiClient.createArea(area);
+              console.log(`Drawn area created with ID: ${response.area_id}, message: ${response.message}`);
+              drawnAreaIds.push(response.area_id);
+            }
+          }
+
+          // Step 3: Combine all area IDs (existing selected + newly created drawn)
+          const allAreaIds = [...selectedAreaIds, ...drawnAreaIds];
+          console.log(`Total area IDs for customer: ${allAreaIds.length} (${selectedAreaIds.length} selected + ${drawnAreaIds.length} drawn)`, allAreaIds);
+          
+          // Step 4: Update customer with all area IDs
+          const updateResponse = await apiClient.updateCustomerAreas(allAreaIds);
+          console.log('Customer areas updated successfully:', updateResponse);
+          
+          // Show success messages
+          if (hasSelectedAreas) {
+            toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
+          }
+          if (hasDrawnAreas) {
+            toast.success(t('drawnAreasCreatedForSubscription', { count: drawnAreas.length, plural: drawnAreas.length !== 1 ? 's' : '' }));
+          }
+        } catch (error) {
+          console.error('Error saving areas to backend:', error);
+          toast.error('Failed to save service areas. Please try again.');
+        }
+      }
+
       // Check if user has existing subscription and call appropriate method
       if (subscription) {
         // If adding a new payment method, add it first
@@ -277,31 +322,6 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           } catch (error) {
             console.error('Failed to add brand name:', error);
             toast.error(t('brandNameError'));
-          }
-        }
-
-        // Handle selected areas
-        if (selectedAreas.length > 0) {
-          console.log('Selected areas for subscription:', selectedAreas);
-
-          try {
-            // Save selected areas to the areas backend
-            const customerId = user?.id;
-            if (!customerId) {
-              throw new Error('User ID not available');
-            }
-
-            // Save each selected area to the backend
-            for (const area of selectedAreas) {
-              const response = await areasApiClient.createArea(area);
-              console.log(`Area created with ID: ${response.area_id}, message: ${response.message}`);
-            }
-
-            console.log(`Successfully saved ${selectedAreas.length} selected areas to areas backend`);
-            toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
-          } catch (error) {
-            console.error('Error saving areas to backend:', error);
-            toast.error('Failed to save service areas. Please try again.');
           }
         }
       }
@@ -631,6 +651,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         <div className="mt-4 pt-4 border-t border-gray-200">
           <AreasSelection
             onAreasChange={setSelectedAreas}
+            onDrawnAreasChange={setDrawnAreas}
             initialSelectedAreas={selectedAreas.map(area => area.id?.toString() || '')}
           />
         </div>
