@@ -81,7 +81,7 @@ export default function AreasAdminPage() {
     }
     
     if (data.type !== 'FeatureCollection') {
-      console.log('❌ Failed: data.type is not "FeatureCollection", got:', data.type);
+      console.log('❌ Failed: data.type is not &quot;FeatureCollection&quot;, got:', data.type);
       return false;
     }
     
@@ -105,7 +105,7 @@ export default function AreasAdminPage() {
     }
     
     if (feature.type !== 'Feature') {
-      console.log('❌ Failed: feature.type is not "Feature", got:', feature.type);
+      console.log('❌ Failed: feature.type is not &quot;Feature&quot;, got:', feature.type);
       return false;
     }
     
@@ -164,7 +164,7 @@ export default function AreasAdminPage() {
       
       if (!validateFeatureCollection(data)) {
         console.log('Invalid FeatureCollection structure');
-        setError('Invalid JSON structure. Expected a FeatureCollection with a "features" array.');
+        setError('Invalid JSON structure. Expected a FeatureCollection with a &quot;features&quot; array.');
         return;
       }
 
