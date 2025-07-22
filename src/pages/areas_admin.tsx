@@ -419,7 +419,7 @@ export default function AreasAdminPage() {
 }`}
             </pre>
             <p className="mt-2">
-              <strong>Required fields:</strong> properties.name, properties.type (must be "poi" or "admin"), geometry
+              <strong>Required fields:</strong> properties.name, properties.type (must be &quot;poi&quot; or &quot;admin&quot;), geometry
             </p>
           </div>
         </div>
