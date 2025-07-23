@@ -67,6 +67,9 @@ fi
 
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=$(gcloud secrets versions access 1 --secret="MAPBOX_ACCESS_TOKEN")
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$(gcloud secrets versions access 1 --secret="GOOGLE_MAPS_API_KEY")
+NEXT_PUBLIC_PLAYSTORE_URL="https://play.google.com/store/apps/details?id=com.cleanapp"
+NEXT_PUBLIC_APPSTORE_URL="https://apps.apple.com/us/app/cleanapp/id6466403301"
+NEXT_PUBLIC_REF_API_URL="http://dev.api.cleanapp.io:8080/write_referral"
 
 . .version
 
@@ -98,6 +101,9 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_REDBULL_API_URL=$(echo ${NEXT_PUBLIC_REDBULL_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_AUTH_API_URL=$(echo ${NEXT_PUBLIC_AUTH_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_AREAS_API_URL=$(echo ${NEXT_PUBLIC_AREAS_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL=$(echo ${NEXT_PUBLIC_PLAYSTORE_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_APPSTORE_URL=$(echo ${NEXT_PUBLIC_APPSTORE_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_REF_API_URL=$(echo ${NEXT_PUBLIC_REF_API_URL} | sed 's/\//\\\//g')
   if [ "${MODE}" == "full" ]; then
     NEXT_PUBLIC_EMBEDDED_MODE="false"
   else
@@ -113,7 +119,10 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_MONTENEGRO_API_URL}}/${ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_REDBULL_API_URL}}/${ESCAPED_NEXT_PUBLIC_REDBULL_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" | \
-  sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" \
+  sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_PLAYSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_APPSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_APPSTORE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REF_API_URL}}/${ESCAPED_NEXT_PUBLIC_REF_API_URL}/" \
   > Dockerfile
 
   echo "Building and pushing docker image..."
