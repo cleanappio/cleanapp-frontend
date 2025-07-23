@@ -184,17 +184,18 @@ export default function DownloadPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Download CleanApp</h1>
             <p className="text-gray-600">
-              {isRedirecting 
-                ? `Detected ${os === 'android' ? 'Android' : 'iOS'} device - redirecting automatically`
+              {os 
+                ? `Detected ${os === 'android' ? 'Android' : 'iOS'} device`
                 : 'Choose your platform to download the CleanApp mobile application'
               }
             </p>
           </div>
 
-          {isRedirecting ? (
-            // Show detected OS button with countdown
+          {os ? (
+            // Show detected OS button
             <div className="space-y-6">
               <button
+                onClick={os === 'android' ? handleAndroidClick : handleIOSClick}
                 className={`w-full flex items-center justify-center space-x-3 py-4 px-6 rounded-lg transition-colors duration-200 ${
                   os === 'android' 
                     ? 'bg-green-600 text-white hover:bg-green-700' 
@@ -220,23 +221,27 @@ export default function DownloadPage() {
                 )}
               </button>
 
-              {/* Countdown Animation */}
-              <div className="text-center">
-                <div className="inline-flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-full">
-                  <div className="animate-pulse">
-                    <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+              {isRedirecting && (
+                <>
+                  {/* Countdown Animation */}
+                  <div className="text-center">
+                    <div className="inline-flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-full">
+                      <div className="animate-pulse">
+                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                      </div>
+                      <span className="text-blue-800 font-medium">
+                        Redirecting in {countdown} second{countdown !== 1 ? 's' : ''}...
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-blue-800 font-medium">
-                    Redirecting in {countdown} second{countdown !== 1 ? 's' : ''}...
-                  </span>
-                </div>
-              </div>
 
-              <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-800 text-center">
-                  We detected your {os === 'android' ? 'Android' : 'iOS'} device and will redirect you automatically.
-                </p>
-              </div>
+                  <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-800 text-center">
+                      We detected your {os === 'android' ? 'Android' : 'iOS'} device and will redirect you automatically.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             // Show both buttons for manual selection

@@ -35,6 +35,7 @@ case ${OPT} in
       NEXT_PUBLIC_REDBULL_API_URL="https://devapiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://devauth.cleanapp.io"
       NEXT_PUBLIC_AREAS_API_URL="https://devareas.cleanapp.io"
+      NEXT_PUBLIC_REF_API_URL="http://dev.api.cleanapp.io:8080/write_referral"
       TARGET_VM_IP="34.132.121.53"
       break
       ;;
@@ -47,6 +48,7 @@ case ${OPT} in
       NEXT_PUBLIC_REDBULL_API_URL="https://apiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://auth.cleanapp.io"
       NEXT_PUBLIC_AREAS_API_URL="https://areas.cleanapp.io"
+      NEXT_PUBLIC_REF_API_URL="http://api.cleanapp.io:8080/write_referral"
       TARGET_VM_IP="34.122.15.16"
       break
       ;;
@@ -69,7 +71,6 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=$(gcloud secrets versions access 1 --secret="MAP
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$(gcloud secrets versions access 1 --secret="GOOGLE_MAPS_API_KEY")
 NEXT_PUBLIC_PLAYSTORE_URL="https://play.google.com/store/apps/details?id=com.cleanapp"
 NEXT_PUBLIC_APPSTORE_URL="https://apps.apple.com/us/app/cleanapp/id6466403301"
-NEXT_PUBLIC_REF_API_URL="http://dev.api.cleanapp.io:8080/write_referral"
 
 . .version
 
