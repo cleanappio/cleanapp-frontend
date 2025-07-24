@@ -140,6 +140,8 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       setSelectedReport(null);
       setIsCleanAppProOpen(false);
     }
+    // Refresh the aggregated data
+    fetchAreaAggrData();
   };
 
   function getMunicipalityColor(osmId: number): string {
@@ -260,7 +262,6 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
       }
 
       const data = await response.json();
-      console.log('Fetched area aggregated data:', data);
 
       if (Array.isArray(data.areas)) {
         setAreaAggrData(data.areas);
