@@ -104,7 +104,11 @@ export const translations: {
     montenegro: 'Montenegro',
     montenegroDashboard: 'Montenegro Dashboard',
     montenegroReports: 'Montenegro Reports',
-    montenegroMap: 'Montenegro Map',
+    
+    // New York specific
+    newYork: 'New York',
+    newYorkDashboard: 'New York Dashboard',
+    newYorkReports: 'New York Reports',
     
     // Brand specific
     brandDashboard: 'Brand Dashboard',
@@ -542,7 +546,11 @@ export const translations: {
     montenegro: 'Crna Gora',
     montenegroDashboard: 'Kontrolna tabla Crne Gore',
     montenegroReports: 'Izveštaji Crne Gore',
-    montenegroMap: 'Mapa Crne Gore',
+    
+    // New York specific
+    newYork: 'Njujork',
+    newYorkDashboard: 'Kontrolna tabla Njujorka',
+    newYorkReports: 'Izveštaji Njujorka',
     
     // Brand specific
     brandDashboard: 'Kontrolna tabla brenda',

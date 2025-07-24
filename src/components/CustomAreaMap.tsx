@@ -271,6 +271,7 @@ export default function CustomAreaMap({
       }
 
       const data = await response.json();
+      console.log('Fetched area aggregated data:', data);
 
       if (Array.isArray(data.areas)) {
         setAreaAggrData(data.areas);
