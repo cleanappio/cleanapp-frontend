@@ -357,6 +357,9 @@ export const translations: {
     noReportSelected: 'No report selected',
     errorLoadingReport: 'Error loading report',
     markAsFixed: 'Mark as fixed',
+    markingAsFixed: 'Marking as fixed...',
+    reportMarkedAsFixed: 'Report marked as fixed successfully',
+    failedToMarkAsFixed: 'Failed to mark report as fixed',
     exportAsPDF: 'Export as PDF',
     
     // Additional keys for components
@@ -793,6 +796,9 @@ export const translations: {
     noReportSelected: 'Nije izabran izveštaj',
     errorLoadingReport: 'Greška učitavanja izveštaja',
     markAsFixed: 'Označi kao popravljeno',
+    markingAsFixed: 'Označavanje kao popravljeno...',
+    reportMarkedAsFixed: 'Izveštaj uspešno označen kao popravljen',
+    failedToMarkAsFixed: 'Neuspešno označavanje izveštaja kao popravljen',
     exportAsPDF: 'Izvezi kao PDF',
     
     // Additional keys for components

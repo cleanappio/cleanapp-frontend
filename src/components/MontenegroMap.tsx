@@ -131,6 +131,17 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
     setIsCleanAppProOpen(true);
   };
 
+  const handleReportFixed = (reportSeq: number) => {
+    // Remove the fixed report from the reports list
+    setReports(prevReports => prevReports.filter(report => report.report.seq !== reportSeq));
+    
+    // If the fixed report was the selected report, clear the selection
+    if (selectedReport?.report.seq === reportSeq) {
+      setSelectedReport(null);
+      setIsCleanAppProOpen(false);
+    }
+  };
+
   function getMunicipalityColor(osmId: number): string {
     if (!municipalitiesRate) {
       return '#808080';
@@ -569,6 +580,7 @@ export default function MontenegroMap({ mapCenter }: MontenegroMapProps) {
         <CustomDashboardReport
           reportItem={selectedReport}
           onClose={() => setIsCleanAppProOpen(false)}
+          onReportFixed={handleReportFixed}
         />
       )}
     </div>

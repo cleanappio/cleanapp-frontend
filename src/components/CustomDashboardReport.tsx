@@ -4,6 +4,7 @@ import { getDisplayableImage } from "@/lib/image-utils";
 import { authApiClient } from "@/lib/auth-api-client";
 import { useAuthStore } from "@/lib/auth-store";
 import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from "@/lib/i18n";
+import { reportProcessingApiClient } from "@/lib/report-processing-api-client";
 import Link from 'next/link';
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -25,13 +26,16 @@ function MapController({ center }: { center: [number, number] }) {
 interface CustomDashboardReportProps {
   reportItem: LatestReport | null;
   onClose?: () => void;
+  onReportFixed?: (reportSeq: number) => void;
 }
 
-const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportItem, onClose }) => {
+const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportItem, onClose, onReportFixed }) => {
   const { isAuthenticated } = useAuthStore();
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [markingAsFixed, setMarkingAsFixed] = useState(false);
+  const [markFixedSuccess, setMarkFixedSuccess] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslations();
 
@@ -94,6 +98,36 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
 
   const getGoogleMapsUrl = (lat: number, lng: number) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
+  };
+
+  const markAsFixed = async () => {
+    if (!reportItem?.report?.seq) return;
+    
+    setMarkingAsFixed(true);
+    setMarkFixedSuccess(null);
+    setError(null);
+    
+    try {
+      const response = await reportProcessingApiClient.markFixed({ seq: reportItem.report.seq });
+      if (response.success) {
+        setMarkFixedSuccess(response.message || t('reportMarkedAsFixed'));
+        // Notify parent component that report was fixed
+        if (onReportFixed && reportItem?.report?.seq) {
+          onReportFixed(reportItem.report.seq);
+        }
+        // Optionally close the modal after a delay
+        setTimeout(() => {
+          if (onClose) onClose();
+        }, 2000);
+      } else {
+        setError(response.message || t('failedToMarkAsFixed'));
+      }
+    } catch (error: any) {
+      console.error('Error marking report as fixed:', error);
+      setError(error.response?.data?.message || t('failedToMarkAsFixed'));
+    } finally {
+      setMarkingAsFixed(false);
+    }
   };
 
   const exportToPDF = async () => {
@@ -588,15 +622,33 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
             {formatTime(report.timestamp)}
           </span>
         </div>
+        
+        {/* Success/Error Messages */}
+        {(markFixedSuccess || error) && (
+          <div className="flex-1 mx-4">
+            {markFixedSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded px-3 py-1">
+                <p className="text-green-800 text-sm">{markFixedSuccess}</p>
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded px-3 py-1">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => {
-              // TODO: Implement mark as fixed functionality
-              console.log('Mark as fixed clicked for report:', reportItem?.report?.seq);
-            }}
-            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+            onClick={markAsFixed}
+            disabled={markingAsFixed}
+            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+              markingAsFixed 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
-            {t('markAsFixed')}
+            {markingAsFixed ? t('markingAsFixed') : t('markAsFixed')}
           </button>
           <button
             onClick={exportToPDF}
