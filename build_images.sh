@@ -36,6 +36,7 @@ case ${OPT} in
       NEXT_PUBLIC_AUTH_API_URL="https://devauth.cleanapp.io"
       NEXT_PUBLIC_AREAS_API_URL="https://devareas.cleanapp.io"
       NEXT_PUBLIC_REF_API_URL="http://dev.api.cleanapp.io:8080/write_referral"
+      NEXT_PUBLIC_REPORT_PROCESSING_API_URL="https://devprocessing.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       break
       ;;
@@ -49,6 +50,7 @@ case ${OPT} in
       NEXT_PUBLIC_AUTH_API_URL="https://auth.cleanapp.io"
       NEXT_PUBLIC_AREAS_API_URL="https://areas.cleanapp.io"
       NEXT_PUBLIC_REF_API_URL="http://api.cleanapp.io:8080/write_referral"
+      NEXT_PUBLIC_REPORT_PROCESSING_API_URL="https://processing.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       break
       ;;
@@ -105,6 +107,7 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL=$(echo ${NEXT_PUBLIC_PLAYSTORE_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_APPSTORE_URL=$(echo ${NEXT_PUBLIC_APPSTORE_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_REF_API_URL=$(echo ${NEXT_PUBLIC_REF_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL=$(echo ${NEXT_PUBLIC_REPORT_PROCESSING_API_URL} | sed 's/\//\\\//g')
   if [ "${MODE}" == "full" ]; then
     NEXT_PUBLIC_EMBEDDED_MODE="false"
   else
@@ -123,7 +126,8 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_PLAYSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL}/" | \
   sed "s/{{NEXT_PUBLIC_APPSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_APPSTORE_URL}/" | \
-  sed "s/{{NEXT_PUBLIC_REF_API_URL}}/${ESCAPED_NEXT_PUBLIC_REF_API_URL}/" \
+  sed "s/{{NEXT_PUBLIC_REF_API_URL}}/${ESCAPED_NEXT_PUBLIC_REF_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REPORT_PROCESSING_API_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL}/" \
   > Dockerfile
 
   echo "Building and pushing docker image..."
