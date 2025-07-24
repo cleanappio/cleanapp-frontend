@@ -16,7 +16,7 @@ export interface BrandsResponse {
 }
 
 export interface BrandReportsResponse {
-  reports: any[]; // Using the same Report interface from MontenegroMap
+  reports: any[]; // Using the same Report interface from CustomAreaMap
 }
 
 export interface PaginationParams {
