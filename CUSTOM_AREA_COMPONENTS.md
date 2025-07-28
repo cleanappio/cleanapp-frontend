@@ -40,9 +40,6 @@ export default function MyAreaPage() {
 |-----------|------|----------|-------------|
 | `apiUrl` | `string` | Yes | The base URL for the area's API endpoint |
 | `mapCenter` | `[number, number]` | Yes | The center coordinates for the map (latitude, longitude) |
-| `adminLevel` | `number` | Yes | The administrative level for country boundaries (typically 2) |
-| `subAdminLevel` | `number` | Yes | The administrative level for sub-areas like municipalities (typically 6) |
-| `countryOsmId` | `number` | Yes | The OpenStreetMap ID for the country/area |
 | `areaName` | `string` | Yes | The display name for the area |
 | `areaFlag` | `string` | No | Optional flag emoji to display in the header |
 
@@ -52,9 +49,6 @@ export default function MyAreaPage() {
 |-----------|------|----------|-------------|
 | `mapCenter` | `[number, number]` | Yes | The center coordinates for the map |
 | `apiUrl` | `string` | Yes | The base URL for the area's API endpoint |
-| `adminLevel` | `number` | Yes | The administrative level for country boundaries |
-| `subAdminLevel` | `number` | Yes | The administrative level for sub-areas |
-| `countryOsmId` | `number` | Yes | The OpenStreetMap ID for the country/area |
 | `areaName` | `string` | No | Optional area name for internal use |
 
 ## Administrative Levels
@@ -72,10 +66,10 @@ The components expect the following API endpoints:
 
 ### Required Endpoints
 
-1. **Reports**: `${apiUrl}/reports?osm_id=${countryOsmId}&n=1000`
+1. **Reports**: `${apiUrl}/reports?n=1000`
 2. **Aggregated Data**: `${apiUrl}/reports_aggr`
-3. **Country Polygons**: `${apiUrl}/polygons?osm_id=${countryOsmId}&admin_level=${adminLevel}`
-4. **Municipality Polygons**: `${apiUrl}/polygons?osm_id=${countryOsmId}&admin_level=${subAdminLevel}`
+3. **Areas**: `${apiUrl}/areas`
+4. **Sub Areas**: `${apiUrl}/sub_areas`
 
 ### API Response Formats
 
@@ -150,9 +144,6 @@ The components expect the following API endpoints:
 <CustomAreaDashboard 
   apiUrl={process.env.NEXT_PUBLIC_MONTENEGRO_API_URL || ''}
   mapCenter={[42.7087, 19.3744]}
-  adminLevel={2}
-  subAdminLevel={6}
-  countryOsmId={-53296}
   areaName="Montenegro"
   areaFlag="🇲🇪"
 />
@@ -163,9 +154,6 @@ The components expect the following API endpoints:
 <CustomAreaDashboard 
   apiUrl="https://api.mycountry.com"
   mapCenter={[40.7128, -74.0060]}
-  adminLevel={2}
-  subAdminLevel={6}
-  countryOsmId={-12345}
   areaName="My Country"
   areaFlag="🏳️"
 />

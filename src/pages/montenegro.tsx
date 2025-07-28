@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations } from '@/lib/i18n';
@@ -7,8 +7,13 @@ import Head from 'next/head';
 
 export default function MontenegroPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  // Only subscribe to the specific auth state properties we need
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isLoading = useAuthStore(state => state.isLoading);
   const { t } = useTranslations();
+
+  // Memoize the map center to prevent unnecessary re-renders
+  const mapCenter = useMemo(() => [42.7087, 19.3744] as [number, number], []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -37,10 +42,7 @@ export default function MontenegroPage() {
       </Head>
       <CustomAreaDashboard 
         apiUrl={process.env.NEXT_PUBLIC_MONTENEGRO_API_URL || ''}
-        mapCenter={[42.7087, 19.3744]} // Montenegro center
-        adminLevel={2}
-        subAdminLevel={6}
-        countryOsmId={-53296} // Montenegro OSM ID
+        mapCenter={mapCenter}
         areaName="Montenegro"
         areaFlag="🇲🇪"
       />
