@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
@@ -22,7 +22,7 @@ interface ReportStats {
 
 // AreaAggrData structure from the API
 interface AreaAggrData {
-  osm_id: number;
+  area_id: number;
   name: string;
   reports_count: number;
   reports_max: number;
@@ -73,21 +73,17 @@ function MapController({ center }: { center: [number, number] }) {
 interface CustomAreaMapProps {
   mapCenter: [number, number];
   apiUrl: string;
-  adminLevel: number;
-  subAdminLevel: number;
-  countryOsmId: number;
   areaName?: string;
 }
 
-export default function CustomAreaMap({ 
+function CustomAreaMap({ 
   mapCenter, 
   apiUrl, 
-  adminLevel, 
-  subAdminLevel, 
-  countryOsmId,
   areaName = "Custom Area"
 }: CustomAreaMapProps) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  // Only subscribe to the specific auth state properties we need
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isLoading = useAuthStore(state => state.isLoading);
   const [isClient, setIsClient] = useState(false);
   const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
   const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
@@ -100,6 +96,11 @@ export default function CustomAreaMap({
   const [areaAggrData, setAreaAggrData] = useState<AreaAggrData[]>([]);
   const [municipalitiesRate, setMunicipalitiesRate] = useState<Map<number, ReportStats>>(new Map());
   const { t } = useTranslations();
+  
+  console.log('CustomAreaMap rendered');
+
+  // Ref to track if data has been fetched to prevent multiple fetches
+  const hasFetchedData = useRef(false);
 
   // Helper function to create authenticated fetch requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -182,7 +183,7 @@ export default function CustomAreaMap({
         return;
       }
 
-      const fullUrl = `${apiUrl}/reports?osm_id=${countryOsmId}&n=1000`;
+      const fullUrl = `${apiUrl}/reports?n=1000`;
       console.log('Full URL:', fullUrl);
       const response = await authenticatedFetch(fullUrl);
       if (!response.ok) {
@@ -219,44 +220,6 @@ export default function CustomAreaMap({
     }
   };
 
-  // Fetch reports for a specific municipality
-  const fetchReportsForMunicipality = async (osmId: number) => {
-    try {
-      setReportsLoading(true);
-      if (!apiUrl) {
-        console.error('API URL not configured');
-        return;
-      }
-
-      const response = await authenticatedFetch(`${apiUrl}/reports?osm_id=${osmId}&n=1000`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Fetched reports for municipality:', osmId, data);
-
-      if (data.reports && Array.isArray(data.reports)) {
-        const locale = getCurrentLocale();
-        try {
-          const filteredReports = filterAnalysesByLanguage(data.reports, locale);
-          setReports(filteredReports);
-        } catch (filterError) {
-          console.error('Error filtering reports by language:', filterError);
-          setReports([]);
-        }
-      } else {
-        console.warn('No reports found in response or invalid format');
-        setReports([]);
-      }
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-      setReports([]);
-    } finally {
-      setReportsLoading(false);
-    }
-  };
-
   // Fetch aggregated data for all areas
   const fetchAreaAggrData = async () => {
     try {
@@ -284,7 +247,7 @@ export default function CustomAreaMap({
             overallRate: area.reports_count / Math.max(area.reports_max, 1),
             averageSeverity: area.mean_severity
           };
-          munRate.set(area.osm_id, stats);
+          munRate.set(area.area_id, stats);
         });
         setMunicipalitiesRate(munRate);
       } else {
@@ -297,19 +260,24 @@ export default function CustomAreaMap({
 
   useEffect(() => {
     setIsClient(true);
+    console.log('isClient', isClient);
   }, []);
 
+  // Reset fetch flag when apiUrl changes
   useEffect(() => {
-    if (isClient && isAuthenticated) {
+    hasFetchedData.current = false;
+  }, [apiUrl]);
+
+  useEffect(() => {
+    console.log('useEffect triggered with:', { isClient, isAuthenticated, apiUrl });
+    
+    if (isClient && isAuthenticated && apiUrl && !hasFetchedData.current) {
+      hasFetchedData.current = true;
+      
       // Fetch country polygons
       const fetchCountryPolygons = async () => {
         try {
-          if (!apiUrl) {
-            console.error('API URL not configured');
-            return;
-          }
-
-          const response = await authenticatedFetch(`${apiUrl}/areas?admin_level=${adminLevel}`);
+          const response = await authenticatedFetch(`${apiUrl}/areas`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -330,12 +298,7 @@ export default function CustomAreaMap({
       // Fetch municipalities polygons
       const fetchMunicipalitiesPolygons = async () => {
         try {
-          if (!apiUrl) {
-            console.error('API URL not configured');
-            return;
-          }
-
-          const response = await authenticatedFetch(`${apiUrl}/areas?admin_level=${subAdminLevel}`);
+          const response = await authenticatedFetch(`${apiUrl}/sub_areas`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -352,13 +315,13 @@ export default function CustomAreaMap({
           console.error('Error fetching municipalities polygons:', error);
         }
       };
-
+      
       fetchCountryPolygons();
       fetchMunicipalitiesPolygons();
       fetchAreaAggrData();
       fetchReportsForCountry();
     }
-  }, [isClient, isAuthenticated, apiUrl, countryOsmId, adminLevel, subAdminLevel]);
+  }, [isClient, isAuthenticated, apiUrl]);
 
   if (!isClient) {
     return (
@@ -445,17 +408,17 @@ export default function CustomAreaMap({
               color: '#555555',
               weight: 3,
               opacity: 0.8,
-              fillColor: viewMode === 'Stats' ? getMunicipalityColor(a.osm_id) : 'transparent',
+              fillColor: viewMode === 'Stats' ? getMunicipalityColor(a.area_id) : 'transparent',
               fillOpacity: viewMode === 'Stats' ? 0.7 : 0
             }}
             eventHandlers={{
               click: (e) => {
                 if (viewMode !== 'Reports') {
                   // Show stats popup when in Stats mode
-                  const stats = municipalitiesRate.get(a.osm_id);
+                  const stats = municipalitiesRate.get(a.area_id);
                   if (stats) {
                     // Find the corresponding aggregated data for this area
-                    const areaData = areaAggrData.find(area => area.osm_id === a.osm_id);
+                    const areaData = areaAggrData.find(area => area.area_id === a.area_id);
 
                     const popup = L.popup()
                       .setLatLng(e.latlng)
@@ -565,4 +528,7 @@ export default function CustomAreaMap({
       )}
     </div>
   );
-} 
+}
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(CustomAreaMap); 

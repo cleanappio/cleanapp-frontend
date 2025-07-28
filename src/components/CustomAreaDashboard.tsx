@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,26 +13,27 @@ import LanguageSwitcher from './LanguageSwitcher';
 interface CustomAreaDashboardProps {
   apiUrl: string;
   mapCenter: [number, number];
-  adminLevel: number;
-  subAdminLevel: number;
-  countryOsmId: number;
   areaName: string;
   areaFlag?: string;
 }
 
-export default function CustomAreaDashboard({ 
+function CustomAreaDashboard({ 
   apiUrl, 
   mapCenter, 
-  adminLevel, 
-  subAdminLevel, 
-  countryOsmId, 
   areaName,
   areaFlag
 }: CustomAreaDashboardProps) {
   const [isClient, setIsClient] = useState(false);
   const { t } = useTranslations();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  
+  // Only subscribe to the specific auth state properties we need
+  const user = useAuthStore(state => state.user);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const logout = useAuthStore(state => state.logout);
+  
   const router = useRouter();
+
+  console.log('CustomAreaDashboard rendered');
 
   const handleLogout = () => {
     logout();
@@ -40,7 +41,7 @@ export default function CustomAreaDashboard({
   };
 
   // Dynamically import the entire map component to avoid SSR issues
-  const CustomAreaMap = dynamic(
+  const CustomAreaMap = useMemo(() => dynamic(
     () => import('./CustomAreaMap'),
     { 
       ssr: false,
@@ -53,7 +54,7 @@ export default function CustomAreaDashboard({
         </div>
       )
     }
-  );
+  ), [t]);
 
   useEffect(() => {
     setIsClient(true);
@@ -135,13 +136,13 @@ export default function CustomAreaDashboard({
           <CustomAreaMap 
             mapCenter={mapCenter}
             apiUrl={apiUrl}
-            adminLevel={adminLevel}
-            subAdminLevel={subAdminLevel}
-            countryOsmId={countryOsmId}
             areaName={areaName}
           />
         </div>
       </div>
     </div>
   );
-} 
+}
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(CustomAreaDashboard); 

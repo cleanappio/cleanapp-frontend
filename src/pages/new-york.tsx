@@ -38,9 +38,6 @@ export default function NewYorkPage() {
       <CustomAreaDashboard 
         apiUrl={process.env.NEXT_PUBLIC_NEW_YORK_API_URL || ''}
         mapCenter={[40.713024, -73.980193]} // New York center
-        adminLevel={5}
-        subAdminLevel={7}
-        countryOsmId={-175905} // New York OSM ID
         areaName="New York"
         areaFlag="🇺🇸"
       />
