@@ -42,13 +42,13 @@ export default function LanguageSwitcher() {
         aria-label={t('selectLanguage')}
       >
         <Globe className="h-4 w-4" />
-        <span className="hidden sm:inline">{currentLanguage.flag}</span>
+        <span className="inline">{currentLanguage.flag}</span>
         <span className="hidden md:inline">{currentLanguage.name}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[1000]">
+        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[1001]">
           <div className="py-1">
             {languages.map((language) => (
               <button

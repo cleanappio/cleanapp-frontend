@@ -374,11 +374,11 @@ function CustomAreaMap({
         />
 
         {/* View Mode Toggle */}
-        <div className="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-2">
-          <div className="flex space-x-1">
+        <div className="absolute top-2 lg:top-4 left-1/2 lg:left-4 transform -translate-x-1/2 lg:translate-x-0 z-[1000] bg-white rounded-lg shadow-lg p-2 lg:p-2">
+          <div className="flex space-x-2 lg:space-x-1">
             <button
               onClick={() => setViewMode('Stats')}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+              className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'Stats'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -388,7 +388,7 @@ function CustomAreaMap({
             </button>
             <button
               onClick={() => setViewMode('Reports')}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+              className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'Reports'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -505,9 +505,9 @@ function CustomAreaMap({
         <MapController center={mapCenter} />
       </MapContainer>
 
-      {/* Latest Reports - only show in Reports mode */}
+      {/* Latest Reports - only show in Reports mode on desktop */}
       {viewMode === 'Reports' && (
-        <div className="absolute left-4 bottom-8 z-[1000] w-80 h-96">
+        <div className="hidden lg:block absolute left-4 bottom-8 z-[1000] w-80 h-96">
           <LatestReports
             reports={reports}
             loading={reportsLoading}

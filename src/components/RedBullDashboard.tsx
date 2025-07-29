@@ -60,9 +60,9 @@ export default function RedBullDashboard() {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 lg:space-x-4">
             <Link href="/" className="flex items-center">
               <Image
                 src="/cleanapp-logo.png"
@@ -73,9 +73,9 @@ export default function RedBullDashboard() {
                 priority
               />
             </Link>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">Red Bull</h1>
+            <div className="hidden lg:block h-6 w-px bg-gray-300"></div>
+            <div className="flex items-center space-x-2 lg:space-x-3">
+              <h1 className="text-lg lg:text-2xl font-bold text-gray-900 break-words">Red Bull</h1>
               <Image
                 src="/redbull-logo.png"
                 alt="Red Bull Logo"
@@ -86,13 +86,13 @@ export default function RedBullDashboard() {
               />
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 lg:space-x-4">
             <LanguageSwitcher />
             
             {/* Authentication Controls */}
             {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-700">{user?.email}</span>
+              <div className="flex items-center space-x-2 lg:space-x-4">
+                <span className="hidden lg:block text-sm text-gray-700">{user?.email}</span>
                 <button
                   onClick={handleLogout}
                   className="text-gray-500 hover:text-gray-700 p-2 rounded-md hover:bg-gray-100 transition-colors"
@@ -102,7 +102,7 @@ export default function RedBullDashboard() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 lg:space-x-4">
                 <Link
                   href="/login"
                   className="text-gray-500 hover:text-gray-700 text-sm font-medium"
@@ -111,7 +111,7 @@ export default function RedBullDashboard() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                  className="bg-green-600 text-white hover:bg-green-700 px-3 lg:px-4 py-2 rounded-md text-sm font-medium"
                 >
                   {t('getStarted')}
                 </Link>
