@@ -183,7 +183,7 @@ function CustomAreaMap({
         return;
       }
 
-      const fullUrl = `${apiUrl}/reports?n=1000`;
+      const fullUrl = `${apiUrl}/reports?n=5000`;
       console.log('Full URL:', fullUrl);
       const response = await authenticatedFetch(fullUrl);
       if (!response.ok) {

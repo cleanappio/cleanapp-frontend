@@ -130,7 +130,7 @@ export default function RedBullMap({ mapCenter, selectedBrand }: RedBullMapProps
       setReportsLoading(true);
       setAuthError(null);
       
-      const reportsData = await getBrandReports(selectedBrand, { limit: 1000 });
+      const reportsData = await getBrandReports(selectedBrand, { limit: 5000 });
       console.log('Fetched reports for brand:', selectedBrand, reportsData);
 
       if (Array.isArray(reportsData)) {

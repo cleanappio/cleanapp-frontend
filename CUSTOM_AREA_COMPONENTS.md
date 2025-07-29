@@ -66,7 +66,7 @@ The components expect the following API endpoints:
 
 ### Required Endpoints
 
-1. **Reports**: `${apiUrl}/reports?n=1000`
+1. **Reports**: `${apiUrl}/reports?n=5000`
 2. **Aggregated Data**: `${apiUrl}/reports_aggr`
 3. **Areas**: `${apiUrl}/areas`
 4. **Sub Areas**: `${apiUrl}/sub_areas`
