@@ -273,8 +273,8 @@ export default function RedBullMap({ mapCenter, selectedBrand }: RedBullMapProps
         <MapController center={mapCenter} />
       </MapContainer>
 
-      {/* Latest Reports */}
-      <div className="absolute left-4 bottom-8 z-[1000] w-80 h-96">
+      {/* Latest Reports - only show on desktop */}
+      <div className="hidden lg:block absolute left-4 bottom-8 z-[1000] w-80 h-96">
         <LatestReports
           reports={reports}
           loading={reportsLoading}

@@ -595,7 +595,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
   const imageUrl = getDisplayableImage(fullReport?.report?.image || report?.image);
 
   return (
-    <div className="fixed inset-0 bg-white z-[2000] overflow-hidden">
+    <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto lg:overflow-hidden">
       {/* Custom CSS for zoom controls z-index */}
       <style jsx>{`
         :global(.leaflet-control-zoom) {
@@ -608,41 +608,43 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
       `}</style>
       
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-gray-50 border-b border-gray-200 flex items-center justify-between px-6 z-10">
-        <div className="flex items-center space-x-4">
-          <img 
-            src="/cleanapp-logo.png" 
-            alt={t('cleanAppLogo')} 
-            className="h-8 w-auto"
-          />
-          <h1 className="text-xl font-semibold text-gray-900">
-            {analysis?.title || `${t('report')} #${report.seq}`}
-          </h1>
-          <span className="text-sm text-gray-500">
+      <div className="absolute top-0 left-0 right-0 min-h-16 lg:h-16 bg-gray-50 border-b border-gray-200 flex flex-col lg:flex-row items-start lg:items-center justify-between px-4 lg:px-6 py-2 lg:py-0 z-10">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-1 lg:space-y-0 lg:space-x-4 w-full lg:w-auto">
+          <div className="flex items-center space-x-2 lg:space-x-4 w-full lg:w-auto">
+            <img 
+              src="/cleanapp-logo.png" 
+              alt={t('cleanAppLogo')} 
+              className="h-6 lg:h-8 w-auto flex-shrink-0"
+            />
+            <h1 className="text-sm lg:text-xl font-semibold text-gray-900 break-words leading-tight lg:leading-normal">
+              {analysis?.title || `${t('report')} #${report.seq}`}
+            </h1>
+          </div>
+          <span className="text-xs lg:text-sm text-gray-500 hidden sm:block lg:ml-2">
             {formatTime(report.timestamp)}
           </span>
         </div>
         
         {/* Success/Error Messages */}
         {(markFixedSuccess || error) && (
-          <div className="flex-1 mx-4">
+          <div className="flex-1 mx-2 lg:mx-4 mt-2 lg:mt-0">
             {markFixedSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded px-3 py-1">
-                <p className="text-green-800 text-sm">{markFixedSuccess}</p>
+              <div className="bg-green-50 border border-green-200 rounded px-2 lg:px-3 py-1">
+                <p className="text-green-800 text-xs lg:text-sm">{markFixedSuccess}</p>
               </div>
             )}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded px-3 py-1">
-                <p className="text-red-800 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded px-2 lg:px-3 py-1">
+                <p className="text-red-800 text-xs lg:text-sm">{error}</p>
               </div>
             )}
           </div>
         )}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 lg:space-x-2 mt-2 lg:mt-0 w-full lg:w-auto justify-end">
           <button
             onClick={markAsFixed}
             disabled={markingAsFixed}
-            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+            className={`px-4 lg:px-3 py-2 lg:py-1 text-white text-sm lg:text-sm rounded transition-colors whitespace-nowrap ${
               markingAsFixed 
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-green-600 hover:bg-green-700'
@@ -652,14 +654,14 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
           </button>
           <button
             onClick={exportToPDF}
-            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+            className="px-4 lg:px-3 py-2 lg:py-1 bg-blue-600 text-white text-sm lg:text-sm rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             {t('exportAsPDF')}
           </button>
           {onClose && (
             <button
               onClick={onClose}
-              className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+              className="px-4 lg:px-3 py-2 lg:py-1 bg-gray-600 text-white text-sm lg:text-sm rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
             >
               {t('close')}
             </button>
@@ -668,15 +670,15 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
       </div>
 
       {/* Main Content */}
-      <div className="pt-16 h-full flex" ref={contentRef}>
-        {/* Left Side - Image */}
-        <div className="w-1/2 h-full p-6">
-          <div className="h-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+      <div className="pt-24 lg:pt-16 min-h-screen lg:h-full flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden" ref={contentRef}>
+        {/* Image Section */}
+        <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6">
+          <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center min-h-64 lg:h-full">
             {imageUrl ? (
               <img
                 src={imageUrl}
                 alt={t('report')}
-                className="max-w-full max-h-full object-contain"
+                className="w-full h-auto max-h-full object-contain"
                 onError={(e) => {
                   console.error("Failed to load image:", imageUrl);
                   e.currentTarget.style.display = 'none';
@@ -691,15 +693,15 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
           </div>
         </div>
 
-        {/* Right Side - Stats and Description */}
-        <div className="w-1/2 h-full p-6 overflow-y-auto">
-          <div className="space-y-6">
+        {/* Content Section */}
+        <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6 lg:overflow-y-auto">
+          <div className="space-y-4 lg:space-y-6">
             {/* Location Info */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-900 mb-3">{t('location')}</h3>
               
               {/* Map */}
-              <div className="h-80 mb-3 rounded-lg overflow-hidden border">
+              <div className="h-64 lg:h-96 mb-3 rounded-lg overflow-hidden border">
                 <MapContainer
                   center={[report.latitude, report.longitude]}
                   zoom={16}
@@ -732,7 +734,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({ reportIte
               </div>
               
               {/* Coordinates */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">{t('latitude')}:</span>
                   <span className="ml-2 font-medium">{report.latitude.toFixed(6)}</span>
