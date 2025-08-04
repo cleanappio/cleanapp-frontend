@@ -11,7 +11,11 @@ import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
 import { getColorByValue } from "@/lib/util";
-import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
+import {
+  useTranslations,
+  getCurrentLocale,
+  filterAnalysesByLanguage,
+} from "@/lib/i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 // Type for report data
@@ -68,7 +72,7 @@ function useIsMobile() {
 }
 
 // Check if embedded mode is enabled
-const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
 export default function GlobeView() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -84,8 +88,13 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<LatestReport | null>(null);
-  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [selectedReport, setSelectedReport] = useState<LatestReport | null>(
+    null
+  );
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -101,35 +110,44 @@ export default function GlobeView() {
       const getLocation = () => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            console.log('Location obtained:', position.coords);
+            console.log("Location obtained:", position.coords);
             setUserLocation({
               latitude: position.coords.latitude,
-              longitude: position.coords.longitude
+              longitude: position.coords.longitude,
             });
             setLocationLoading(false);
           },
           (error) => {
-            console.log('Geolocation error:', error.code, error.message);
-            
+            console.log("Geolocation error:", error.code, error.message);
+
             // Try with less restrictive options if first attempt fails
-            if (error.code === error.POSITION_UNAVAILABLE || error.code === error.TIMEOUT) {
+            if (
+              error.code === error.POSITION_UNAVAILABLE ||
+              error.code === error.TIMEOUT
+            ) {
               navigator.geolocation.getCurrentPosition(
                 (position) => {
-                  console.log('Location obtained with fallback options:', position.coords);
+                  console.log(
+                    "Location obtained with fallback options:",
+                    position.coords
+                  );
                   setUserLocation({
                     latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
+                    longitude: position.coords.longitude,
                   });
                   setLocationLoading(false);
                 },
                 (fallbackError) => {
-                  console.log('Fallback geolocation also failed:', fallbackError.message);
+                  console.log(
+                    "Fallback geolocation also failed:",
+                    fallbackError.message
+                  );
                   setLocationLoading(false);
                 },
                 {
                   enableHighAccuracy: false,
                   timeout: 15000,
-                  maximumAge: 600000 // 10 minutes
+                  maximumAge: 600000, // 10 minutes
                 }
               );
             } else {
@@ -139,32 +157,35 @@ export default function GlobeView() {
           {
             enableHighAccuracy: true,
             timeout: 10000,
-            maximumAge: 300000 // 5 minutes
+            maximumAge: 300000, // 5 minutes
           }
         );
       };
 
       // Check if geolocation is available and not blocked
       if (navigator.permissions) {
-        navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-          if (result.state === 'granted') {
+        navigator.permissions
+          .query({ name: "geolocation" })
+          .then((result) => {
+            if (result.state === "granted") {
+              getLocation();
+            } else if (result.state === "prompt") {
+              getLocation(); // Will prompt user
+            } else {
+              console.log("Geolocation permission denied");
+              setLocationLoading(false);
+            }
+          })
+          .catch(() => {
+            // Fallback if permissions API is not supported
             getLocation();
-          } else if (result.state === 'prompt') {
-            getLocation(); // Will prompt user
-          } else {
-            console.log('Geolocation permission denied');
-            setLocationLoading(false);
-          }
-        }).catch(() => {
-          // Fallback if permissions API is not supported
-          getLocation();
-        });
+          });
       } else {
         // Fallback if permissions API is not supported
         getLocation();
       }
     } else {
-      console.log('Geolocation not supported');
+      console.log("Geolocation not supported");
       setLocationLoading(false);
     }
   }, []);
@@ -172,18 +193,18 @@ export default function GlobeView() {
   // Pan to user location when it becomes available
   useEffect(() => {
     if (userLocation && mapLoaded && mapRef.current) {
-      console.log('Flying to user location:', userLocation);
-      
+      console.log("Flying to user location:", userLocation);
+
       // Try using the MapRef's flyTo method first
       try {
         mapRef.current.flyTo({
           center: [userLocation.longitude, userLocation.latitude],
           zoom: mapRef.current.getMap()?.getZoom() || 2.5,
-          duration: 2000
+          duration: 2000,
         });
       } catch (error) {
-        console.log('MapRef flyTo failed, trying map.flyTo:', error);
-        
+        console.log("MapRef flyTo failed, trying map.flyTo:", error);
+
         // Fallback to using the map instance directly
         const map = mapRef.current.getMap();
         if (map) {
@@ -191,7 +212,7 @@ export default function GlobeView() {
             center: [userLocation.longitude, userLocation.latitude],
             zoom: map.getZoom() || 2.5,
             duration: 2000,
-            essential: true
+            essential: true,
           });
         }
       }
@@ -453,75 +474,80 @@ export default function GlobeView() {
       if (map) {
         // Create GeoJSON data from reports
         const reportFeatures = latestReports.map((report, index) => ({
-          type: 'Feature' as const,
+          type: "Feature" as const,
           geometry: {
-            type: 'Point' as const,
-            coordinates: [report.report.longitude, report.report.latitude]
+            type: "Point" as const,
+            coordinates: [report.report.longitude, report.report.latitude],
           },
           properties: {
             id: report.report.id,
             seq: report.report.seq,
-            title: report.analysis?.title || 'Report',
+            title: report.analysis?.title || "Report",
             severity: report.analysis?.severity_level || 0,
-            index: index
-          }
+            index: index,
+          },
         }));
 
         const reportGeoJSON = {
-          type: 'FeatureCollection' as const,
-          features: reportFeatures
+          type: "FeatureCollection" as const,
+          features: reportFeatures,
         };
 
         // Add source if it doesn't exist
-        if (!map.getSource('reports')) {
-          map.addSource('reports', {
-            type: 'geojson',
-            data: reportGeoJSON
+        if (!map.getSource("reports")) {
+          map.addSource("reports", {
+            type: "geojson",
+            data: reportGeoJSON,
           });
         } else {
           // Update existing source
-          (map.getSource('reports') as any).setData(reportGeoJSON);
+          (map.getSource("reports") as any).setData(reportGeoJSON);
         }
 
         // Add layer if it doesn't exist
-        if (!map.getLayer('report-pins')) {
+        if (!map.getLayer("report-pins")) {
           map.addLayer({
-            id: 'report-pins',
-            type: 'circle',
-            source: 'reports',
+            id: "report-pins",
+            type: "circle",
+            source: "reports",
             paint: {
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['get', 'severity'],
-                0.0, 6.6,
-                0.9, 13.2
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["get", "severity"],
+                0.0,
+                6.6,
+                0.9,
+                13.2,
               ],
-              'circle-color': [
-                'interpolate',
-                ['linear'],
-                ['get', 'severity'],
-                0.0, getColorByValue(0.0), // green for low severity
-                0.5, getColorByValue(0.5), // yellow for medium severity
-                0.9, getColorByValue(0.9)  // red for high severity
+              "circle-color": [
+                "interpolate",
+                ["linear"],
+                ["get", "severity"],
+                0.0,
+                getColorByValue(0.0), // green for low severity
+                0.5,
+                getColorByValue(0.5), // yellow for medium severity
+                0.9,
+                getColorByValue(0.9), // red for high severity
               ],
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#ffffff'
-            }
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#ffffff",
+            },
           });
         }
 
         // Show/hide report pins based on selectedTab
-        if (map.getLayer('report-pins')) {
-          if (selectedTab === 'physical') {
-            map.setLayoutProperty('report-pins', 'visibility', 'visible');
+        if (map.getLayer("report-pins")) {
+          if (selectedTab === "physical") {
+            map.setLayoutProperty("report-pins", "visibility", "visible");
           } else {
-            map.setLayoutProperty('report-pins', 'visibility', 'none');
+            map.setLayoutProperty("report-pins", "visibility", "none");
           }
         }
 
         // Add click handler for report pins
-        map.on('click', 'report-pins', (e) => {
+        map.on("click", "report-pins", (e) => {
           if (e.features && e.features[0]) {
             const feature = e.features[0];
             const reportIndex = feature.properties?.index;
@@ -534,12 +560,12 @@ export default function GlobeView() {
         });
 
         // Add hover effects
-        map.on('mouseenter', 'report-pins', () => {
-          map.getCanvas().style.cursor = 'pointer';
+        map.on("mouseenter", "report-pins", () => {
+          map.getCanvas().style.cursor = "pointer";
         });
 
-        map.on('mouseleave', 'report-pins', () => {
-          map.getCanvas().style.cursor = '';
+        map.on("mouseleave", "report-pins", () => {
+          map.getCanvas().style.cursor = "";
         });
       }
     }
@@ -551,7 +577,7 @@ export default function GlobeView() {
       console.error("mapRef not found");
       return;
     }
-    
+
     const map = mapRef.current.getMap();
     if (!map) {
       console.error("map not found");
@@ -569,29 +595,31 @@ export default function GlobeView() {
         center: [report.longitude, report.latitude],
         zoom: map.getZoom() || 2.5,
         duration: 2000,
-        essential: true
+        essential: true,
       });
     }
     // Create a temporary animated pin for the new report
     const animatedPinId = `animated-pin-${report.seq}`;
-    
+
     // Add animated pin source
     if (!map.getSource(animatedPinId)) {
       map.addSource(animatedPinId, {
-        type: 'geojson',
+        type: "geojson",
         data: {
-          type: 'FeatureCollection',
-          features: [{
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [report.longitude, report.latitude]
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: [report.longitude, report.latitude],
+              },
+              properties: {
+                severity: analysis.severity_level || 1,
+              },
             },
-            properties: {
-              severity: analysis.severity_level || 1
-            }
-          }]
-        }
+          ],
+        },
       });
     }
 
@@ -599,47 +627,52 @@ export default function GlobeView() {
     if (!map.getLayer(animatedPinId)) {
       map.addLayer({
         id: animatedPinId,
-        type: 'circle',
+        type: "circle",
         source: animatedPinId,
         paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['get', 'severity'],
-            0.0, 6.6,
-            0.9, 13.2
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["get", "severity"],
+            0.0,
+            6.6,
+            0.9,
+            13.2,
           ],
-          'circle-color': [
-            'interpolate',
-            ['linear'],
-            ['get', 'severity'],
-            0.0, getColorByValue(0.0),
-            0.5, getColorByValue(0.5),
-            0.9, getColorByValue(0.9)
+          "circle-color": [
+            "interpolate",
+            ["linear"],
+            ["get", "severity"],
+            0.0,
+            getColorByValue(0.0),
+            0.5,
+            getColorByValue(0.5),
+            0.9,
+            getColorByValue(0.9),
           ],
-          'circle-stroke-width': 3,
-          'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.9
-        }
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.9,
+        },
       });
     }
 
     // Animate the pin for 10 seconds
     let startTime = Date.now();
     const animationDuration = 10000; // 10 seconds
-    
+
     function animatePin() {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
-      
+
       // Create pulsing effect (expand/shrink)
       const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
       const baseRadius = analysis.severity_level >= 3 ? 13.2 : 6.6;
       const currentRadius = baseRadius * pulseScale;
-      
+
       // Update the pin radius
-      map.setPaintProperty(animatedPinId, 'circle-radius', currentRadius);
-      
+      map.setPaintProperty(animatedPinId, "circle-radius", currentRadius);
+
       // Continue animation if not finished
       if (progress < 1) {
         requestAnimationFrame(animatePin);
@@ -653,7 +686,7 @@ export default function GlobeView() {
         }
       }
     }
-    
+
     // Start the animation
     requestAnimationFrame(animatePin);
   };
@@ -952,17 +985,20 @@ export default function GlobeView() {
       if (message.type === "reports") {
         const batch = message.data;
         const currentLocale = getCurrentLocale();
-        const filteredReports = filterAnalysesByLanguage(batch.reports || [], currentLocale);
-        
+        const filteredReports = filterAnalysesByLanguage(
+          batch.reports || [],
+          currentLocale
+        );
+
         console.log(
           `Received ${batch.count} reports, filtered to ${filteredReports.length} for locale ${currentLocale} (seq ${batch.from_seq}-${batch.to_seq})`
         );
-        
+
         // Fly to new report location and animate the pin (if any filtered reports)
         if (filteredReports.length > 0) {
           handleNewReport(filteredReports[0]);
         }
-        
+
         // Add new reports to the top of the list
         setLatestReports((prev) => {
           const newReports = filteredReports;
@@ -1003,7 +1039,10 @@ export default function GlobeView() {
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
-        const filteredReports = filterAnalysesByLanguage(data.reports || [], locale);
+        const filteredReports = filterAnalysesByLanguage(
+          data.reports || [],
+          locale
+        );
         setLatestReports(filteredReports);
       } catch (err) {
         console.error("Error fetching last reports:", err);
@@ -1023,7 +1062,7 @@ export default function GlobeView() {
       center: [report.report.longitude, report.report.latitude],
       zoom: map.getZoom() || 2.5,
       duration: 2000,
-      essential: true
+      essential: true,
     });
   };
 
@@ -1043,7 +1082,7 @@ export default function GlobeView() {
             zoom: 2.5,
           }}
           onLoad={() => {
-            console.log('Map loaded');
+            console.log("Map loaded");
             setMapLoaded(true);
           }}
           antialias={true}
@@ -1058,7 +1097,7 @@ export default function GlobeView() {
           <Link href="/" className="flex items-center">
             <Image
               src="/cleanapp-logo.png"
-              alt={t('cleanAppLogo')}
+              alt={t("cleanAppLogo")}
               width={200}
               height={60}
               className="h-12 w-auto"
@@ -1088,27 +1127,27 @@ export default function GlobeView() {
             <div className="px-4 py-2">
               <LanguageSwitcher />
             </div>
-            
+
             {[
               {
-                label: t('installAndroid'),
+                label: t("installAndroid"),
                 link: "https://play.google.com/store/apps/details/CleanApp?id=com.cleanapp&hl=ln",
               },
               {
-                label: t('installIOS'),
+                label: t("installIOS"),
                 link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
               },
-              { label: t('subscribe'), link: "/pricing" },
+              { label: t("subscribe"), link: "/pricing" },
               {
-                label: t('brandDashboard'),
+                label: t("brandDashboard"),
                 link: "/redbull",
               },
               {
-                label: t('cleanAppMap'),
+                label: t("cleanAppMap"),
                 link: "https://cleanappmap.replit.app",
               },
               {
-                label: t('cleanAppGPT'),
+                label: t("cleanAppGPT"),
                 link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
               },
               { label: "STXN", link: "https://www.stxn.io" },
@@ -1139,7 +1178,7 @@ export default function GlobeView() {
             }`}
             onClick={() => setSelectedTab("physical")}
           >
-            {t('physical')}
+            {t("physical")}
           </p>
           <p
             className={`text-sm cursor-pointer rounded-full px-4 py-2 font-bold ${
@@ -1149,7 +1188,7 @@ export default function GlobeView() {
             }`}
             onClick={() => setSelectedTab("digital")}
           >
-            {t('digital')}
+            {t("digital")}
           </p>
         </div>
       </div>
@@ -1165,25 +1204,25 @@ export default function GlobeView() {
                   (position) => {
                     setUserLocation({
                       latitude: position.coords.latitude,
-                      longitude: position.coords.longitude
+                      longitude: position.coords.longitude,
                     });
                     setLocationLoading(false);
                   },
                   (error) => {
-                    console.log('Manual geolocation failed:', error.message);
+                    console.log("Manual geolocation failed:", error.message);
                     setLocationLoading(false);
                   },
                   {
                     enableHighAccuracy: false,
                     timeout: 15000,
-                    maximumAge: 600000
+                    maximumAge: 600000,
                   }
                 );
               }
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg"
           >
-            {locationLoading ? t('gettingLocation') : t('useMyLocation')}
+            {locationLoading ? t("gettingLocation") : t("useMyLocation")}
           </button>
         </div>
       )}
@@ -1208,7 +1247,7 @@ export default function GlobeView() {
         <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
           <Link href={"https://stxn.io/"} target="_blank">
             <div className="flex items-center justify-center gap-2">
-              <span>{t('poweredBy')}</span>
+              <span>{t("poweredBy")}</span>
               <span>
                 <Image
                   src={"/stxn.svg"}
@@ -1219,7 +1258,7 @@ export default function GlobeView() {
                 />
               </span>
               <span className="underline underline-offset-4">
-                {t('smartTransactions')}
+                {"Smart Transactions"}
               </span>
             </div>
           </Link>
