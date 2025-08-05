@@ -1096,7 +1096,7 @@ export default function GlobeView() {
         <div className="absolute top-2 left-4 p-2">
           <Link href="/" className="flex items-center">
             <Image
-              src="/cleanapp-logo.png"
+              src="/cleanapp-sticker-logo.png"
               alt={t("cleanAppLogo")}
               width={200}
               height={60}
@@ -1193,40 +1193,6 @@ export default function GlobeView() {
         </div>
       </div>
 
-      {/* Location button - show when geolocation fails */}
-      {!locationLoading && !userLocation && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2">
-          <button
-            onClick={() => {
-              setLocationLoading(true);
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (position) => {
-                    setUserLocation({
-                      latitude: position.coords.latitude,
-                      longitude: position.coords.longitude,
-                    });
-                    setLocationLoading(false);
-                  },
-                  (error) => {
-                    console.log("Manual geolocation failed:", error.message);
-                    setLocationLoading(false);
-                  },
-                  {
-                    enableHighAccuracy: false,
-                    timeout: 15000,
-                    maximumAge: 600000,
-                  }
-                );
-              }
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg"
-          >
-            {locationLoading ? t("gettingLocation") : t("useMyLocation")}
-          </button>
-        </div>
-      )}
-
       {/* Latest Reports - only show when modal is not open and not on mobile */}
       {!isCleanAppProOpen && !isMobile && (
         <LatestReports
@@ -1244,7 +1210,7 @@ export default function GlobeView() {
 
       {/* Bottom right logo */}
       {!isEmbeddedMode && (
-        <div className="bg-black p-2 text-center text-white text-sm absolute bottom-0 right-0 left-0 z-10">
+        <div className="bg-black/10 p-2 text-center text-white text-sm absolute bottom-0 right-1/3 left-1/3 z-10">
           <Link href={"https://stxn.io/"} target="_blank">
             <div className="flex items-center justify-center gap-2">
               <span>{t("poweredBy")}</span>
