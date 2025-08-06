@@ -26,7 +26,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
       }`}
     >
       {/* Create translucent div with a gradient */}
-      <div className="w-full h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[275px]">
+      <div className="h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[300px]">
         <p className="text-slate-300 font-semibold text-sm mt-2 mb-3 flex-shrink-0">
           {t("latestReports")}
         </p>
