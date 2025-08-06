@@ -17,6 +17,7 @@ import {
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 
 // Type for report data
 export interface Report {
@@ -1035,15 +1036,17 @@ export default function GlobeView() {
       try {
         const locale = getCurrentLocale();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=5000&lang=${locale}`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
+        console.log({ data: data.reports.length });
         const filteredReports = filterAnalysesByLanguage(
           data.reports || [],
           locale
         );
         setLatestReports(filteredReports);
+        console.log({ filteredReports: filteredReports.length });
       } catch (err) {
         console.error("Error fetching last reports:", err);
       } finally {
@@ -1208,9 +1211,13 @@ export default function GlobeView() {
         />
       )}
 
-      {/* Bottom right logo */}
+      {/* Bottom center logo */}
       {!isEmbeddedMode && (
-        <div className="bg-black/10 p-2 text-center text-white text-sm absolute bottom-0 right-1/3 left-1/3 z-10">
+        <div
+          className={`bg-black/10 p-2 text-center text-white text-sm absolute bottom-0 ${
+            isMobile ? "right-0 left-0" : "right-1/3 left-1/3"
+          } z-10`}
+        >
           <Link href={"https://stxn.io/"} target="_blank">
             <div className="flex items-center justify-center gap-2">
               <span>{t("poweredBy")}</span>

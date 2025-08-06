@@ -52,8 +52,8 @@
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 /* Area tooltip styling */
@@ -74,4 +74,8 @@
 
 .area-tooltip::before {
   border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+.mapboxgl-ctrl-bottom-right {
+  display: none;
 }
