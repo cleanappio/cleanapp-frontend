@@ -1,0 +1,1 @@
+export const MAX_REPORTS_LIMIT = 50000;

@@ -1,17 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap, GeoJSON } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { Icon } from 'leaflet';
-import L from 'leaflet';
-import Link from 'next/link';
-import { getColorByValue } from '@/lib/util';
-import { authApiClient } from '@/lib/auth-api-client';
-import { useAuthStore } from '@/lib/auth-store';
-import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
-import LatestReports from './LatestReports';
-import CustomDashboardReport from './CustomDashboardReport';
+import { useEffect, useRef, useState, useCallback, memo } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Circle,
+  CircleMarker,
+  useMap,
+  GeoJSON,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { Icon } from "leaflet";
+import L from "leaflet";
+import Link from "next/link";
+import { getColorByValue } from "@/lib/util";
+import { authApiClient } from "@/lib/auth-api-client";
+import { useAuthStore } from "@/lib/auth-store";
+import {
+  useTranslations,
+  getCurrentLocale,
+  filterAnalysesByLanguage,
+} from "@/lib/i18n";
+import LatestReports from "./LatestReports";
+import CustomDashboardReport from "./CustomDashboardReport";
+import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 
 // ReportStats structure
 interface ReportStats {
@@ -76,48 +90,52 @@ interface CustomAreaMapProps {
   areaName?: string;
 }
 
-function CustomAreaMap({ 
-  mapCenter, 
-  apiUrl, 
-  areaName = "Custom Area"
+function CustomAreaMap({
+  mapCenter,
+  apiUrl,
+  areaName = "Custom Area",
 }: CustomAreaMapProps) {
   // Only subscribe to the specific auth state properties we need
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const isLoading = useAuthStore(state => state.isLoading);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [isClient, setIsClient] = useState(false);
   const [countryPolygons, setCountryPolygons] = useState<any[]>([]);
-  const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<'Stats' | 'Reports'>('Stats');
+  const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>(
+    []
+  );
+  const [viewMode, setViewMode] = useState<"Stats" | "Reports">("Stats");
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [areaAggrData, setAreaAggrData] = useState<AreaAggrData[]>([]);
-  const [municipalitiesRate, setMunicipalitiesRate] = useState<Map<number, ReportStats>>(new Map());
+  const [municipalitiesRate, setMunicipalitiesRate] = useState<
+    Map<number, ReportStats>
+  >(new Map());
   const { t } = useTranslations();
-  
-  console.log('CustomAreaMap rendered');
+
+  console.log("CustomAreaMap rendered");
 
   // Ref to track if data has been fetched to prevent multiple fetches
   const hasFetchedData = useRef(false);
 
   // Helper function to create authenticated fetch requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-    console.log('authenticatedFetch called with URL:', url);
+    console.log("authenticatedFetch called with URL:", url);
 
     // Load token from storage first
     authApiClient.loadTokenFromStorage();
     const token = authApiClient.getAuthToken();
-    console.log('Token available:', !!token);
+    console.log("Token available:", !!token);
 
     if (!token) {
-      throw new Error('No authentication token available');
+      throw new Error("No authentication token available");
     }
 
     const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     };
 
@@ -126,10 +144,10 @@ function CustomAreaMap({
 
     try {
       const response = await fetch(url, options);
-      console.log('Fetch response status:', response.status);
+      console.log("Fetch response status:", response.status);
       return response;
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error("Fetch error:", error);
       throw error;
     }
   };
@@ -137,7 +155,7 @@ function CustomAreaMap({
   // Handle report click from LatestReports
   const handleReportClick = (report: Report) => {
     if (!isAuthenticated) {
-      setAuthError(t('authenticationRequired'));
+      setAuthError(t("authenticationRequired"));
       return;
     }
     setSelectedReport(report);
@@ -146,8 +164,10 @@ function CustomAreaMap({
 
   const handleReportFixed = (reportSeq: number) => {
     // Remove the fixed report from the reports list
-    setReports(prevReports => prevReports.filter(report => report.report.seq !== reportSeq));
-    
+    setReports((prevReports) =>
+      prevReports.filter((report) => report.report.seq !== reportSeq)
+    );
+
     // If the fixed report was the selected report, clear the selection
     if (selectedReport?.report.seq === reportSeq) {
       setSelectedReport(null);
@@ -159,13 +179,13 @@ function CustomAreaMap({
 
   function getMunicipalityColor(osmId: number): string {
     if (!municipalitiesRate) {
-      return '#808080';
+      return "#808080";
     }
     const stats = municipalitiesRate.get(osmId);
 
     if (stats === undefined || stats === null) {
       // Return a default gray color if no stats found
-      return '#808080';
+      return "#808080";
     }
 
     // Use the getColorByValue function to get the appropriate color based on overallRate
@@ -177,42 +197,49 @@ function CustomAreaMap({
     try {
       setReportsLoading(true);
       setAuthError(null);
-      console.log('API URL:', apiUrl);
+      console.log("API URL:", apiUrl);
       if (!apiUrl) {
-        console.error('API URL not configured');
+        console.error("API URL not configured");
         return;
       }
 
-      const fullUrl = `${apiUrl}/reports?n=5000`;
-      console.log('Full URL:', fullUrl);
+      const fullUrl = `${apiUrl}/reports?n=${MAX_REPORTS_LIMIT}`;
+      console.log("Full URL:", fullUrl);
       const response = await authenticatedFetch(fullUrl);
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Authentication required');
+          throw new Error("Authentication required");
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Fetched reports for country:', data);
+      console.log("Fetched reports for country:", data);
 
       if (data.reports && Array.isArray(data.reports)) {
         const locale = getCurrentLocale();
         try {
-          const filteredReports = filterAnalysesByLanguage(data.reports, locale);
+          const filteredReports = filterAnalysesByLanguage(
+            data.reports,
+            locale
+          );
           setReports(filteredReports);
         } catch (filterError) {
-          console.error('Error filtering reports by language:', filterError);
+          console.error("Error filtering reports by language:", filterError);
           setReports([]);
         }
       } else {
-        console.warn('No reports found in response or invalid format');
+        console.warn("No reports found in response or invalid format");
         setReports([]);
       }
     } catch (error) {
-      console.error('Error fetching reports:', error);
-      if (error instanceof Error && (error.message.includes('authentication') || error.message.includes('Authentication required'))) {
-        setAuthError(t('authenticationRequired'));
+      console.error("Error fetching reports:", error);
+      if (
+        error instanceof Error &&
+        (error.message.includes("authentication") ||
+          error.message.includes("Authentication required"))
+      ) {
+        setAuthError(t("authenticationRequired"));
       }
       setReports([]);
     } finally {
@@ -224,7 +251,7 @@ function CustomAreaMap({
   const fetchAreaAggrData = async () => {
     try {
       if (!apiUrl) {
-        console.error('API URL not configured');
+        console.error("API URL not configured");
         return;
       }
 
@@ -234,7 +261,7 @@ function CustomAreaMap({
       }
 
       const data = await response.json();
-      console.log('Fetched area aggregated data:', data);
+      console.log("Fetched area aggregated data:", data);
 
       if (Array.isArray(data.areas)) {
         setAreaAggrData(data.areas);
@@ -245,22 +272,22 @@ function CustomAreaMap({
           const stats: ReportStats = {
             reportsNumber: area.reports_count,
             overallRate: area.reports_count / Math.max(area.reports_max, 1),
-            averageSeverity: area.mean_severity
+            averageSeverity: area.mean_severity,
           };
           munRate.set(area.area_id, stats);
         });
         setMunicipalitiesRate(munRate);
       } else {
-        console.warn('No aggregated data found in response or invalid format');
+        console.warn("No aggregated data found in response or invalid format");
       }
     } catch (error) {
-      console.error('Error fetching area aggregated data:', error);
+      console.error("Error fetching area aggregated data:", error);
     }
   };
 
   useEffect(() => {
     setIsClient(true);
-    console.log('isClient', isClient);
+    console.log("isClient", isClient);
   }, []);
 
   // Reset fetch flag when apiUrl changes
@@ -269,11 +296,15 @@ function CustomAreaMap({
   }, [apiUrl]);
 
   useEffect(() => {
-    console.log('useEffect triggered with:', { isClient, isAuthenticated, apiUrl });
-    
+    console.log("useEffect triggered with:", {
+      isClient,
+      isAuthenticated,
+      apiUrl,
+    });
+
     if (isClient && isAuthenticated && apiUrl && !hasFetchedData.current) {
       hasFetchedData.current = true;
-      
+
       // Fetch country polygons
       const fetchCountryPolygons = async () => {
         try {
@@ -283,15 +314,17 @@ function CustomAreaMap({
           }
 
           const data = await response.json();
-          console.log('Fetched country polygons:', data);
+          console.log("Fetched country polygons:", data);
 
           if (data.areas && Array.isArray(data.areas)) {
-            setCountryPolygons(data.areas.map((a: any) => (a.area)));
+            setCountryPolygons(data.areas.map((a: any) => a.area));
           } else {
-            console.warn('No country polygons found in response or invalid format');
+            console.warn(
+              "No country polygons found in response or invalid format"
+            );
           }
         } catch (error) {
-          console.error('Error fetching country polygons:', error);
+          console.error("Error fetching country polygons:", error);
         }
       };
 
@@ -304,18 +337,20 @@ function CustomAreaMap({
           }
 
           const data = await response.json();
-          console.log('Fetched municipalities polygons:', data);
+          console.log("Fetched municipalities polygons:", data);
 
           if (data.areas && Array.isArray(data.areas)) {
             setMunicipalitiesPolygons(data.areas);
           } else {
-            console.warn('No municipalities polygons found in response or invalid format');
+            console.warn(
+              "No municipalities polygons found in response or invalid format"
+            );
           }
         } catch (error) {
-          console.error('Error fetching municipalities polygons:', error);
+          console.error("Error fetching municipalities polygons:", error);
         }
       };
-      
+
       fetchCountryPolygons();
       fetchMunicipalitiesPolygons();
       fetchAreaAggrData();
@@ -328,7 +363,9 @@ function CustomAreaMap({
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{t('loading')} {t('map').toLowerCase()}...</p>
+          <p className="mt-4 text-gray-600">
+            {t("loading")} {t("map").toLowerCase()}...
+          </p>
         </div>
       </div>
     );
@@ -341,19 +378,31 @@ function CustomAreaMap({
         <div className="absolute top-4 right-4 z-[1000] bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">{t('authenticationRequired')}</h3>
+              <h3 className="text-sm font-medium text-red-800">
+                {t("authenticationRequired")}
+              </h3>
               <p className="mt-1 text-sm text-red-700">{authError}</p>
               <div className="mt-3">
                 <Link
-                  href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                  href={`/login?redirect=${encodeURIComponent(
+                    window.location.pathname
+                  )}`}
                   className="text-sm font-medium text-red-800 hover:text-red-600 underline"
                 >
-                  {t('goToLogin')} →
+                  {t("goToLogin")} →
                 </Link>
               </div>
             </div>
@@ -364,7 +413,7 @@ function CustomAreaMap({
       <MapContainer
         center={mapCenter}
         zoom={7}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: "100%", width: "100%" }}
         zoomControl={false}
         scrollWheelZoom={true}
       >
@@ -377,24 +426,24 @@ function CustomAreaMap({
         <div className="absolute top-2 lg:top-4 left-1/2 lg:left-4 transform -translate-x-1/2 lg:translate-x-0 z-[1000] bg-white rounded-lg shadow-lg p-2 lg:p-2">
           <div className="flex space-x-2 lg:space-x-1">
             <button
-              onClick={() => setViewMode('Stats')}
+              onClick={() => setViewMode("Stats")}
               className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'Stats'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                viewMode === "Stats"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {t('stats')}
+              {t("stats")}
             </button>
             <button
-              onClick={() => setViewMode('Reports')}
+              onClick={() => setViewMode("Reports")}
               className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'Reports'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                viewMode === "Reports"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {t('reports')}
+              {t("reports")}
             </button>
           </div>
         </div>
@@ -405,88 +454,108 @@ function CustomAreaMap({
             key={`polygon-${index}`}
             data={a.area}
             style={{
-              color: '#555555',
+              color: "#555555",
               weight: 3,
               opacity: 0.8,
-              fillColor: viewMode === 'Stats' ? getMunicipalityColor(a.area_id) : 'transparent',
-              fillOpacity: viewMode === 'Stats' ? 0.7 : 0
+              fillColor:
+                viewMode === "Stats"
+                  ? getMunicipalityColor(a.area_id)
+                  : "transparent",
+              fillOpacity: viewMode === "Stats" ? 0.7 : 0,
             }}
             eventHandlers={{
               click: (e) => {
-                if (viewMode !== 'Reports') {
+                if (viewMode !== "Reports") {
                   // Show stats popup when in Stats mode
                   const stats = municipalitiesRate.get(a.area_id);
                   if (stats) {
                     // Find the corresponding aggregated data for this area
-                    const areaData = areaAggrData.find(area => area.area_id === a.area_id);
+                    const areaData = areaAggrData.find(
+                      (area) => area.area_id === a.area_id
+                    );
 
                     const popup = L.popup()
                       .setLatLng(e.latlng)
-                      .setContent(`
+                      .setContent(
+                        `
                       <div style="min-width: 200px; padding: 10px;">
                         <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: bold;">
                           ${a.name}
                         </h3>
                         <div style="margin-bottom: 8px;">
-                          <strong>${t('reportsCount')}:</strong> ${stats.reportsNumber}
+                          <strong>${t("reportsCount")}:</strong> ${
+                          stats.reportsNumber
+                        }
                         </div>
                         <div style="margin-bottom: 8px;">
-                          <strong>${t('meanSeverity')}:</strong> ${stats.averageSeverity.toFixed(3)}
+                          <strong>${t(
+                            "meanSeverity"
+                          )}:</strong> ${stats.averageSeverity.toFixed(3)}
                         </div>
-                        ${areaData ? `
+                        ${
+                          areaData
+                            ? `
                         <div style="margin-bottom: 8px;">
-                          <strong>${t('meanLitterProbability')}:</strong> ${(areaData.mean_litter_probability * 100).toFixed(1)}%
+                          <strong>${t("meanLitterProbability")}:</strong> ${(
+                                areaData.mean_litter_probability * 100
+                              ).toFixed(1)}%
                         </div>
                         <div style="margin-bottom: 8px;">
-                          <strong>${t('meanHazardProbability')}:</strong> ${(areaData.mean_hazard_probability * 100).toFixed(1)}%
+                          <strong>${t("meanHazardProbability")}:</strong> ${(
+                                areaData.mean_hazard_probability * 100
+                              ).toFixed(1)}%
                         </div>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                       </div>
-                    `)
+                    `
+                      )
                       .openOn(e.target._map);
                   }
                 }
-              }
+              },
             }}
           />
         ))}
 
         {/* Individual report markers - only show in Reports mode when reports are loaded */}
-        {viewMode === 'Reports' && reports.map((report) => {
-          // Calculate severity-based styling using the same logic as GlobeView
-          const severity = report.analysis?.severity_level || 0.0; // Use actual severity from analysis
+        {viewMode === "Reports" &&
+          reports.map((report) => {
+            // Calculate severity-based styling using the same logic as GlobeView
+            const severity = report.analysis?.severity_level || 0.0; // Use actual severity from analysis
 
-          // Use the same color interpolation as GlobeView
-          const color = getColorByValue(severity);
+            // Use the same color interpolation as GlobeView
+            const color = getColorByValue(severity);
 
-          // Use the same radius interpolation as GlobeView
-          const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
+            // Use the same radius interpolation as GlobeView
+            const baseRadius = severity >= 0.3 ? 8 : 6; // Fixed pixel radius that won't change with zoom
 
-          return (
-            <CircleMarker
-              key={report.report.seq}
-              center={[report.report.latitude, report.report.longitude]}
-              radius={baseRadius}
-              pathOptions={{
-                color: '#555555',
-                fillColor: color,
-                fillOpacity: 0.8,
-                weight: 2,
-                opacity: 1
-              }}
-              eventHandlers={{
-                click: () => {
-                  if (!isAuthenticated) {
-                    setAuthError(t('authenticationRequired'));
-                    return;
-                  }
-                  setSelectedReport(report);
-                  setIsCleanAppProOpen(true);
-                }
-              }}
-            />
-          );
-        })}
+            return (
+              <CircleMarker
+                key={report.report.seq}
+                center={[report.report.latitude, report.report.longitude]}
+                radius={baseRadius}
+                pathOptions={{
+                  color: "#555555",
+                  fillColor: color,
+                  fillOpacity: 0.8,
+                  weight: 2,
+                  opacity: 1,
+                }}
+                eventHandlers={{
+                  click: () => {
+                    if (!isAuthenticated) {
+                      setAuthError(t("authenticationRequired"));
+                      return;
+                    }
+                    setSelectedReport(report);
+                    setIsCleanAppProOpen(true);
+                  },
+                }}
+              />
+            );
+          })}
 
         {/* Country polygons */}
         {countryPolygons.map((polygon, index) => (
@@ -494,10 +563,10 @@ function CustomAreaMap({
             key={`polygon-${index}`}
             data={polygon}
             style={{
-              color: '#333333',
+              color: "#333333",
               weight: 5,
               opacity: 0.8,
-              fillOpacity: 0.0
+              fillOpacity: 0.0,
             }}
           />
         ))}
@@ -506,7 +575,7 @@ function CustomAreaMap({
       </MapContainer>
 
       {/* Latest Reports - only show in Reports mode on desktop */}
-      {viewMode === 'Reports' && (
+      {viewMode === "Reports" && (
         <div className="hidden lg:block absolute left-4 bottom-8 z-[1000] w-80 h-96">
           <LatestReports
             reports={reports}
@@ -531,4 +600,4 @@ function CustomAreaMap({
 }
 
 // Memoize the component to prevent unnecessary re-renders
-export default memo(CustomAreaMap); 
+export default memo(CustomAreaMap);
