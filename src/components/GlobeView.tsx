@@ -566,16 +566,16 @@ export default function GlobeView() {
         // });
 
         // Add hover effects
-        map.on("mouseenter", "report-pins", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
+        // map.on("mouseenter", "report-pins", () => {
+        //   map.getCanvas().style.cursor = "pointer";
+        // });
 
-        map.on("mouseleave", "report-pins", () => {
-          map.getCanvas().style.cursor = "";
-        });
+        // map.on("mouseleave", "report-pins", () => {
+        //   map.getCanvas().style.cursor = "";
+        // });
       }
     }
-  }, [mapLoaded, latestReports, selectedTab]);
+  }, [mapLoaded, latestReports, selectedTab, latestReportsWithAnalysis]);
 
   // Handle new report from WebSocket
   const handleNewReport = (reportWithAnalysis: LatestReport) => {
@@ -1006,7 +1006,6 @@ export default function GlobeView() {
 
         // Add new reports to the top of the list
         setLatestReports((prev) => {
-          console.log("lite reports", prev);
           const newReports = filteredReports.map((report) => ({
             seq: report.seq,
             timestamp: report.timestamp,
@@ -1027,7 +1026,6 @@ export default function GlobeView() {
         });
 
         setLatestReportsWithAnalysis((prev) => {
-          console.log("with analysis", prev);
           const newReports = filteredReports;
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
