@@ -1006,11 +1006,19 @@ export default function GlobeView() {
 
         // Add new reports to the top of the list
         setLatestReports((prev) => {
-          const newReports = filteredReports;
+          console.log("lite reports", prev);
+          const newReports = filteredReports.map((report) => ({
+            seq: report.seq,
+            timestamp: report.timestamp,
+            id: report.id,
+            latitude: report.latitude,
+            longitude: report.longitude,
+            image: report.image,
+          }));
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
           const combined = [...newReports, ...prev].filter((item) => {
-            const seq = item.report?.seq;
+            const seq = item.seq;
             if (seen.has(seq)) return false;
             seen.add(seq);
             return true;
@@ -1019,6 +1027,7 @@ export default function GlobeView() {
         });
 
         setLatestReportsWithAnalysis((prev) => {
+          console.log("with analysis", prev);
           const newReports = filteredReports;
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
