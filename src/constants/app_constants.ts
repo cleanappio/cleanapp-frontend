@@ -1,1 +1,1 @@
-export const MAX_REPORTS_LIMIT = 1000;
+export const MAX_REPORTS_LIMIT = 50000;

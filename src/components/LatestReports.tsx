@@ -1,5 +1,5 @@
 import React from "react";
-import { LatestReport } from "./GlobeView";
+import { LatestReport, Report } from "./GlobeView";
 import { useTranslations } from "@/lib/i18n";
 
 interface LatestReportsProps {
@@ -26,7 +26,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
       }`}
     >
       {/* Create translucent div with a gradient */}
-      <div className="w-full h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[275px]">
+      <div className="h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[300px]">
         <p className="text-slate-300 font-semibold text-sm mt-2 mb-3 flex-shrink-0">
           {t("latestReports")}
         </p>
@@ -40,6 +40,10 @@ const LatestReports: React.FC<LatestReportsProps> = ({
             reports.map((item, idx) => {
               const isSelected =
                 selectedReport?.report?.seq === item.report?.seq;
+
+              const title = Array.isArray(item.analysis)
+                ? item.analysis[0]?.title
+                : item.analysis?.title;
               return (
                 <div
                   key={item.report?.seq || idx}
@@ -51,15 +55,18 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                   }`}
                 >
                   <p className="text-xs">
-                    {item.analysis?.title || t("report")}
+                    {title || t("report")}
                     {item.report?.timestamp
                       ? `, ${new Date(item.report.timestamp).toLocaleString()}`
                       : ""}
                   </p>
                   <p className="text-xs text-gray-400 line-clamp-2">
-                    {item.analysis?.summary ||
-                      item.analysis?.description ||
-                      t("noSummary")}
+                    {Array.isArray(item.analysis)
+                      ? item.analysis[0]?.summary ||
+                        item.analysis[0]?.description
+                      : item.analysis?.summary ||
+                        item.analysis?.description ||
+                        t("noSummary")}
                   </p>
                 </div>
               );
