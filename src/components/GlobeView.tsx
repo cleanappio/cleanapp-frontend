@@ -689,11 +689,58 @@ export default function GlobeView() {
         if (map.getSource(animatedPinId)) {
           map.removeSource(animatedPinId);
         }
+
+        addReportPinToMap(reportWithAnalysis);
       }
     }
 
     // Start the animation
     requestAnimationFrame(animatePin);
+  };
+
+  // Helper function to add a single report pin to the map
+  const addReportPinToMap = (reportWithAnalysis: LatestReport) => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    const report = reportWithAnalysis.report;
+    const analysis = reportWithAnalysis.analysis;
+
+    // Get current reports data
+    const currentSource = map.getSource("reports") as any;
+    if (!currentSource) return;
+
+    const currentData = currentSource._data || {
+      type: "FeatureCollection",
+      features: [],
+    };
+
+    // Create new feature for this report
+    const newFeature = {
+      type: "Feature" as const,
+      geometry: {
+        type: "Point" as const,
+        coordinates: [report.longitude, report.latitude],
+      },
+      properties: {
+        id: report.id,
+        seq: report.seq,
+        title: analysis?.title || "Report",
+        severity: analysis?.severity_level || 0,
+        index: currentData.features.length, // Add to end of list
+      },
+    };
+
+    // Add new feature to existing data
+    const updatedData = {
+      ...currentData,
+      features: [...currentData.features, newFeature],
+    };
+
+    // Update the source with new data
+    currentSource.setData(updatedData);
   };
 
   useEffect(() => {
