@@ -2,9 +2,9 @@ import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
-import { LatestReport } from "@/components/GlobeView";
+import { LatestReport, Report } from "@/components/GlobeView";
 import { X } from "lucide-react";
-import { useTranslations } from '@/lib/i18n';
+import { useTranslations } from "@/lib/i18n";
 
 interface CleanAppProModalProps {
   isOpen: boolean;
@@ -16,15 +16,15 @@ interface CleanAppProModalProps {
 }
 
 // Check if embedded mode is enabled
-const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
-const CleanAppProModal: React.FC<CleanAppProModalProps> = ({ 
-  isOpen, 
-  onClose, 
+const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
+  isOpen,
+  onClose,
   reportItem,
   allReports,
   onReportChange,
-  showLatestReports = true
+  showLatestReports = true,
 }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -37,8 +37,8 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleCloseModal = () => {
@@ -62,10 +62,20 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   return (
     <>
       {/* Semi-transparent overlay */}
-      <div className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-150 ${isClosing ? 'opacity-0' : 'opacity-100'}`} onClick={handleCloseModal} />
-      
+      <div
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-150 ${
+          isClosing ? "opacity-0" : "opacity-100"
+        }`}
+        onClick={handleCloseModal}
+      />
+
       {/* Modal content */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-150 ${isClosing ? 'opacity-0' : 'opacity-100'}`} onClick={handleModalContentClick}>
+      <div
+        className={`fixed inset-0 z-50 transition-opacity duration-150 ${
+          isClosing ? "opacity-0" : "opacity-100"
+        }`}
+        onClick={handleModalContentClick}
+      >
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="fixed inset-0 overflow-y-auto scrollbar-hide">
@@ -73,7 +83,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             <button
               onClick={handleCloseModal}
               className="fixed top-4 right-4 z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
-              aria-label={t('close')}
+              aria-label={t("close")}
             >
               <X className="w-6 h-6" />
             </button>
@@ -96,7 +106,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
               <button
                 onClick={handleCloseModal}
                 className="fixed top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-                aria-label={t('close')}
+                aria-label={t("close")}
               >
                 <X className="w-6 h-6" />
               </button>
@@ -125,4 +135,4 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   );
 };
 
-export default CleanAppProModal; 
+export default CleanAppProModal;
