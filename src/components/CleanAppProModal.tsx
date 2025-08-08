@@ -2,33 +2,73 @@ import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
-import { LatestReport } from "@/components/GlobeView";
+import { LatestReport, Report } from "@/components/GlobeView";
 import { X } from "lucide-react";
-import { useTranslations } from '@/lib/i18n';
+import {
+  filterAnalysesByLanguage,
+  getCurrentLocale,
+  useTranslations,
+} from "@/lib/i18n";
 
 interface CleanAppProModalProps {
   isOpen: boolean;
   onClose: () => void;
-  reportItem: LatestReport | null;
+  report: Report | null;
   allReports: LatestReport[];
   onReportChange: (report: LatestReport) => void;
   showLatestReports?: boolean;
 }
 
 // Check if embedded mode is enabled
-const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
-const CleanAppProModal: React.FC<CleanAppProModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  reportItem,
+const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
+  isOpen,
+  onClose,
+  report,
   allReports,
   onReportChange,
-  showLatestReports = true
+  showLatestReports = true,
 }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslations();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reportItem, setReportItem] = useState<LatestReport | null>(null);
+
+  useEffect(() => {
+    console.log("report", report);
+
+    if (report?.seq) {
+      getReportItem(report.seq);
+    }
+  }, [report]);
+
+  const getReportItem = async (seq: number) => {
+    try {
+      const locale = getCurrentLocale();
+      setLoading(true);
+      setError(null);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${seq}&lang=${locale}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // Filter analyses by language and convert to single analysis format
+        const filteredData = filterAnalysesByLanguage([data], locale);
+        setReportItem(filteredData[0] || data);
+      } else {
+        console.error(`${t("failedToFetchReport")}: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      setError(t("failedToFetchReport"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mobile detection
   useEffect(() => {
@@ -37,8 +77,8 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleCloseModal = () => {
@@ -62,10 +102,20 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   return (
     <>
       {/* Semi-transparent overlay */}
-      <div className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-150 ${isClosing ? 'opacity-0' : 'opacity-100'}`} onClick={handleCloseModal} />
-      
+      <div
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-150 ${
+          isClosing ? "opacity-0" : "opacity-100"
+        }`}
+        onClick={handleCloseModal}
+      />
+
       {/* Modal content */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-150 ${isClosing ? 'opacity-0' : 'opacity-100'}`} onClick={handleModalContentClick}>
+      <div
+        className={`fixed inset-0 z-50 transition-opacity duration-150 ${
+          isClosing ? "opacity-0" : "opacity-100"
+        }`}
+        onClick={handleModalContentClick}
+      >
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="fixed inset-0 overflow-y-auto scrollbar-hide">
@@ -73,7 +123,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             <button
               onClick={handleCloseModal}
               className="fixed top-4 right-4 z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
-              aria-label={t('close')}
+              aria-label={t("close")}
             >
               <X className="w-6 h-6" />
             </button>
@@ -81,7 +131,13 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             {/* Mobile content container with transparency */}
             <div className="min-h-screen">
               <div className="px-4 py-6">
-                <ReportOverview reportItem={reportItem} />
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <p>Loading...</p>
+                  </div>
+                ) : (
+                  <ReportOverview reportItem={reportItem} />
+                )}
                 <div className="mt-6">
                   {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
                 </div>
@@ -96,7 +152,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
               <button
                 onClick={handleCloseModal}
                 className="fixed top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-                aria-label={t('close')}
+                aria-label={t("close")}
               >
                 <X className="w-6 h-6" />
               </button>
@@ -125,4 +181,4 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   );
 };
 
-export default CleanAppProModal; 
+export default CleanAppProModal;

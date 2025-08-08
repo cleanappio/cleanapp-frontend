@@ -60,6 +60,16 @@ export interface ReportWithAnalysis {
   analysis: ReportAnalysis[];
 }
 
+export interface SimplifiedAnalysis {
+  severity_level: number;
+  classification: "physical" | "digital";
+}
+
+export interface ReportWithSimplifiedAnalysis {
+  report: Report;
+  analysis: SimplifiedAnalysis;
+}
+
 // Responsive hook for mobile detection
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -89,9 +99,7 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<LatestReport | null>(
-    null
-  );
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -101,7 +109,14 @@ export default function GlobeView() {
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
 
-  const [latestReports, setLatestReports] = useState<LatestReport[]>([]);
+  const [latestReports, setLatestReports] = useState<
+    ReportWithSimplifiedAnalysis[]
+  >([]);
+  const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
+    LatestReport[]
+  >([]);
+  const [reportsWithAnalysisLoading, setReportsWithAnalysisLoading] =
+    useState(true);
   const [reportsLoading, setReportsLoading] = useState(true);
 
   // Get user's current location on component mount
@@ -483,15 +498,19 @@ export default function GlobeView() {
           properties: {
             id: report.report.id,
             seq: report.report.seq,
-            title: report.analysis?.title || "Report",
-            severity: report.analysis?.severity_level || 0,
+            title: "",
             index: index,
+            severity: report.analysis.severity_level,
+            classification: report.analysis.classification,
           },
         }));
 
+        // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
           type: "FeatureCollection" as const,
-          features: reportFeatures,
+          features: reportFeatures.filter(
+            (report) => report.properties.classification === selectedTab
+          ),
         };
 
         // Add source if it doesn't exist
@@ -539,38 +558,38 @@ export default function GlobeView() {
         }
 
         // Show/hide report pins based on selectedTab
-        if (map.getLayer("report-pins")) {
-          if (selectedTab === "physical") {
-            map.setLayoutProperty("report-pins", "visibility", "visible");
-          } else {
-            map.setLayoutProperty("report-pins", "visibility", "none");
-          }
-        }
+        // if (map.getLayer("report-pins")) {
+        //   if (selectedTab === "physical") {
+        //     map.setLayoutProperty("report-pins", "visibility", "visible");
+        //   } else {
+        //     map.setLayoutProperty("report-pins", "visibility", "none");
+        //   }
+        // }
 
         // Add click handler for report pins
-        map.on("click", "report-pins", (e) => {
-          if (e.features && e.features[0]) {
-            const feature = e.features[0];
-            const reportIndex = feature.properties?.index;
-            if (reportIndex !== undefined && latestReports[reportIndex]) {
-              setSelectedReport(latestReports[reportIndex]);
-              flyToReport(latestReports[reportIndex]);
-              setIsCleanAppProOpen(true);
-            }
-          }
-        });
+        // map.on("click", "report-pins", (e) => {
+        //   if (e.features && e.features[0]) {
+        //     const feature = e.features[0];
+        //     const reportIndex = feature.properties?.index;
+        //     if (reportIndex !== undefined && latestReports[reportIndex]) {
+        //       setSelectedReport(latestReports[reportIndex].report);
+        //       flyToReport(latestReports[reportIndex].report);
+        //       setIsCleanAppProOpen(true);
+        //     }
+        //   }
+        // });
 
-        // Add hover effects
-        map.on("mouseenter", "report-pins", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
+        // // Add hover effects
+        // map.on("mouseenter", "report-pins", () => {
+        //   map.getCanvas().style.cursor = "pointer";
+        // });
 
-        map.on("mouseleave", "report-pins", () => {
-          map.getCanvas().style.cursor = "";
-        });
+        // map.on("mouseleave", "report-pins", () => {
+        //   map.getCanvas().style.cursor = "";
+        // });
       }
     }
-  }, [mapLoaded, latestReports, selectedTab]);
+  }, [mapLoaded, latestReports, selectedTab, latestReportsWithAnalysis]);
 
   // Handle new report from WebSocket
   const handleNewReport = (reportWithAnalysis: LatestReport) => {
@@ -584,8 +603,6 @@ export default function GlobeView() {
       console.error("map not found");
       return;
     }
-
-    console.log("reportWithAnalysis", reportWithAnalysis);
 
     const report = reportWithAnalysis.report;
     const analysis = reportWithAnalysis.analysis;
@@ -668,7 +685,8 @@ export default function GlobeView() {
 
       // Create pulsing effect (expand/shrink)
       const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
-      const baseRadius = analysis.severity_level >= 3 ? 13.2 : 6.6;
+      const baseRadius =
+        analysis?.severity_level && analysis.severity_level >= 3 ? 13.2 : 6.6;
       const currentRadius = baseRadius * pulseScale;
 
       // Update the pin radius
@@ -685,11 +703,58 @@ export default function GlobeView() {
         if (map.getSource(animatedPinId)) {
           map.removeSource(animatedPinId);
         }
+
+        addReportPinToMap(reportWithAnalysis);
       }
     }
 
     // Start the animation
     requestAnimationFrame(animatePin);
+  };
+
+  // Helper function to add a single report pin to the map
+  const addReportPinToMap = (reportWithAnalysis: LatestReport) => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    const report = reportWithAnalysis.report;
+    const analysis = reportWithAnalysis.analysis;
+
+    // Get current reports data
+    const currentSource = map.getSource("reports") as any;
+    if (!currentSource) return;
+
+    const currentData = currentSource._data || {
+      type: "FeatureCollection",
+      features: [],
+    };
+
+    // Create new feature for this report
+    const newFeature = {
+      type: "Feature" as const,
+      geometry: {
+        type: "Point" as const,
+        coordinates: [report.longitude, report.latitude],
+      },
+      properties: {
+        id: report.id,
+        seq: report.seq,
+        title: analysis?.title || "Report",
+        severity: analysis?.severity_level || 0,
+        index: currentData.features.length, // Add to end of list
+      },
+    };
+
+    // Add new feature to existing data
+    const updatedData = {
+      ...currentData,
+      features: [...currentData.features, newFeature],
+    };
+
+    // Update the source with new data
+    currentSource.setData(updatedData);
   };
 
   useEffect(() => {
@@ -1002,6 +1067,29 @@ export default function GlobeView() {
 
         // Add new reports to the top of the list
         setLatestReports((prev) => {
+          const newReports = filteredReports.map((report) => ({
+            report: {
+              seq: report.seq,
+              timestamp: report.timestamp,
+              id: report.id,
+              latitude: report.latitude,
+              longitude: report.longitude,
+              image: report.image,
+            },
+            analysis: report.analysis,
+          }));
+          // Remove duplicates by id (keep the newest)
+          const seen = new Set();
+          const combined = [...newReports, ...prev].filter((item) => {
+            const seq = item.report?.seq;
+            if (seen.has(seq)) return false;
+            seen.add(seq);
+            return true;
+          });
+          return combined;
+        });
+
+        setLatestReportsWithAnalysis((prev) => {
           const newReports = filteredReports;
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
@@ -1036,7 +1124,31 @@ export default function GlobeView() {
       try {
         const locale = getCurrentLocale();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=false`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=true`
+        );
+        if (!res.ok) throw new Error("Failed to fetch last reports");
+        const data = await res.json();
+        const filteredReports = filterAnalysesByLanguage(
+          data.reports || [],
+          locale
+        );
+        setLatestReportsWithAnalysis(filteredReports);
+      } catch (err) {
+        console.error("Error fetching last reports:", err);
+      } finally {
+        setReportsWithAnalysisLoading(false);
+      }
+    }
+    fetchLastReports();
+  }, []);
+
+  // Fetch lite reports on mount
+  useEffect(() => {
+    async function fetchLastReports() {
+      try {
+        const locale = getCurrentLocale();
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=false&classification=${selectedTab}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
@@ -1046,7 +1158,6 @@ export default function GlobeView() {
           locale
         );
         setLatestReports(filteredReports);
-        console.log({ filteredReports: filteredReports.length });
       } catch (err) {
         console.error("Error fetching last reports:", err);
       } finally {
@@ -1054,15 +1165,15 @@ export default function GlobeView() {
       }
     }
     fetchLastReports();
-  }, []);
+  }, [selectedTab]);
 
   // Add this helper inside GlobeView
-  const flyToReport = (report: LatestReport) => {
+  const flyToReport = (report: Report) => {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     if (!map) return;
     map.flyTo({
-      center: [report.report.longitude, report.report.latitude],
+      center: [report.longitude, report.latitude],
       zoom: map.getZoom() || 2.5,
       duration: 2000,
       essential: true,
@@ -1199,14 +1310,14 @@ export default function GlobeView() {
       {/* Latest Reports - only show when modal is not open and not on mobile */}
       {!isCleanAppProOpen && !isMobile && (
         <LatestReports
-          reports={latestReports}
-          loading={reportsLoading}
+          reports={latestReportsWithAnalysis}
+          loading={reportsWithAnalysisLoading}
           onReportClick={(report) => {
-            setSelectedReport(report);
+            setSelectedReport(report.report);
             setIsCleanAppProOpen(true);
-            flyToReport(report);
+            flyToReport(report.report);
           }}
-          isModalActive={false}
+          isModalActive={true}
           selectedReport={null}
         />
       )}
@@ -1242,11 +1353,11 @@ export default function GlobeView() {
       <CleanAppProModal
         isOpen={isCleanAppProOpen}
         onClose={() => setIsCleanAppProOpen(false)}
-        reportItem={selectedReport}
-        allReports={latestReports}
+        report={selectedReport}
+        allReports={latestReportsWithAnalysis}
         onReportChange={(report) => {
-          setSelectedReport(report);
-          flyToReport(report);
+          setSelectedReport(report.report);
+          flyToReport(report.report);
         }}
       />
     </div>
