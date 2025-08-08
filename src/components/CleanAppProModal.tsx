@@ -4,12 +4,16 @@ import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
 import { LatestReport, Report } from "@/components/GlobeView";
 import { X } from "lucide-react";
-import { useTranslations } from "@/lib/i18n";
+import {
+  filterAnalysesByLanguage,
+  getCurrentLocale,
+  useTranslations,
+} from "@/lib/i18n";
 
 interface CleanAppProModalProps {
   isOpen: boolean;
   onClose: () => void;
-  reportItem: LatestReport | null;
+  report: Report | null;
   allReports: LatestReport[];
   onReportChange: (report: LatestReport) => void;
   showLatestReports?: boolean;
@@ -21,7 +25,7 @@ const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   isOpen,
   onClose,
-  reportItem,
+  report,
   allReports,
   onReportChange,
   showLatestReports = true,
@@ -29,6 +33,42 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslations();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reportItem, setReportItem] = useState<LatestReport | null>(null);
+
+  useEffect(() => {
+    console.log("report", report);
+
+    if (report?.seq) {
+      getReportItem(report.seq);
+    }
+  }, [report]);
+
+  const getReportItem = async (seq: number) => {
+    try {
+      const locale = getCurrentLocale();
+      setLoading(true);
+      setError(null);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${seq}&lang=${locale}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // Filter analyses by language and convert to single analysis format
+        const filteredData = filterAnalysesByLanguage([data], locale);
+        setReportItem(filteredData[0] || data);
+      } else {
+        console.error(`${t("failedToFetchReport")}: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      setError(t("failedToFetchReport"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mobile detection
   useEffect(() => {
@@ -91,7 +131,13 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
             {/* Mobile content container with transparency */}
             <div className="min-h-screen">
               <div className="px-4 py-6">
-                <ReportOverview reportItem={reportItem} />
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <p>Loading...</p>
+                  </div>
+                ) : (
+                  <ReportOverview reportItem={reportItem} />
+                )}
                 <div className="mt-6">
                   {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
                 </div>
