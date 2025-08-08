@@ -1,3 +1,7 @@
+import {
+  ReportWithAnalysis,
+  ReportWithSimplifiedAnalysis,
+} from "@/components/GlobeView";
 import { useRouter } from "next/router";
 
 // Translation keys and their English values
@@ -1014,10 +1018,9 @@ export function getCurrentLocale(): string {
 }
 
 // Function to filter analyses by language and convert to LatestReport format
-export function filterAnalysesByLanguage(
-  reportsWithAnalyses: any[],
-  currentLocale: string = "en"
-): any[] {
+export function filterAnalysesByLanguage<
+  T extends ReportWithAnalysis | ReportWithSimplifiedAnalysis
+>(reportsWithAnalyses: T[], currentLocale: string = "en"): T[] {
   return reportsWithAnalyses;
   // Handle edge cases where input is not an array
   if (!Array.isArray(reportsWithAnalyses)) {

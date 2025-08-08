@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import router from "next/router";
-import { LatestReport } from "./GlobeView";
+import { Report, ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
-import { useTranslations, getCurrentLocale, filterAnalysesByLanguage } from '@/lib/i18n';
+import {
+  useTranslations,
+  getCurrentLocale,
+  filterAnalysesByLanguage,
+} from "@/lib/i18n";
 
 interface ReportOverviewProps {
-  reportItem?: LatestReport | null;
+  reportItem?: Report | null;
 }
 
 // Check if embedded mode is enabled
-const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === 'true';
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
 const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
+  const locale = getCurrentLocale();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [title, setTitle] = useState<string>("");
 
   useEffect(() => {
-    if (reportItem?.report?.seq) {
+    if (reportItem?.seq) {
       fetchFullReport();
     } else {
       setFullReport(null);
@@ -28,30 +35,58 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   }, [reportItem]);
 
   const fetchFullReport = async () => {
-    if (!reportItem?.report?.seq) return;
-    
+    if (!reportItem?.seq) return;
+
     setLoading(true);
     setError(null);
     try {
       const locale = getCurrentLocale();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.report.seq}&lang=${locale}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.seq}&lang=${locale}`
       );
       if (response.ok) {
         const data = await response.json();
         // Filter analyses by language and convert to single analysis format
-        const filteredData = filterAnalysesByLanguage([data], locale);
+        const filteredData = filterAnalysesByLanguage<ReportWithAnalysis>(
+          [data],
+          locale
+        );
         setFullReport(filteredData[0] || data);
       } else {
-        setError(`${t('failedToFetchReport')}: ${response.status}`);
+        setError(`${t("failedToFetchReport")}: ${response.status}`);
       }
     } catch (error) {
       console.error("Error fetching full report:", error);
-      setError(t('failedToFetchReport'));
+      setError(t("failedToFetchReport"));
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const locale = getCurrentLocale();
+    if (fullReport?.analysis) {
+      setTitle(
+        fullReport.analysis.find(
+          (analysis: any) => analysis.language === locale
+        )?.title || fullReport.analysis[0].title
+      );
+    } else if (reportItem?.id) {
+      setTitle(`${t("report")} ${reportItem.seq}`);
+    } else {
+      setTitle("");
+    }
+  }, [fullReport?.analysis, reportItem, t, locale]);
+
+  useEffect(() => {
+    if (fullReport?.report?.image) {
+      setImageUrl(getDisplayableImage(fullReport.report.image));
+    } else if (reportItem?.image) {
+      setImageUrl(getDisplayableImage(reportItem.image));
+    } else {
+      setImageUrl(null);
+    }
+  }, [fullReport?.report?.image, reportItem?.image, fullReport?.analysis]);
 
   const getGradientColor = (value: number, maxValue: number = 1) => {
     const percentage = (value / maxValue) * 100;
@@ -72,17 +107,17 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     return (
       <div className="border rounded-md bg-white shadow-md">
         <div className="p-4">
-          <p className="text-lg font-medium">{t('selectAReport')}</p>
+          <p className="text-lg font-medium">{t("selectAReport")}</p>
           <p className="text-sm text-gray-500">
-            {t('selectAReportFromMapToViewDetailedAnalysis')}
+            {t("selectAReportFromMapToViewDetailedAnalysis")}
           </p>
         </div>
         <div className="relative min-h-[400px] sm:h-96 bg-gray-100 rounded-b-md flex items-center justify-center">
           <div className="text-center">
             <div className="text-gray-400 text-4xl sm:text-6xl mb-4">📊</div>
-            <p className="text-gray-500">{t('noReportSelected')}</p>
+            <p className="text-gray-500">{t("noReportSelected")}</p>
             <p className="text-sm text-gray-400 mt-2">
-              {t('clickOnAReportFromTheMapToSeeDetailedInformation')}
+              {t("clickOnAReportFromTheMapToSeeDetailedInformation")}
             </p>
           </div>
         </div>
@@ -90,15 +125,19 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     );
   }
 
-  const report = reportItem.report;
-  const analysis = reportItem.analysis;
-  const imageUrl = getDisplayableImage(fullReport?.report?.image || report?.image);
+  const report = reportItem;
+  // const analysis = fullReport?.analysis[0];
+  const analysis = fullReport?.analysis.map((analysis: any) => {
+    if (analysis.language === locale) {
+      return analysis;
+    }
+  });
 
   return (
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          {analysis?.title || `${t('report')} ${report.seq}`}
+          {title || `${t("report")} ${report.seq}`}
         </h1>
       </div>
 
@@ -107,32 +146,34 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           <div className="w-full h-full bg-red-50 rounded-b-md flex items-center justify-center">
             <div className="text-center">
               <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
-              <p className="text-red-600 font-medium">{t('errorLoadingReport')}</p>
+              <p className="text-red-600 font-medium">
+                {t("errorLoadingReport")}
+              </p>
               <p className="text-sm text-red-500 mt-1">{error}</p>
             </div>
           </div>
         ) : imageUrl ? (
           <Image
             src={imageUrl}
-            alt={t('reportAnalysis')}
+            alt={t("reportAnalysis")}
             width={1000}
             height={1000}
             className="w-full h-full rounded-b-md object-cover"
             onError={(e) => {
               console.error("Failed to load image:", imageUrl);
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling?.classList.remove("hidden");
             }}
           />
         ) : (
-          <div className="w-full h-full bg-gray-200 rounded-b-md flex items-center justify-center">
-            <p className="text-gray-500">{t('noImageAvailable')}</p>
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
+            <p className="text-gray-500 text-sm sm:text-base">{t("loading")}</p>
           </div>
         )}
 
         {/* Mobile Layout - Content below image */}
         <div className="sm:hidden">
-
           {/* Content sections below image */}
           <div className="p-4 space-y-4">
             {/* Top section with report details */}
@@ -142,33 +183,46 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 <div className="flex gap-4">
                   {/* Location */}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('location')}</h3>
-                    <a 
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                      {t("location")}
+                    </h3>
+                    <a
                       href={getGoogleMapsUrl(report.latitude, report.longitude)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
                     >
-                      {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+                      {report.latitude.toFixed(4)},{" "}
+                      {report.longitude.toFixed(4)}
                     </a>
                   </div>
 
                   {/* Time */}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('time')}</h3>
-                    <p className="text-sm text-gray-600">{formatTime(report.timestamp)}</p>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                      {t("time")}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {formatTime(report.timestamp)}
+                    </p>
                   </div>
                 </div>
 
                 {/* Litter Probability */}
                 {analysis?.litter_probability !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('litter')}</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                      {t("litter")}
+                    </h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
-                          style={{ width: `${analysis.litter_probability * 100}%` }}
+                        <div
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                            analysis.litter_probability
+                          )}`}
+                          style={{
+                            width: `${analysis.litter_probability * 100}%`,
+                          }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700">
@@ -181,12 +235,18 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 {/* Hazard Probability */}
                 {analysis?.hazard_probability !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('hazard')}</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                      {t("hazard")}
+                    </h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
-                          style={{ width: `${analysis.hazard_probability * 100}%` }}
+                        <div
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                            analysis.hazard_probability
+                          )}`}
+                          style={{
+                            width: `${analysis.hazard_probability * 100}%`,
+                          }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700">
@@ -199,11 +259,15 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 {/* Severity Level */}
                 {analysis?.severity_level !== undefined && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">{t('severity')}</h3>
+                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                      {t("severity")}
+                    </h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-300 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.severity_level)}`}
+                        <div
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                            analysis.severity_level
+                          )}`}
                           style={{ width: `${analysis.severity_level * 100}%` }}
                         ></div>
                       </div>
@@ -219,7 +283,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
             {/* Description */}
             {analysis?.description && (
               <div className="bg-gray-100 p-4 rounded-lg">
-                <h3 className="font-semibold text-sm mb-2 text-gray-800">{t('description')}</h3>
+                <h3 className="font-semibold text-sm mb-2 text-gray-800">
+                  {t("description")}
+                </h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {analysis.description}
                 </p>
@@ -229,7 +295,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
             {/* Summary */}
             {analysis?.summary && (
               <div className="bg-gray-100 p-4 rounded-lg">
-                <h3 className="font-semibold text-sm mb-2 text-gray-800">{t('summary')}</h3>
+                <h3 className="font-semibold text-sm mb-2 text-gray-800">
+                  {t("summary")}
+                </h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {analysis.summary}
                 </p>
@@ -244,8 +312,8 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-white">
               {/* Location */}
               <div>
-                <h3 className="font-semibold text-sm mb-1">{t('location')}</h3>
-                <a 
+                <h3 className="font-semibold text-sm mb-1">{t("location")}</h3>
+                <a
                   href={getGoogleMapsUrl(report.latitude, report.longitude)}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -257,19 +325,23 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
               {/* Time */}
               <div>
-                <h3 className="font-semibold text-sm mb-1">{t('time')}</h3>
+                <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
                 <p className="text-sm">{formatTime(report.timestamp)}</p>
               </div>
 
               {/* Litter Probability */}
               {analysis?.litter_probability !== undefined && (
                 <div>
-                  <h3 className="font-semibold text-sm mb-1">{t('litter')}</h3>
+                  <h3 className="font-semibold text-sm mb-1">{t("litter")}</h3>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-white/20 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.litter_probability)}`}
-                        style={{ width: `${analysis.litter_probability * 100}%` }}
+                      <div
+                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                          analysis.litter_probability
+                        )}`}
+                        style={{
+                          width: `${analysis.litter_probability * 100}%`,
+                        }}
                       ></div>
                     </div>
                     <span className="text-sm font-medium">
@@ -282,12 +354,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               {/* Hazard Probability */}
               {analysis?.hazard_probability !== undefined && (
                 <div>
-                  <h3 className="font-semibold text-sm mb-1">{t('hazard')}</h3>
+                  <h3 className="font-semibold text-sm mb-1">{t("hazard")}</h3>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-white/20 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(analysis.hazard_probability)}`}
-                        style={{ width: `${analysis.hazard_probability * 100}%` }}
+                      <div
+                        className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                          analysis.hazard_probability
+                        )}`}
+                        style={{
+                          width: `${analysis.hazard_probability * 100}%`,
+                        }}
                       ></div>
                     </div>
                     <span className="text-sm font-medium">
