@@ -60,6 +60,16 @@ export interface ReportWithAnalysis {
   analysis: ReportAnalysis[];
 }
 
+export interface SimplifiedAnalysis {
+  severity_level: number;
+  classification: "physical" | "digital";
+}
+
+export interface ReportWithSimplifiedAnalysis {
+  report: Report;
+  analysis: SimplifiedAnalysis;
+}
+
 // Responsive hook for mobile detection
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -89,9 +99,7 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<LatestReport | null>(
-    null
-  );
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -101,7 +109,9 @@ export default function GlobeView() {
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
 
-  const [latestReports, setLatestReports] = useState<Report[]>([]);
+  const [latestReports, setLatestReports] = useState<
+    ReportWithSimplifiedAnalysis[]
+  >([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     LatestReport[]
   >([]);
@@ -483,20 +493,24 @@ export default function GlobeView() {
           type: "Feature" as const,
           geometry: {
             type: "Point" as const,
-            coordinates: [report.longitude, report.latitude],
+            coordinates: [report.report.longitude, report.report.latitude],
           },
           properties: {
-            id: report.id,
-            seq: report.seq,
+            id: report.report.id,
+            seq: report.report.seq,
             title: "",
-            severity: 0,
             index: index,
+            severity: report.analysis.severity_level,
+            classification: report.analysis.classification,
           },
         }));
 
+        // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
           type: "FeatureCollection" as const,
-          features: reportFeatures,
+          features: reportFeatures.filter(
+            (report) => report.properties.classification === selectedTab
+          ),
         };
 
         // Add source if it doesn't exist
@@ -544,13 +558,13 @@ export default function GlobeView() {
         }
 
         // Show/hide report pins based on selectedTab
-        if (map.getLayer("report-pins")) {
-          if (selectedTab === "physical") {
-            map.setLayoutProperty("report-pins", "visibility", "visible");
-          } else {
-            map.setLayoutProperty("report-pins", "visibility", "none");
-          }
-        }
+        // if (map.getLayer("report-pins")) {
+        //   if (selectedTab === "physical") {
+        //     map.setLayoutProperty("report-pins", "visibility", "visible");
+        //   } else {
+        //     map.setLayoutProperty("report-pins", "visibility", "none");
+        //   }
+        // }
 
         // Add click handler for report pins
         // map.on("click", "report-pins", (e) => {
@@ -558,14 +572,14 @@ export default function GlobeView() {
         //     const feature = e.features[0];
         //     const reportIndex = feature.properties?.index;
         //     if (reportIndex !== undefined && latestReports[reportIndex]) {
-        //       setSelectedReport(latestReports[reportIndex]);
-        //       flyToReport(latestReports[reportIndex]);
+        //       setSelectedReport(latestReports[reportIndex].report);
+        //       flyToReport(latestReports[reportIndex].report);
         //       setIsCleanAppProOpen(true);
         //     }
         //   }
         // });
 
-        // Add hover effects
+        // // Add hover effects
         // map.on("mouseenter", "report-pins", () => {
         //   map.getCanvas().style.cursor = "pointer";
         // });
@@ -1054,17 +1068,20 @@ export default function GlobeView() {
         // Add new reports to the top of the list
         setLatestReports((prev) => {
           const newReports = filteredReports.map((report) => ({
-            seq: report.seq,
-            timestamp: report.timestamp,
-            id: report.id,
-            latitude: report.latitude,
-            longitude: report.longitude,
-            image: report.image,
+            report: {
+              seq: report.seq,
+              timestamp: report.timestamp,
+              id: report.id,
+              latitude: report.latitude,
+              longitude: report.longitude,
+              image: report.image,
+            },
+            analysis: report.analysis,
           }));
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
           const combined = [...newReports, ...prev].filter((item) => {
-            const seq = item.seq;
+            const seq = item.report?.seq;
             if (seen.has(seq)) return false;
             seen.add(seq);
             return true;
@@ -1131,7 +1148,7 @@ export default function GlobeView() {
       try {
         const locale = getCurrentLocale();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=false`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=false&classification=${selectedTab}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
@@ -1148,15 +1165,15 @@ export default function GlobeView() {
       }
     }
     fetchLastReports();
-  }, []);
+  }, [selectedTab]);
 
   // Add this helper inside GlobeView
-  const flyToReport = (report: LatestReport) => {
+  const flyToReport = (report: Report) => {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     if (!map) return;
     map.flyTo({
-      center: [report.report.longitude, report.report.latitude],
+      center: [report.longitude, report.latitude],
       zoom: map.getZoom() || 2.5,
       duration: 2000,
       essential: true,
@@ -1296,9 +1313,9 @@ export default function GlobeView() {
           reports={latestReportsWithAnalysis}
           loading={reportsWithAnalysisLoading}
           onReportClick={(report) => {
-            setSelectedReport(report);
+            setSelectedReport(report.report);
             setIsCleanAppProOpen(true);
-            flyToReport(report);
+            flyToReport(report.report);
           }}
           isModalActive={true}
           selectedReport={null}
@@ -1336,11 +1353,11 @@ export default function GlobeView() {
       <CleanAppProModal
         isOpen={isCleanAppProOpen}
         onClose={() => setIsCleanAppProOpen(false)}
-        reportItem={selectedReport}
+        report={selectedReport}
         allReports={latestReportsWithAnalysis}
         onReportChange={(report) => {
-          setSelectedReport(report);
-          flyToReport(report);
+          setSelectedReport(report.report);
+          flyToReport(report.report);
         }}
       />
     </div>
