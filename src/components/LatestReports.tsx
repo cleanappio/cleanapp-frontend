@@ -1,6 +1,6 @@
 import React from "react";
 import { LatestReport, Report } from "./GlobeView";
-import { useTranslations } from "@/lib/i18n";
+import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 
 interface LatestReportsProps {
   reports: LatestReport[];
@@ -18,6 +18,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
   selectedReport = null,
 }) => {
   const { t } = useTranslations();
+  const locale = getCurrentLocale();
 
   return (
     <div
@@ -42,8 +43,9 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                 selectedReport?.report?.seq === item.report?.seq;
 
               const title = Array.isArray(item.analysis)
-                ? item.analysis[0]?.title
-                : item.analysis?.title;
+                ? item.analysis.find((analysis) => analysis.language === locale)
+                : item.analysis;
+
               return (
                 <div
                   key={item.report?.seq || idx}
@@ -55,18 +57,20 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                   }`}
                 >
                   <p className="text-xs">
-                    {title || t("report")}
+                    {title?.title || t("report")}
                     {item.report?.timestamp
                       ? `, ${new Date(item.report.timestamp).toLocaleString()}`
                       : ""}
                   </p>
                   <p className="text-xs text-gray-400 line-clamp-2">
                     {Array.isArray(item.analysis)
-                      ? item.analysis[0]?.summary ||
-                        item.analysis[0]?.description
-                      : item.analysis?.summary ||
-                        item.analysis?.description ||
-                        t("noSummary")}
+                      ? item.analysis.find(
+                          (analysis) => analysis.language === locale
+                        )?.summary ||
+                        item.analysis.find(
+                          (analysis) => analysis.language === locale
+                        )?.description
+                      : title?.summary || title?.description || t("noSummary")}
                   </p>
                 </div>
               );
