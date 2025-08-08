@@ -36,8 +36,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       const url = reportItem?.report?.id
-        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`
-        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`
+        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=false`;
 
       const response = await fetch(url);
       if (response.ok) {
