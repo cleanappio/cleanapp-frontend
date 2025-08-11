@@ -31,44 +31,28 @@ export interface Report {
 
 // Type for report analysis
 export interface ReportAnalysis {
-  seq: number;
-  source: string;
-  analysis_text: string;
-  analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
-  title: string;
-  description: string;
-  litter_probability: number;
-  hazard_probability: number;
+  seq?: number;
+  source?: string;
+  analysis_text?: string;
+  analysis_image?: number[] | string | null; // Can be bytes array, URL string, or null
+  title?: string;
+  description?: string;
+  litter_probability?: number;
+  hazard_probability?: number;
   severity_level: number;
-  summary: string;
-  language: string;
+  summary?: string;
+  language?: string;
   brand_name?: string; // Optional brand name
   brand_display_name?: string; // Optional brand display name
   classification: "physical" | "digital";
-  created_at: string;
-  updated_at: string;
-}
-
-// Type for report with analysis (legacy compatibility)
-export interface LatestReport {
-  report: Report;
-  analysis: ReportAnalysis;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Type for report with multiple analyses
 export interface ReportWithAnalysis {
   report: Report;
   analysis: ReportAnalysis[];
-}
-
-export interface SimplifiedAnalysis {
-  severity_level: number;
-  classification: "physical" | "digital";
-}
-
-export interface ReportWithSimplifiedAnalysis {
-  report: Report;
-  analysis: SimplifiedAnalysis;
 }
 
 // Responsive hook for mobile detection
@@ -100,7 +84,8 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] =
+    useState<ReportWithAnalysis | null>(null);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -110,11 +95,9 @@ export default function GlobeView() {
   const menuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
 
-  const [latestReports, setLatestReports] = useState<
-    ReportWithSimplifiedAnalysis[]
-  >([]);
+  const [latestReports, setLatestReports] = useState<ReportWithAnalysis[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
-    LatestReport[]
+    ReportWithAnalysis[]
   >([]);
   const [reportsWithAnalysisLoading, setReportsWithAnalysisLoading] =
     useState(true);
@@ -236,275 +219,34 @@ export default function GlobeView() {
     }
   }, [userLocation, mapLoaded]);
 
-  // const DIGITAL_PROPERTIES = [
-  //   {
-  //     name: "GOOGLE",
-  //     position: [139.6917, 35.6895], // Tokyo
-  //     color: "#4285f4",
-  //     size: 28,
-  //     subsidiaries: [
-  //       {
-  //         name: "YOUTUBE",
-  //         position: [141.2917, 37.1895],
-  //         color: "#ff0000",
-  //         size: 18,
-  //       },
-  //       {
-  //         name: "GMAIL",
-  //         position: [137.9917, 33.8895],
-  //         color: "#ea4335",
-  //         size: 15,
-  //       },
-  //       {
-  //         name: "WAYMO",
-  //         position: [142.3917, 34.2895],
-  //         color: "#34a853",
-  //         size: 12,
-  //       },
-  //       {
-  //         name: "GOOGLE MAPS",
-  //         position: [136.8917, 37.3895],
-  //         color: "#34a853",
-  //         size: 16,
-  //       },
-  //       {
-  //         name: "GOOGLE MEET",
-  //         position: [142.1917, 38.1895],
-  //         color: "#fbbc04",
-  //         size: 14,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     name: "META",
-  //     position: [-74.006, 40.7128], // New York
-  //     color: "#1877f2",
-  //     size: 25,
-  //     subsidiaries: [
-  //       {
-  //         name: "FACEBOOK",
-  //         position: [-71.506, 42.3128],
-  //         color: "#1877f2",
-  //         size: 20,
-  //       },
-  //       {
-  //         name: "INSTAGRAM",
-  //         position: [-76.406, 38.1128],
-  //         color: "#e4405f",
-  //         size: 18,
-  //       },
-  //       {
-  //         name: "WHATSAPP",
-  //         position: [-71.206, 43.4128],
-  //         color: "#25d366",
-  //         size: 17,
-  //       },
-  //       {
-  //         name: "THREADS",
-  //         position: [-76.806, 37.0128],
-  //         color: "#000000",
-  //         size: 12,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     name: "ADOBE",
-  //     position: [2.3522, 48.8566], // Paris
-  //     color: "#ff0000",
-  //     size: 20,
-  //   },
-  //   {
-  //     name: "X",
-  //     position: [-122.4194, 37.7749], // San Francisco
-  //     color: "#000000",
-  //     size: 22,
-  //   },
-  //   {
-  //     name: "MICROSOFT",
-  //     position: [0.1278, 51.5074], // London
-  //     color: "#00bcf2",
-  //     size: 30,
-  //     subsidiaries: [
-  //       {
-  //         name: "TEAMS",
-  //         position: [2.8278, 53.1074],
-  //         color: "#464eb8",
-  //         size: 16,
-  //       },
-  //       {
-  //         name: "XBOX",
-  //         position: [-2.4722, 49.9074],
-  //         color: "#107c10",
-  //         size: 18,
-  //       },
-  //       {
-  //         name: "OFFICE 365",
-  //         position: [3.1278, 54.2074],
-  //         color: "#d83b01",
-  //         size: 20,
-  //       },
-  //       {
-  //         name: "LINKEDIN",
-  //         position: [-2.8278, 48.8074],
-  //         color: "#0077b5",
-  //         size: 17,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     name: "AMAZON",
-  //     position: [-43.1729, -22.9068], // Rio de Janeiro
-  //     color: "#ff9900",
-  //     size: 32,
-  //     subsidiaries: [
-  //       {
-  //         name: "AWS",
-  //         position: [-40.6729, -20.5068],
-  //         color: "#ff9900",
-  //         size: 22,
-  //       },
-  //       {
-  //         name: "PRIME VIDEO",
-  //         position: [-45.5729, -25.3068],
-  //         color: "#00a8e1",
-  //         size: 18,
-  //       },
-  //       {
-  //         name: "ALEXA",
-  //         position: [-40.8729, -25.6068],
-  //         color: "#37c5f0",
-  //         size: 16,
-  //       },
-  //       {
-  //         name: "KINDLE",
-  //         position: [-45.4729, -20.2068],
-  //         color: "#000000",
-  //         size: 14,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     name: "NETFLIX",
-  //     position: [151.2093, -33.8688], // Sydney
-  //     color: "#e50914",
-  //     size: 24,
-  //   },
-  //   // 10 Additional Companies
-  //   {
-  //     name: "APPLE",
-  //     position: [103.8198, 1.3521], // Singapore
-  //     color: "#007aff",
-  //     size: 35,
-  //     subsidiaries: [
-  //       {
-  //         name: "IPHONE",
-  //         position: [106.3198, 3.8521],
-  //         color: "#007aff",
-  //         size: 25,
-  //       },
-  //       {
-  //         name: "IMAC",
-  //         position: [101.2198, -1.2479],
-  //         color: "#5ac8fa",
-  //         size: 18,
-  //       },
-  //       {
-  //         name: "APPLE TV+",
-  //         position: [106.5198, -1.4479],
-  //         color: "#000000",
-  //         size: 16,
-  //       },
-  //       {
-  //         name: "APP STORE",
-  //         position: [101.1198, 3.6521],
-  //         color: "#007aff",
-  //         size: 20,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     name: "SPOTIFY",
-  //     position: [18.0686, 59.3293], // Stockholm
-  //     color: "#1db954",
-  //     size: 26,
-  //   },
-  //   {
-  //     name: "UBER",
-  //     position: [-99.1332, 19.4326], // Mexico City
-  //     color: "#000000",
-  //     size: 24,
-  //   },
-  //   {
-  //     name: "TESLA",
-  //     position: [13.405, 52.52], // Berlin
-  //     color: "#cc0000",
-  //     size: 28,
-  //   },
-  //   {
-  //     name: "DISCORD",
-  //     position: [37.6173, 55.7558], // Moscow
-  //     color: "#5865f2",
-  //     size: 22,
-  //   },
-  //   {
-  //     name: "TIKTOK",
-  //     position: [116.4074, 39.9042], // Beijing
-  //     color: "#fe2c55",
-  //     size: 30,
-  //   },
-  //   {
-  //     name: "SLACK",
-  //     position: [-123.1207, 49.2827], // Vancouver
-  //     color: "#4a154b",
-  //     size: 20,
-  //   },
-  //   {
-  //     name: "ZOOM",
-  //     position: [139.6503, 35.6762], // Tokyo (different area)
-  //     color: "#2d8cff",
-  //     size: 22,
-  //   },
-  //   {
-  //     name: "SHOPIFY",
-  //     position: [-75.6972, 45.4215], // Ottawa
-  //     color: "#95bf47",
-  //     size: 23,
-  //   },
-  //   {
-  //     name: "DROPBOX",
-  //     position: [12.4964, 41.9028], // Rome
-  //     color: "#0061ff",
-  //     size: 18,
-  //   },
-  //   {
-  //     name: "FIVERR",
-  //     position: [34.7818, 32.0853], // Tel Aviv
-  //     color: "#1dbf73",
-  //     size: 20,
-  //   },
-  // ];
-
   // Add report pins to the map when reports are loaded
   useEffect(() => {
     if (mapLoaded && mapRef.current && latestReports.length > 0) {
       const map = mapRef.current.getMap();
       if (map) {
         // Create GeoJSON data from reports
-        const reportFeatures = latestReports.map((report, index) => ({
-          type: "Feature" as const,
-          geometry: {
-            type: "Point" as const,
-            coordinates: [report.report.longitude, report.report.latitude],
-          },
-          properties: {
-            id: report.report.id,
-            seq: report.report.seq,
-            title: "",
-            index: index,
-            severity: report.analysis.severity_level,
-            classification: report.analysis.classification,
-          },
-        }));
+        const reportFeatures = latestReports.map((report, index) => {
+          const locale = getCurrentLocale();
+          const reportAnalysis = report.analysis.find(
+            (analysis) => analysis.language === locale
+          );
+
+          return {
+            type: "Feature" as const,
+            geometry: {
+              type: "Point" as const,
+              coordinates: [report.report.longitude, report.report.latitude],
+            },
+            properties: {
+              id: report.report.id,
+              seq: report.report.seq,
+              title: reportAnalysis?.title ?? "",
+              index: index,
+              severity: reportAnalysis?.severity_level ?? 0.0,
+              classification: reportAnalysis?.classification ?? "physical",
+            },
+          };
+        });
 
         // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
@@ -557,16 +299,6 @@ export default function GlobeView() {
             },
           });
         }
-
-        // Show/hide report pins based on selectedTab
-        // if (map.getLayer("report-pins")) {
-        //   if (selectedTab === "physical") {
-        //     map.setLayoutProperty("report-pins", "visibility", "visible");
-        //   } else {
-        //     map.setLayoutProperty("report-pins", "visibility", "none");
-        //   }
-        // }
-
         // Define click handler function
         const handleReportPinClick = (e: any) => {
           if (selectedTab === "digital") {
@@ -579,7 +311,7 @@ export default function GlobeView() {
             const feature = e.features[0];
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
-              setSelectedReport(latestReports[reportIndex].report);
+              setSelectedReport(latestReports[reportIndex]);
               flyToReport(latestReports[reportIndex].report);
               setIsCleanAppProOpen(true);
             }
@@ -620,9 +352,7 @@ export default function GlobeView() {
   }, [mapLoaded, latestReports, selectedTab, latestReportsWithAnalysis]);
 
   // Handle new report from WebSocket
-  const handleNewReport = (
-    reportWithAnalysis: ReportWithAnalysis | ReportWithSimplifiedAnalysis
-  ) => {
+  const handleNewReport = (reportWithAnalysis: ReportWithAnalysis) => {
     if (!mapRef.current) {
       console.error("mapRef not found");
       return;
@@ -636,16 +366,8 @@ export default function GlobeView() {
 
     const report = reportWithAnalysis.report;
     const analysis = reportWithAnalysis.analysis;
-    var severity_level = 0,
-      classification = "physical";
-
-    if (typeof analysis === "object" && "severity_level" in analysis) {
-      severity_level = analysis.severity_level;
-      classification = analysis.classification;
-    } else {
-      severity_level = analysis[0].severity_level;
-      classification = analysis[0].classification;
-    }
+    const severity_level = analysis[0].severity_level;
+    const classification = analysis[0].classification;
 
     if (classification !== selectedTab) {
       console.log(
@@ -762,9 +484,7 @@ export default function GlobeView() {
   };
 
   // Helper function to add a single report pin to the map
-  const addReportPinToMap = (
-    reportWithAnalysis: ReportWithAnalysis | ReportWithSimplifiedAnalysis
-  ) => {
+  const addReportPinToMap = (reportWithAnalysis: ReportWithAnalysis) => {
     if (!mapRef.current) return;
 
     const map = mapRef.current.getMap();
@@ -772,16 +492,12 @@ export default function GlobeView() {
 
     const report = reportWithAnalysis.report;
     const analysis = reportWithAnalysis.analysis;
-    var severity_level = 0,
-      title = "Report";
-
-    if (typeof analysis === "object" && "severity_level" in analysis) {
-      severity_level = analysis.severity_level;
-      title = "Report";
-    } else {
-      severity_level = analysis[0].severity_level;
-      title = analysis[0].title;
-    }
+    const locale = getCurrentLocale();
+    const reportAnalysis = analysis.find(
+      (analysis) => analysis.language === locale
+    );
+    const severity_level = reportAnalysis?.severity_level;
+    const title = reportAnalysis?.title;
 
     // Get current reports data
     const currentSource = map.getSource("reports") as any;
@@ -892,168 +608,6 @@ export default function GlobeView() {
     }
   }, [selectedTab]);
 
-  // Digital layers logic
-  useEffect(() => {
-    const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
-
-    // Helper to convert DIGITAL_PROPERTIES to GeoJSON FeatureCollection
-    // function getDigitalTerritoriesGeoJSON() {
-    //   const features = [];
-    //   for (const company of DIGITAL_PROPERTIES) {
-    //     features.push({
-    //       type: "Feature",
-    //       geometry: { type: "Point", coordinates: company.position },
-    //       properties: {
-    //         name: company.name,
-    //         color: company.color,
-    //         size: company.size,
-    //         isParent: !!company.subsidiaries,
-    //         parentName: company.name,
-    //       },
-    //     });
-    //     if (company.subsidiaries) {
-    //       for (const sub of company.subsidiaries) {
-    //         features.push({
-    //           type: "Feature",
-    //           geometry: { type: "Point", coordinates: sub.position },
-    //           properties: {
-    //             name: sub.name,
-    //             color: sub.color,
-    //             size: sub.size,
-    //             isParent: false,
-    //             parentName: company.name,
-    //           },
-    //         });
-    //       }
-    //     }
-    //   }
-    //   return { type: "FeatureCollection", features };
-    // }
-
-    // // Add digital-territories source if not present
-    // if (!map.getSource("digital-territories")) {
-    //   map.addSource("digital-territories", {
-    //     type: "geojson",
-    //     data: { type: "FeatureCollection", features: [] },
-    //   });
-    // }
-
-    // // Update source data based on mode
-    // if (selectedTab === "digital") {
-    //   const geojson = getDigitalTerritoriesGeoJSON();
-    //   (map.getSource("digital-territories") as any).setData(geojson);
-    // } else {
-    //   (map.getSource("digital-territories") as any).setData({
-    //     type: "FeatureCollection",
-    //     features: [],
-    //   });
-    // }
-
-    // Add digital-nodes layer
-    // if (!map.getLayer("digital-nodes")) {
-    //   map.addLayer({
-    //     id: "digital-nodes",
-    //     type: "circle",
-    //     source: "digital-territories",
-    //     layout: { visibility: "none" },
-    //     paint: {
-    //       "circle-radius": ["get", "size"],
-    //       "circle-color": ["get", "color"],
-    //       "circle-opacity": 0.8,
-    //       "circle-stroke-width": [
-    //         "case",
-    //         [
-    //           "in",
-    //           ["get", "name"],
-    //           ["literal", ["GOOGLE", "META", "MICROSOFT", "AMAZON", "APPLE"]],
-    //         ],
-    //         4,
-    //         2,
-    //       ],
-    //       "circle-stroke-color": [
-    //         "case",
-    //         [
-    //           "in",
-    //           ["get", "name"],
-    //           ["literal", ["GOOGLE", "META", "MICROSOFT", "AMAZON", "APPLE"]],
-    //         ],
-    //         "#ffff00",
-    //         "#ffffff",
-    //       ],
-    //       "circle-stroke-opacity": 0.8,
-    //     },
-    //   });
-    // }
-
-    // // Add digital-pulse layer
-    // if (!map.getLayer("digital-pulse")) {
-    //   map.addLayer({
-    //     id: "digital-pulse",
-    //     type: "circle",
-    //     source: "digital-territories",
-    //     layout: { visibility: "none" },
-    //     paint: {
-    //       "circle-radius": ["*", ["get", "size"], 1.8],
-    //       "circle-color": ["get", "color"],
-    //       "circle-opacity": 0.3,
-    //     },
-    //   });
-    // }
-
-    // // Add digital-labels layer
-    // if (!map.getLayer("digital-labels")) {
-    //   map.addLayer({
-    //     id: "digital-labels",
-    //     type: "symbol",
-    //     source: "digital-territories",
-    //     layout: {
-    //       visibility: "none",
-    //       "text-field": ["get", "name"],
-    //       "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-    //       "text-size": 14,
-    //       "text-transform": "uppercase",
-    //       "text-letter-spacing": 0.1,
-    //       "text-offset": [0, 3],
-    //       "text-anchor": "top",
-    //     },
-    //     paint: {
-    //       "text-color": "#ffffff",
-    //       "text-opacity": 1.0,
-    //       "text-halo-color": "#000000",
-    //       "text-halo-width": 2,
-    //       "text-halo-blur": 1,
-    //     },
-    //   });
-    // }
-
-    // // Show/hide digital layers based on selectedTab
-    // const visibility = selectedTab === "digital" ? "visible" : "none";
-    // ["digital-nodes", "digital-pulse", "digital-labels"].forEach((layerId) => {
-    //   if (map.getLayer(layerId)) {
-    //     map.setLayoutProperty(layerId, "visibility", visibility);
-    //   }
-    // });
-
-    // // Pulse animation
-    // let pulseFrame = 0;
-    // let pulseAnimId: number;
-    // function animatePulse() {
-    //   const map = mapRef.current && mapRef.current.getMap();
-    //   if (!map) return;
-    //   if (selectedTab === "digital" && map.getLayer("digital-pulse")) {
-    //     pulseFrame += 0.05;
-    //     const pulseOpacity = 0.1 + (0.3 * (Math.sin(pulseFrame) + 1)) / 2;
-    //     map.setPaintProperty("digital-pulse", "circle-opacity", pulseOpacity);
-    //   }
-    //   pulseAnimId = requestAnimationFrame(animatePulse);
-    // }
-    // if (selectedTab === "digital") animatePulse();
-    // return () => {
-    //   if (pulseAnimId) cancelAnimationFrame(pulseAnimId);
-    // };
-  }, [selectedTab]);
-
   // Digital click/hover handlers
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
@@ -1112,7 +666,7 @@ export default function GlobeView() {
       if (message.type === "reports") {
         const batch = message.data;
         const currentLocale = getCurrentLocale();
-        const filteredReports = filterAnalysesByLanguage<ReportWithAnalysis>(
+        const filteredReports = filterAnalysesByLanguage(
           batch.reports || [],
           currentLocale
         );
@@ -1141,10 +695,7 @@ export default function GlobeView() {
               longitude: report.report.longitude,
               image: report.report.image,
             },
-            analysis: {
-              severity_level: report.analysis[0].severity_level,
-              classification: report.analysis[0].classification,
-            },
+            analysis: report.analysis,
           }));
           // Remove duplicates by id (keep the newest)
           const seen = new Set();
@@ -1210,7 +761,7 @@ export default function GlobeView() {
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
-        const filteredReports = filterAnalysesByLanguage<LatestReport>(
+        const filteredReports = filterAnalysesByLanguage(
           data.reports || [],
           locale
         );
@@ -1234,12 +785,12 @@ export default function GlobeView() {
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
-        const filteredReports =
-          filterAnalysesByLanguage<ReportWithSimplifiedAnalysis>(
-            data.reports || [],
-            locale
-          );
+        const filteredReports = filterAnalysesByLanguage(
+          data.reports || [],
+          locale
+        );
         setLatestReports(filteredReports);
+        // console.log({ filteredReports });
       } catch (err) {
         console.error("Error fetching last reports:", err);
       } finally {
@@ -1395,7 +946,7 @@ export default function GlobeView() {
           reports={latestReportsWithAnalysis}
           loading={reportsWithAnalysisLoading}
           onReportClick={(report) => {
-            setSelectedReport(report.report);
+            setSelectedReport(report);
             setIsCleanAppProOpen(true);
             flyToReport(report.report);
           }}
@@ -1438,7 +989,7 @@ export default function GlobeView() {
         report={selectedReport}
         allReports={latestReportsWithAnalysis}
         onReportChange={(report) => {
-          setSelectedReport(report.report);
+          setSelectedReport(report);
           flyToReport(report.report);
         }}
       />

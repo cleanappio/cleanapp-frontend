@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
-import {
-  LatestReport,
-  Report,
-  ReportAnalysis,
-  ReportWithAnalysis,
-  ReportWithSimplifiedAnalysis,
-} from "./GlobeView";
+import { ReportAnalysis, ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { useRouter } from "next/router";
 import {
@@ -17,7 +11,7 @@ import {
 } from "@/lib/i18n";
 
 interface RecentReportsProps {
-  reportItem?: Report | null;
+  reportItem?: ReportWithAnalysis | null;
 }
 
 // Check if embedded mode is enabled
@@ -42,18 +36,18 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       const locale = getCurrentLocale();
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
-      const url = reportItem?.id
-        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`
-        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=false`;
+      const url = reportItem?.report?.id
+        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`
+        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
 
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        const filteredReports = filterAnalysesByLanguage<ReportWithAnalysis>(
+        const filteredReports = filterAnalysesByLanguage(
           data.reports || [],
           locale
         );
-        setRecentReports(filteredReports);
+        setRecentReports(filteredReports as ReportWithAnalysis[]);
       } else {
         setError(`${t("failedToFetchReports")}: ${response.status}`);
       }
@@ -80,8 +74,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const getCategory = (analysis: ReportAnalysis[]) => {
     const matchingAnalysis =
       analysis?.find((a) => a.language === locale) || analysis?.[0];
-    if (matchingAnalysis?.litter_probability > 0.5) return t("litter");
-    if (matchingAnalysis?.hazard_probability > 0.5) return t("hazard");
+    if (
+      matchingAnalysis?.litter_probability &&
+      matchingAnalysis.litter_probability > 0.5
+    )
+      return t("litter");
+    if (
+      matchingAnalysis?.hazard_probability &&
+      matchingAnalysis.hazard_probability > 0.5
+    )
+      return t("hazard");
     return t("general");
   };
 
