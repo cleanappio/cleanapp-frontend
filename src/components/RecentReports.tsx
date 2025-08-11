@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
-import { LatestReport } from "./GlobeView";
+import { ReportAnalysis, ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { useRouter } from "next/router";
 import {
@@ -11,18 +11,19 @@ import {
 } from "@/lib/i18n";
 
 interface RecentReportsProps {
-  reportItem?: LatestReport | null;
+  reportItem?: ReportWithAnalysis | null;
 }
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
 const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
-  const [recentReports, setRecentReports] = useState<LatestReport[]>([]);
+  const [recentReports, setRecentReports] = useState<ReportWithAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslations();
+  const locale = getCurrentLocale();
 
   useEffect(() => {
     fetchRecentReports();
@@ -36,8 +37,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       const url = reportItem?.report?.id
-        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`
-        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=false`;
+        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`
+        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
 
       const response = await fetch(url);
       if (response.ok) {
@@ -46,7 +47,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           data.reports || [],
           locale
         );
-        setRecentReports(filteredReports);
+        setRecentReports(filteredReports as ReportWithAnalysis[]);
       } else {
         setError(`${t("failedToFetchReports")}: ${response.status}`);
       }
@@ -70,9 +71,19 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     return t("lowPriority");
   };
 
-  const getCategory = (analysis: any) => {
-    if (analysis?.litter_probability > 0.5) return t("litter");
-    if (analysis?.hazard_probability > 0.5) return t("hazard");
+  const getCategory = (analysis: ReportAnalysis[]) => {
+    const matchingAnalysis =
+      analysis?.find((a) => a.language === locale) || analysis?.[0];
+    if (
+      matchingAnalysis?.litter_probability &&
+      matchingAnalysis.litter_probability > 0.5
+    )
+      return t("litter");
+    if (
+      matchingAnalysis?.hazard_probability &&
+      matchingAnalysis.hazard_probability > 0.5
+    )
+      return t("hazard");
     return t("general");
   };
 
@@ -133,6 +144,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         {firstRow.map((item, index) => {
           const report = item.report;
           const analysis = item.analysis;
+          const matchingAnalysis =
+            analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
           return (
             <div
@@ -143,7 +156,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 {imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={analysis?.title || t("report")}
+                    alt={matchingAnalysis?.title || t("report")}
                     width={400}
                     height={160}
                     className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
@@ -162,21 +175,21 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     </p>
                   </div>
                 )}
-                {analysis?.severity_level !== undefined &&
-                  analysis?.severity_level !== 0 && (
+                {matchingAnalysis?.severity_level !== undefined &&
+                  matchingAnalysis?.severity_level !== 0 && (
                     <span
                       className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${getPriorityColor(
-                        analysis.severity_level
+                        matchingAnalysis.severity_level
                       )} text-white text-xs font-semibold px-2 py-1 sm:px-3 sm:py-1 rounded-full`}
                     >
-                      {getPriorityText(analysis.severity_level)}
+                      {getPriorityText(matchingAnalysis.severity_level)}
                     </span>
                   )}
               </div>
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {analysis?.title ||
+                    {matchingAnalysis?.title ||
                       `${t("report")} ${report?.seq || index + 1}`}
                   </h2>
                   <p className="text-gray-500 text-xs sm:text-sm mb-2">
@@ -193,8 +206,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       WebkitBoxOrient: "vertical",
                     }}
                   >
-                    {analysis?.summary ||
-                      analysis?.description ||
+                    {matchingAnalysis?.summary ||
+                      matchingAnalysis?.description ||
                       t("noDescriptionAvailable")}
                   </p>
                 </div>
@@ -222,6 +235,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         {secondRow.map((item, index) => {
           const report = item.report;
           const analysis = item.analysis;
+          const matchingAnalysis =
+            analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
           return (
             <div
@@ -242,7 +257,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 {imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={analysis?.title || t("report")}
+                    alt={matchingAnalysis?.title || t("report")}
                     width={400}
                     height={160}
                     className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
@@ -261,21 +276,21 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     </p>
                   </div>
                 )}
-                {analysis?.severity_level !== undefined &&
-                  analysis?.severity_level !== 0 && (
+                {matchingAnalysis?.severity_level !== undefined &&
+                  matchingAnalysis?.severity_level !== 0 && (
                     <span
                       className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${getPriorityColor(
-                        analysis.severity_level
+                        matchingAnalysis.severity_level
                       )} text-white text-xs font-semibold px-2 py-1 sm:px-3 sm:py-1 rounded-full`}
                     >
-                      {getPriorityText(analysis.severity_level)}
+                      {getPriorityText(matchingAnalysis.severity_level)}
                     </span>
                   )}
               </div>
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {analysis?.title ||
+                    {matchingAnalysis?.title ||
                       `${t("report")} ${report?.seq || index + 1}`}
                   </h2>
                   <p className="text-gray-500 text-xs sm:text-sm mb-2">
@@ -292,8 +307,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       WebkitBoxOrient: "vertical",
                     }}
                   >
-                    {analysis?.summary ||
-                      analysis?.description ||
+                    {matchingAnalysis?.summary ||
+                      matchingAnalysis?.description ||
                       t("noDescriptionAvailable")}
                   </p>
                 </div>
@@ -395,11 +410,15 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-red-600">
                     {
-                      recentReports.filter(
-                        (r) =>
-                          r.analysis?.severity_level &&
-                          r.analysis?.severity_level >= 0.7
-                      ).length
+                      recentReports.filter((r) => {
+                        const matchingAnalysis =
+                          r.analysis?.find((a) => a.language === locale) ||
+                          r.analysis?.[0];
+                        return (
+                          matchingAnalysis?.severity_level &&
+                          matchingAnalysis.severity_level >= 0.7
+                        );
+                      }).length
                     }
                   </div>
                   <div className="text-xs text-gray-500">
@@ -409,12 +428,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-yellow-600">
                     {
-                      recentReports.filter(
-                        (r) =>
-                          r.analysis?.severity_level &&
-                          r.analysis?.severity_level >= 0.4 &&
-                          r.analysis?.severity_level < 0.7
-                      ).length
+                      recentReports.filter((r) => {
+                        const matchingAnalysis =
+                          r.analysis?.find((a) => a.language === locale) ||
+                          r.analysis?.[0];
+                        return (
+                          matchingAnalysis?.severity_level &&
+                          matchingAnalysis.severity_level >= 0.4 &&
+                          matchingAnalysis.severity_level < 0.7
+                        );
+                      }).length
                     }
                   </div>
                   <div className="text-xs text-gray-500">
@@ -426,11 +449,15 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               <div className="text-center">
                 <div className="text-base sm:text-lg font-semibold text-green-600">
                   {
-                    recentReports.filter(
-                      (r) =>
-                        r.analysis?.litter_probability &&
-                        r.analysis?.litter_probability > 0.5
-                    ).length
+                    recentReports.filter((r) => {
+                      const matchingAnalysis =
+                        r.analysis?.find((a) => a.language === locale) ||
+                        r.analysis?.[0];
+                      return (
+                        matchingAnalysis?.litter_probability &&
+                        matchingAnalysis.litter_probability > 0.5
+                      );
+                    }).length
                   }
                 </div>
                 <div className="text-xs text-gray-500">{t("litterIssues")}</div>

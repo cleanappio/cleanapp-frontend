@@ -2,7 +2,7 @@ import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
-import { LatestReport, Report } from "@/components/GlobeView";
+import { ReportWithAnalysis } from "@/components/GlobeView";
 import { X } from "lucide-react";
 import {
   filterAnalysesByLanguage,
@@ -13,9 +13,9 @@ import {
 interface CleanAppProModalProps {
   isOpen: boolean;
   onClose: () => void;
-  report: Report | null;
-  allReports: LatestReport[];
-  onReportChange: (report: LatestReport) => void;
+  report: ReportWithAnalysis | null;
+  allReports: ReportWithAnalysis[];
+  onReportChange: (report: ReportWithAnalysis) => void;
   showLatestReports?: boolean;
 }
 
@@ -36,39 +36,6 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reportItem, setReportItem] = useState<LatestReport | null>(null);
-
-  useEffect(() => {
-    console.log("report", report);
-
-    if (report?.seq) {
-      getReportItem(report.seq);
-    }
-  }, [report]);
-
-  const getReportItem = async (seq: number) => {
-    try {
-      const locale = getCurrentLocale();
-      setLoading(true);
-      setError(null);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${seq}&lang=${locale}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // Filter analyses by language and convert to single analysis format
-        const filteredData = filterAnalysesByLanguage([data], locale);
-        setReportItem(filteredData[0] || data);
-      } else {
-        console.error(`${t("failedToFetchReport")}: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error fetching report:", error);
-      setError(t("failedToFetchReport"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Mobile detection
   useEffect(() => {
@@ -136,10 +103,10 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
                     <p>Loading...</p>
                   </div>
                 ) : (
-                  <ReportOverview reportItem={reportItem} />
+                  <ReportOverview reportItem={report} />
                 )}
                 <div className="mt-6">
-                  {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
+                  {!isEmbeddedMode && <RecentReports reportItem={report} />}
                 </div>
               </div>
             </div>
@@ -159,8 +126,8 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
 
               {/* Content */}
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
-                <ReportOverview reportItem={reportItem} />
-                {!isEmbeddedMode && <RecentReports reportItem={reportItem} />}
+                <ReportOverview reportItem={report} />
+                {!isEmbeddedMode && <RecentReports reportItem={report} />}
               </div>
             </div>
 
@@ -171,7 +138,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
                 loading={false}
                 onReportClick={onReportChange}
                 isModalActive={true}
-                selectedReport={reportItem}
+                selectedReport={report}
               />
             )}
           </>

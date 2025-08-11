@@ -83,6 +83,7 @@ export const translations: {
     // Dashboard
     overview: "Overview",
     recentActivity: "Recent Activity",
+    recentReports: "Recent Reports",
     quickActions: "Quick Actions",
     statistics: "Statistics",
     charts: "Charts",
@@ -554,6 +555,7 @@ export const translations: {
     // Dashboard
     overview: "Pregled",
     recentActivity: "Nedavna aktivnost",
+    recentReports: "Nedavni izveštaji",
     quickActions: "Brze akcije",
     statistics: "Statistika",
     charts: "Grafikoni",
@@ -1017,7 +1019,7 @@ export function getCurrentLocale(): string {
 export function filterAnalysesByLanguage(
   reportsWithAnalyses: any[],
   currentLocale: string = "en"
-): any[] {
+) {
   return reportsWithAnalyses;
   // Handle edge cases where input is not an array
   if (!Array.isArray(reportsWithAnalyses)) {

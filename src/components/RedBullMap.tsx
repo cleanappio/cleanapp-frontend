@@ -25,33 +25,7 @@ import {
 import LatestReports from "./LatestReports";
 import CustomDashboardReport from "./CustomDashboardReport";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
-
-// Report interface from MontenegroMap
-export interface Report {
-  report: {
-    seq: number;
-    timestamp: string;
-    id: string;
-    latitude: number;
-    longitude: number;
-    image?: number[] | string | null; // Report image as bytes array, URL string, or null
-  };
-  analysis: {
-    seq: number;
-    source: string;
-    analysis_text: string;
-    analysis_image: number[] | string | null; // Can be bytes array, URL string, or null
-    title: string;
-    description: string;
-    litter_probability: number;
-    hazard_probability: number;
-    severity_level: number;
-    summary: string;
-    language: string;
-    created_at: string;
-    updated_at: string;
-  };
-}
+import { ReportWithAnalysis } from "./GlobeView";
 
 // Custom hook to handle map center changes
 function MapController({ center }: { center: [number, number] }) {
@@ -75,9 +49,10 @@ export default function RedBullMap({
 }: RedBullMapProps) {
   const { isAuthenticated, isLoading, getBrandReports } = useAuthStore();
   const [isClient, setIsClient] = useState(false);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportWithAnalysis[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] =
+    useState<ReportWithAnalysis | null>(null);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const { t } = useTranslations();
@@ -115,7 +90,7 @@ export default function RedBullMap({
   };
 
   // Handle report click from LatestReports
-  const handleReportClick = (report: Report) => {
+  const handleReportClick = (report: ReportWithAnalysis) => {
     if (!isAuthenticated) {
       setAuthError(t("authenticationRequired"));
       return;
@@ -278,7 +253,7 @@ export default function RedBullMap({
         {/* Individual report markers */}
         {reports.map((report) => {
           // Calculate severity-based styling using the same logic as GlobeView
-          const severity = report.analysis?.severity_level || 0.0; // Use actual severity from analysis
+          const severity = report.analysis[0]?.severity_level || 0.0; // Use actual severity from analysis
 
           // Use the same color interpolation as GlobeView
           const color = getColorByValue(severity);
