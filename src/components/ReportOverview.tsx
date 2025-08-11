@@ -124,11 +124,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
   const report = reportItem;
   // const analysis = fullReport?.analysis[0];
-  const analysis = fullReport?.analysis.map((analysis: any) => {
-    if (analysis.language === locale) {
-      return analysis;
-    }
-  });
+  const analysis = fullReport?.analysis.find(
+    (analysis: any) => analysis.language === locale
+  );
 
   return (
     <div className="border rounded-md bg-white shadow-md">
