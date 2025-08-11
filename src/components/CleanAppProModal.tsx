@@ -2,7 +2,7 @@ import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect } from "react";
-import { LatestReport, Report, ReportAnalysis } from "@/components/GlobeView";
+import { ReportWithAnalysis } from "@/components/GlobeView";
 import { X } from "lucide-react";
 import {
   filterAnalysesByLanguage,
@@ -13,9 +13,9 @@ import {
 interface CleanAppProModalProps {
   isOpen: boolean;
   onClose: () => void;
-  report: Report | null;
-  allReports: LatestReport[];
-  onReportChange: (report: LatestReport) => void;
+  report: ReportWithAnalysis | null;
+  allReports: ReportWithAnalysis[];
+  onReportChange: (report: ReportWithAnalysis) => void;
   showLatestReports?: boolean;
 }
 
@@ -138,10 +138,7 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
                 loading={false}
                 onReportClick={onReportChange}
                 isModalActive={true}
-                selectedReport={{
-                  report: report as Report,
-                  analysis: {} as ReportAnalysis,
-                }}
+                selectedReport={report}
               />
             )}
           </>

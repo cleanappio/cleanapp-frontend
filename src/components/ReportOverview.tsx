@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import router from "next/router";
-import { Report, ReportWithAnalysis } from "./GlobeView";
+import { ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import {
   useTranslations,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/i18n";
 
 interface ReportOverviewProps {
-  reportItem?: Report | null;
+  reportItem?: ReportWithAnalysis | null;
 }
 
 // Check if embedded mode is enabled
@@ -26,7 +26,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   const [title, setTitle] = useState<string>("");
 
   useEffect(() => {
-    if (reportItem?.seq) {
+    if (reportItem?.report?.seq) {
       fetchFullReport();
     } else {
       setFullReport(null);
@@ -35,22 +35,19 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   }, [reportItem]);
 
   const fetchFullReport = async () => {
-    if (!reportItem?.seq) return;
+    if (!reportItem?.report?.seq) return;
 
     setLoading(true);
     setError(null);
     try {
       const locale = getCurrentLocale();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.seq}&lang=${locale}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.report.seq}&lang=${locale}`
       );
       if (response.ok) {
         const data = await response.json();
         // Filter analyses by language and convert to single analysis format
-        const filteredData = filterAnalysesByLanguage<ReportWithAnalysis>(
-          [data],
-          locale
-        );
+        const filteredData = filterAnalysesByLanguage([data], locale);
         setFullReport(filteredData[0] || data);
       } else {
         setError(`${t("failedToFetchReport")}: ${response.status}`);
@@ -71,8 +68,8 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           (analysis: any) => analysis.language === locale
         )?.title || fullReport.analysis[0].title
       );
-    } else if (reportItem?.id) {
-      setTitle(`${t("report")} ${reportItem.seq}`);
+    } else if (reportItem?.report?.seq) {
+      setTitle(`${t("report")} ${reportItem.report.seq}`);
     } else {
       setTitle("");
     }
@@ -81,12 +78,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   useEffect(() => {
     if (fullReport?.report?.image) {
       setImageUrl(getDisplayableImage(fullReport.report.image));
-    } else if (reportItem?.image) {
-      setImageUrl(getDisplayableImage(reportItem.image));
+    } else if (reportItem?.report?.image) {
+      setImageUrl(getDisplayableImage(reportItem.report.image));
     } else {
       setImageUrl(null);
     }
-  }, [fullReport?.report?.image, reportItem?.image, fullReport?.analysis]);
+  }, [fullReport?.report?.image, reportItem?.report?.image]);
 
   const getGradientColor = (value: number, maxValue: number = 1) => {
     const percentage = (value / maxValue) * 100;
@@ -137,7 +134,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          {title || `${t("report")} ${report.seq}`}
+          {title || `${t("report")} ${report.report.seq}`}
         </h1>
       </div>
 
@@ -187,13 +184,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                       {t("location")}
                     </h3>
                     <a
-                      href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                      href={getGoogleMapsUrl(
+                        report.report.latitude,
+                        report.report.longitude
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
                     >
-                      {report.latitude.toFixed(4)},{" "}
-                      {report.longitude.toFixed(4)}
+                      {report.report.latitude.toFixed(4)},{" "}
+                      {report.report.longitude.toFixed(4)}
                     </a>
                   </div>
 
@@ -203,7 +203,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                       {t("time")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {formatTime(report.timestamp)}
+                      {formatTime(report.report.timestamp)}
                     </p>
                   </div>
                 </div>
@@ -314,19 +314,23 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               <div>
                 <h3 className="font-semibold text-sm mb-1">{t("location")}</h3>
                 <a
-                  href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                  href={getGoogleMapsUrl(
+                    report.report.latitude,
+                    report.report.longitude
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-300 hover:text-blue-200 text-sm underline"
                 >
-                  {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+                  {report.report.latitude.toFixed(4)},{" "}
+                  {report.report.longitude.toFixed(4)}
                 </a>
               </div>
 
               {/* Time */}
               <div>
                 <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
-                <p className="text-sm">{formatTime(report.timestamp)}</p>
+                <p className="text-sm">{formatTime(report.report.timestamp)}</p>
               </div>
 
               {/* Litter Probability */}

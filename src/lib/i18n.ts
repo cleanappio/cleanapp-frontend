@@ -1,7 +1,3 @@
-import {
-  ReportWithAnalysis,
-  ReportWithSimplifiedAnalysis,
-} from "@/components/GlobeView";
 import { useRouter } from "next/router";
 
 // Translation keys and their English values
@@ -87,6 +83,7 @@ export const translations: {
     // Dashboard
     overview: "Overview",
     recentActivity: "Recent Activity",
+    recentReports: "Recent Reports",
     quickActions: "Quick Actions",
     statistics: "Statistics",
     charts: "Charts",
@@ -558,6 +555,7 @@ export const translations: {
     // Dashboard
     overview: "Pregled",
     recentActivity: "Nedavna aktivnost",
+    recentReports: "Nedavni izveštaji",
     quickActions: "Brze akcije",
     statistics: "Statistika",
     charts: "Grafikoni",
@@ -1018,9 +1016,10 @@ export function getCurrentLocale(): string {
 }
 
 // Function to filter analyses by language and convert to LatestReport format
-export function filterAnalysesByLanguage<
-  T extends ReportWithAnalysis | ReportWithSimplifiedAnalysis
->(reportsWithAnalyses: T[], currentLocale: string = "en"): T[] {
+export function filterAnalysesByLanguage(
+  reportsWithAnalyses: any[],
+  currentLocale: string = "en"
+) {
   return reportsWithAnalyses;
   // Handle edge cases where input is not an array
   if (!Array.isArray(reportsWithAnalyses)) {

@@ -1,13 +1,13 @@
 import React from "react";
-import { LatestReport, Report } from "./GlobeView";
+import { ReportWithAnalysis } from "./GlobeView";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 
 interface LatestReportsProps {
-  reports: LatestReport[];
+  reports: ReportWithAnalysis[];
   loading: boolean;
-  onReportClick: (report: LatestReport) => void;
+  onReportClick: (report: ReportWithAnalysis) => void;
   isModalActive?: boolean;
-  selectedReport?: LatestReport | null;
+  selectedReport?: ReportWithAnalysis | null;
 }
 
 const LatestReports: React.FC<LatestReportsProps> = ({
