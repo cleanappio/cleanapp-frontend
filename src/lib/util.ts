@@ -123,3 +123,14 @@ export function stringToLatLonColor(key: string): LatLongColor {
 
   return { lat, lon, color };
 }
+
+export function getBrandName(brandName: string | undefined): string {
+  if (!brandName) {
+    return "other";
+  }
+  const blackList = ["", "null", "unknown"];
+  if (blackList.includes(brandName.toLowerCase())) {
+    return "other";
+  }
+  return brandName;
+}
