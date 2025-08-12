@@ -254,7 +254,7 @@ export default function GlobeView() {
             color = brandColor;
             latitude = lat;
             longitude = lon;
-            title = brandDisplayName;
+            title = `${brandDisplayName} (${report.analysis.length})`;
           }
 
           if (!isDigital) {
@@ -734,10 +734,9 @@ export default function GlobeView() {
         reportsByBrand
       ).map(([brandName, reports]) => {
         const { lat, lon, color } = stringToLatLonColor(brandName);
-        const brandDisplayname =
-          brandName === "other"
-            ? "Other"
-            : reports[0].analysis[0].brand_display_name ?? brandName;
+        const { brandDisplayName } = getBrandNameDisplay(
+          reports[0].analysis[0]
+        );
         const reportCount = reports.length;
 
         // Calculate size based on report count
@@ -751,7 +750,7 @@ export default function GlobeView() {
         }
 
         return {
-          name: brandDisplayname,
+          name: `${brandDisplayName} (${reportCount})`,
           position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
           color: color,
           size: size,
