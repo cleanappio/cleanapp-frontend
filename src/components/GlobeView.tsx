@@ -10,7 +10,11 @@ import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
-import { getColorByValue, stringToLatLonColor } from "@/lib/util";
+import {
+  getBrandNameDisplay,
+  getColorByValue,
+  stringToLatLonColor,
+} from "@/lib/util";
 import {
   useTranslations,
   getCurrentLocale,
@@ -240,7 +244,8 @@ export default function GlobeView() {
           const isDigital = reportAnalysis?.classification === "digital";
 
           if (isDigital) {
-            const brandName = reportAnalysis?.brand_name ?? "other";
+            const { brandName, brandDisplayName } =
+              getBrandNameDisplay(reportAnalysis);
             const {
               lat,
               lon,
@@ -249,7 +254,7 @@ export default function GlobeView() {
             color = brandColor;
             latitude = lat;
             longitude = lon;
-            title = brandName;
+            title = `${brandDisplayName} (${report.analysis.length})`;
           }
 
           if (!isDigital) {
@@ -345,7 +350,7 @@ export default function GlobeView() {
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
               setSelectedReport(latestReports[reportIndex]);
-              flyToReport(latestReports[reportIndex].report);
+              flyToReport(latestReports[reportIndex]);
               setIsCleanAppProOpen(true);
             }
           }
@@ -403,7 +408,7 @@ export default function GlobeView() {
       const severity_level = analysis[0].severity_level;
       const classification = analysis[0].classification;
       const isPhysical = classification === "physical";
-      const brandName = analysis[0].brand_name ?? "other";
+      const { brandName } = getBrandNameDisplay(analysis[0]);
       const { lat, lon, color } = stringToLatLonColor(brandName);
       const latLon: [number, number] = isPhysical
         ? [report.longitude, report.latitude]
@@ -717,7 +722,7 @@ export default function GlobeView() {
       // Group reports by brand name
       const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
       digitalReports.forEach((report) => {
-        const brandName = report.analysis[0].brand_name ?? "other";
+        const { brandName } = getBrandNameDisplay(report.analysis[0]);
         if (!reportsByBrand[brandName]) {
           reportsByBrand[brandName] = [];
         }
@@ -729,9 +734,10 @@ export default function GlobeView() {
         reportsByBrand
       ).map(([brandName, reports]) => {
         const { lat, lon, color } = stringToLatLonColor(brandName);
+        const { brandDisplayName } = getBrandNameDisplay(
+          reports[0].analysis[0]
+        );
         const reportCount = reports.length;
-
-        // console.log(brandName, reportCount);
 
         // Calculate size based on report count
         let size = 10;
@@ -744,15 +750,13 @@ export default function GlobeView() {
         }
 
         return {
-          name: brandName,
+          name: `${brandDisplayName} (${reportCount})`,
           position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
           color: color,
           size: size,
           subsidiaries: [],
         };
       });
-
-      // console.log("digitalReportsByBrand", digitalReportsByBrand);
 
       for (const company of digitalReportsByBrand) {
         features.push({
@@ -959,10 +963,6 @@ export default function GlobeView() {
 
     ws.onopen = function () {
       console.log("=== WebSocket Connected ===");
-      console.log(
-        "Connected to report listener at:",
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`
-      );
     };
 
     ws.onmessage = function (event) {
@@ -974,10 +974,6 @@ export default function GlobeView() {
         const filteredReports = filterAnalysesByLanguage(
           batch.reports || [],
           currentLocale
-        );
-
-        console.log(
-          `Received ${batch.count} reports, filtered to ${filteredReports.length} for locale ${currentLocale} (seq ${batch.from_seq}-${batch.to_seq})`
         );
 
         // Fly to new report location and animate the pin (if any filtered reports)
@@ -1114,12 +1110,22 @@ export default function GlobeView() {
   }, [selectedTab]);
 
   // Add this helper inside GlobeView
-  const flyToReport = (report: Report) => {
+  const flyToReport = (reportWithAnalysis: ReportWithAnalysis) => {
+    const report = reportWithAnalysis.report;
+    const analysis = reportWithAnalysis.analysis;
+    const classification = analysis[0].classification;
+    const isPhysical = classification === "physical";
+    const { brandName } = getBrandNameDisplay(analysis[0]);
+    const { lat, lon, color } = stringToLatLonColor(brandName);
+    const lonLat: [number, number] = isPhysical
+      ? [report.longitude, report.latitude]
+      : [lon, lat];
+
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     if (!map) return;
     map.flyTo({
-      center: [report.longitude, report.latitude],
+      center: lonLat,
       zoom: map.getZoom() || 2.5,
       duration: 2000,
       essential: true,
@@ -1261,7 +1267,7 @@ export default function GlobeView() {
           onReportClick={(report) => {
             setSelectedReport(report);
             setIsCleanAppProOpen(true);
-            flyToReport(report.report);
+            flyToReport(report);
           }}
           isModalActive={true}
           selectedReport={null}
@@ -1303,7 +1309,7 @@ export default function GlobeView() {
         allReports={latestReportsWithAnalysis}
         onReportChange={(report) => {
           setSelectedReport(report);
-          flyToReport(report.report);
+          flyToReport(report);
         }}
       />
     </div>
