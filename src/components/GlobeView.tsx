@@ -10,7 +10,11 @@ import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
-import { getBrandName, getColorByValue, stringToLatLonColor } from "@/lib/util";
+import {
+  getBrandNameDisplay,
+  getColorByValue,
+  stringToLatLonColor,
+} from "@/lib/util";
 import {
   useTranslations,
   getCurrentLocale,
@@ -240,11 +244,8 @@ export default function GlobeView() {
           const isDigital = reportAnalysis?.classification === "digital";
 
           if (isDigital) {
-            const brandName = getBrandName(reportAnalysis?.brand_name);
-            const brandDisplayname =
-              brandName === "other"
-                ? "Other"
-                : reportAnalysis?.brand_display_name ?? brandName;
+            const { brandName, brandDisplayName } =
+              getBrandNameDisplay(reportAnalysis);
             const {
               lat,
               lon,
@@ -253,7 +254,7 @@ export default function GlobeView() {
             color = brandColor;
             latitude = lat;
             longitude = lon;
-            title = brandDisplayname;
+            title = brandDisplayName;
           }
 
           if (!isDigital) {
@@ -407,7 +408,7 @@ export default function GlobeView() {
       const severity_level = analysis[0].severity_level;
       const classification = analysis[0].classification;
       const isPhysical = classification === "physical";
-      const brandName = getBrandName(analysis[0].brand_name);
+      const { brandName } = getBrandNameDisplay(analysis[0]);
       const { lat, lon, color } = stringToLatLonColor(brandName);
       const latLon: [number, number] = isPhysical
         ? [report.longitude, report.latitude]
@@ -721,7 +722,7 @@ export default function GlobeView() {
       // Group reports by brand name
       const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
       digitalReports.forEach((report) => {
-        const brandName = getBrandName(report.analysis[0].brand_name);
+        const { brandName } = getBrandNameDisplay(report.analysis[0]);
         if (!reportsByBrand[brandName]) {
           reportsByBrand[brandName] = [];
         }
@@ -1115,7 +1116,7 @@ export default function GlobeView() {
     const analysis = reportWithAnalysis.analysis;
     const classification = analysis[0].classification;
     const isPhysical = classification === "physical";
-    const brandName = getBrandName(analysis[0].brand_name);
+    const { brandName } = getBrandNameDisplay(analysis[0]);
     const { lat, lon, color } = stringToLatLonColor(brandName);
     const lonLat: [number, number] = isPhysical
       ? [report.longitude, report.latitude]
