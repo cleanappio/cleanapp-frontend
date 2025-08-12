@@ -38,6 +38,7 @@ case ${OPT} in
       NEXT_PUBLIC_AREAS_API_URL="https://devareas.cleanapp.io"
       NEXT_PUBLIC_REF_API_URL="http://dev.api.cleanapp.io:8080/write_referral"
       NEXT_PUBLIC_REPORT_PROCESSING_API_URL="https://devprocessing.cleanapp.io"
+      NEXT_PUBLIC_EMAIL_API_URL="https://devemail.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       break
       ;;
@@ -53,6 +54,7 @@ case ${OPT} in
       NEXT_PUBLIC_AREAS_API_URL="https://areas.cleanapp.io"
       NEXT_PUBLIC_REF_API_URL="http://api.cleanapp.io:8080/write_referral"
       NEXT_PUBLIC_REPORT_PROCESSING_API_URL="https://processing.cleanapp.io"
+      NEXT_PUBLIC_EMAIL_API_URL="https://email.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       break
       ;;
