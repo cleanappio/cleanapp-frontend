@@ -4,13 +4,13 @@ import Map from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
 import LatestReports from "./LatestReports";
-import { getColorByValue } from "@/lib/util";
+import { getColorByValue, stringToLatLonColor } from "@/lib/util";
 import {
   useTranslations,
   getCurrentLocale,
@@ -231,16 +231,44 @@ export default function GlobeView() {
             (analysis) => analysis.language === locale
           );
 
+          // Default value to digital lat, lon
+          var latitude = 0,
+            longitude = 0,
+            color = "",
+            title = "";
+
+          const isDigital = reportAnalysis?.classification === "digital";
+
+          if (isDigital) {
+            const brandName = reportAnalysis?.brand_name ?? "other";
+            const {
+              lat,
+              lon,
+              color: brandColor,
+            } = stringToLatLonColor(brandName);
+            color = brandColor;
+            latitude = lat;
+            longitude = lon;
+            title = brandName;
+          }
+
+          if (!isDigital) {
+            latitude = report.report.latitude;
+            longitude = report.report.longitude;
+            title = reportAnalysis?.title ?? "";
+          }
+
           return {
             type: "Feature" as const,
             geometry: {
               type: "Point" as const,
-              coordinates: [report.report.longitude, report.report.latitude],
+              coordinates: [longitude, latitude],
             },
             properties: {
+              color: isDigital ? color : undefined,
               id: report.report.id,
               seq: report.report.seq,
-              title: reportAnalysis?.title ?? "",
+              title: title,
               index: index,
               severity: reportAnalysis?.severity_level ?? 0.0,
               classification: reportAnalysis?.classification ?? "physical",
@@ -284,15 +312,20 @@ export default function GlobeView() {
                 13.2,
               ],
               "circle-color": [
-                "interpolate",
-                ["linear"],
-                ["get", "severity"],
-                0.0,
-                getColorByValue(0.0), // green for low severity
-                0.5,
-                getColorByValue(0.5), // yellow for medium severity
-                0.9,
-                getColorByValue(0.9), // red for high severity
+                "case",
+                ["==", ["get", "classification"], "digital"],
+                ["get", "color"],
+                [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "severity"],
+                  0.0,
+                  getColorByValue(0.0), // green for low severity
+                  0.5,
+                  getColorByValue(0.5), // yellow for medium severity
+                  0.9,
+                  getColorByValue(0.9), // red for high severity
+                ],
               ],
               "circle-stroke-width": 2,
               "circle-stroke-color": "#ffffff",
@@ -349,139 +382,148 @@ export default function GlobeView() {
         };
       }
     }
-  }, [mapLoaded, latestReports, selectedTab, latestReportsWithAnalysis]);
+  }, [mapLoaded, latestReports, selectedTab]);
 
   // Handle new report from WebSocket
-  const handleNewReport = (reportWithAnalysis: ReportWithAnalysis) => {
-    if (!mapRef.current) {
-      console.error("mapRef not found");
-      return;
-    }
-
-    const map = mapRef.current.getMap();
-    if (!map) {
-      console.error("map not found");
-      return;
-    }
-
-    const report = reportWithAnalysis.report;
-    const analysis = reportWithAnalysis.analysis;
-    const severity_level = analysis[0].severity_level;
-    const classification = analysis[0].classification;
-
-    if (classification !== selectedTab) {
-      console.log(
-        "Skipping report with classification:",
-        classification,
-        "selectedTab:",
-        selectedTab
-      );
-      return;
-    }
-
-    // Fly to the new report location
-    if (!isEmbeddedMode) {
-      map.flyTo({
-        center: [report.longitude, report.latitude],
-        zoom: map.getZoom() || 2.5,
-        duration: 2000,
-        essential: true,
-      });
-    }
-    // Create a temporary animated pin for the new report
-    const animatedPinId = `animated-pin-${report.seq}`;
-
-    // Add animated pin source
-    if (!map.getSource(animatedPinId)) {
-      map.addSource(animatedPinId, {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: [report.longitude, report.latitude],
-              },
-              properties: {
-                severity: severity_level || 1,
-              },
-            },
-          ],
-        },
-      });
-    }
-
-    // Add animated pin layer
-    if (!map.getLayer(animatedPinId)) {
-      map.addLayer({
-        id: animatedPinId,
-        type: "circle",
-        source: animatedPinId,
-        paint: {
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["get", "severity"],
-            0.0,
-            6.6,
-            0.9,
-            13.2,
-          ],
-          "circle-color": [
-            "interpolate",
-            ["linear"],
-            ["get", "severity"],
-            0.0,
-            getColorByValue(0.0),
-            0.5,
-            getColorByValue(0.5),
-            0.9,
-            getColorByValue(0.9),
-          ],
-          "circle-stroke-width": 3,
-          "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.9,
-        },
-      });
-    }
-
-    // Animate the pin for 10 seconds
-    let startTime = Date.now();
-    const animationDuration = 10000; // 10 seconds
-
-    function animatePin() {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / animationDuration, 1);
-
-      // Create pulsing effect (expand/shrink)
-      const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
-      const baseRadius = severity_level && severity_level >= 3 ? 13.2 : 6.6;
-      const currentRadius = baseRadius * pulseScale;
-
-      // Update the pin radius
-      map.setPaintProperty(animatedPinId, "circle-radius", currentRadius);
-
-      // Continue animation if not finished
-      if (progress < 1) {
-        requestAnimationFrame(animatePin);
-      } else {
-        // Remove the animated pin after animation completes
-        if (map.getLayer(animatedPinId)) {
-          map.removeLayer(animatedPinId);
-        }
-        if (map.getSource(animatedPinId)) {
-          map.removeSource(animatedPinId);
-        }
-
-        addReportPinToMap(reportWithAnalysis);
+  const handleNewReport = useCallback(
+    (reportWithAnalysis: ReportWithAnalysis) => {
+      if (!mapRef.current) {
+        console.error("mapRef not found");
+        return;
       }
-    }
 
-    // Start the animation
-    requestAnimationFrame(animatePin);
-  };
+      const map = mapRef.current.getMap();
+      if (!map) {
+        console.error("map not found");
+        return;
+      }
+
+      const report = reportWithAnalysis.report;
+      const analysis = reportWithAnalysis.analysis;
+      const severity_level = analysis[0].severity_level;
+      const classification = analysis[0].classification;
+      const isPhysical = classification === "physical";
+      const brandName = analysis[0].brand_name ?? "other";
+      const { lat, lon, color } = stringToLatLonColor(brandName);
+      const latLon: [number, number] = isPhysical
+        ? [report.longitude, report.latitude]
+        : [lon, lat];
+
+      if (classification !== selectedTab) {
+        console.log(
+          "Skipping report with classification:",
+          classification,
+          "selectedTab:",
+          selectedTab
+        );
+        return;
+      }
+      if (!isEmbeddedMode) {
+        map.flyTo({
+          center: latLon,
+          zoom: map.getZoom() || 2.5,
+          duration: 2000,
+          essential: true,
+        });
+      }
+      // Create a temporary animated pin for the new report
+      const animatedPinId = `animated-pin-${report.seq}`;
+
+      // Add animated pin source
+      if (!map.getSource(animatedPinId)) {
+        map.addSource(animatedPinId, {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: latLon,
+                },
+                properties: {
+                  severity: severity_level || 1,
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      // Add animated pin layer
+      if (!map.getLayer(animatedPinId)) {
+        map.addLayer({
+          id: animatedPinId,
+          type: "circle",
+          source: animatedPinId,
+          paint: {
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["get", "severity"],
+              0.0,
+              6.6,
+              0.9,
+              13.2,
+            ],
+            "circle-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "severity"],
+              0.0,
+              getColorByValue(0.0),
+              0.5,
+              getColorByValue(0.5),
+              0.9,
+              getColorByValue(0.9),
+            ],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.9,
+          },
+        });
+      }
+
+      // Animate the pin for 10 seconds
+      let startTime = Date.now();
+      const animationDuration = 10000; // 10 seconds
+
+      function animatePin() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / animationDuration, 1);
+
+        // Create pulsing effect (expand/shrink)
+        const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
+        const baseRadius = severity_level && severity_level >= 3 ? 13.2 : 6.6;
+        const currentRadius = baseRadius * pulseScale;
+
+        // Update the pin radius
+        map.setPaintProperty(animatedPinId, "circle-radius", currentRadius);
+
+        // Continue animation if not finished
+        if (progress < 1) {
+          requestAnimationFrame(animatePin);
+        } else {
+          // Remove the animated pin after animation completes
+          if (map.getLayer(animatedPinId)) {
+            map.removeLayer(animatedPinId);
+          }
+          if (map.getSource(animatedPinId)) {
+            map.removeSource(animatedPinId);
+          }
+
+          if (selectedTab === "physical") {
+            addReportPinToMap(reportWithAnalysis);
+          }
+        }
+      }
+
+      // Start the animation
+      requestAnimationFrame(animatePin);
+    },
+    [selectedTab]
+  );
 
   // Helper function to add a single report pin to the map
   const addReportPinToMap = (reportWithAnalysis: ReportWithAnalysis) => {
@@ -651,6 +693,264 @@ export default function GlobeView() {
     };
   }, [selectedTab]);
 
+  // Digital layers logic
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map) return;
+
+    // Helper to convert DIGITAL_PROPERTIES to GeoJSON FeatureCollection
+    function getDigitalTerritoriesGeoJSON() {
+      const features = [];
+      const digitalReports = latestReports.filter(
+        (report) => report.analysis[0].classification === "digital"
+      );
+
+      // Define interface for company object
+      interface CompanyData {
+        name: string;
+        position: number[];
+        color: string;
+        size: number;
+        subsidiaries: any[];
+      }
+
+      // Group reports by brand name
+      const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
+      digitalReports.forEach((report) => {
+        const brandName = report.analysis[0].brand_name ?? "other";
+        if (!reportsByBrand[brandName]) {
+          reportsByBrand[brandName] = [];
+        }
+        reportsByBrand[brandName].push(report);
+      });
+
+      // Convert to array with one entry per brand
+      const digitalReportsByBrand: CompanyData[] = Object.entries(
+        reportsByBrand
+      ).map(([brandName, reports]) => {
+        const { lat, lon, color } = stringToLatLonColor(brandName);
+        const reportCount = reports.length;
+
+        // console.log(brandName, reportCount);
+
+        // Calculate size based on report count
+        let size = 10;
+        if (reportCount >= 50) {
+          size += 5;
+        } else if (reportCount >= 3) {
+          size += 3;
+        } else if (reportCount >= 2) {
+          size += 2;
+        }
+
+        return {
+          name: brandName,
+          position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
+          color: color,
+          size: size,
+          subsidiaries: [],
+        };
+      });
+
+      // console.log("digitalReportsByBrand", digitalReportsByBrand);
+
+      for (const company of digitalReportsByBrand) {
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: company.position },
+          properties: {
+            name: company.name,
+            color: company.color,
+            size: company.size,
+            isParent: !!company.subsidiaries,
+            parentName: company.name,
+          },
+        });
+        if (company.subsidiaries) {
+          for (const sub of company.subsidiaries) {
+            features.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: sub.position },
+              properties: {
+                name: sub.name,
+                color: sub.color,
+                size: sub.size,
+                isParent: false,
+                parentName: company.name,
+              },
+            });
+          }
+        }
+      }
+      return { type: "FeatureCollection", features };
+    }
+
+    // Add digital-territories source if not present
+    if (!map.getSource("digital-territories")) {
+      map.addSource("digital-territories", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
+    // Update source data based on mode
+    if (selectedTab === "digital") {
+      const geojson = getDigitalTerritoriesGeoJSON();
+      (map.getSource("digital-territories") as any).setData(geojson);
+    } else {
+      (map.getSource("digital-territories") as any).setData({
+        type: "FeatureCollection",
+        features: [],
+      });
+    }
+
+    // Add digital-nodes layer
+    if (!map.getLayer("digital-nodes")) {
+      map.addLayer({
+        id: "digital-nodes",
+        type: "circle",
+        source: "digital-territories",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": ["get", "size"],
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.8,
+          "circle-stroke-width": [
+            "case",
+            [
+              "in",
+              ["get", "name"],
+              ["literal", ["GOOGLE", "META", "MICROSOFT", "AMAZON", "APPLE"]],
+            ],
+            4,
+            2,
+          ],
+          "circle-stroke-color": [
+            "case",
+            [
+              "in",
+              ["get", "name"],
+              ["literal", ["GOOGLE", "META", "MICROSOFT", "AMAZON", "APPLE"]],
+            ],
+            "#ffff00",
+            "#ffffff",
+          ],
+          "circle-stroke-opacity": 0.8,
+        },
+      });
+    }
+
+    // Add digital-pulse layer
+    if (!map.getLayer("digital-pulse")) {
+      map.addLayer({
+        id: "digital-pulse",
+        type: "circle",
+        source: "digital-territories",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": ["*", ["get", "size"], 1.8],
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.3,
+        },
+      });
+    }
+
+    // Add digital-labels layer
+    if (!map.getLayer("digital-labels")) {
+      map.addLayer({
+        id: "digital-labels",
+        type: "symbol",
+        source: "digital-territories",
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "name"],
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 14,
+          "text-transform": "uppercase",
+          "text-letter-spacing": 0.1,
+          "text-offset": [0, 3],
+          "text-anchor": "top",
+        },
+        paint: {
+          "text-color": "#ffffff",
+          "text-opacity": 1.0,
+          "text-halo-color": "#000000",
+          "text-halo-width": 2,
+          "text-halo-blur": 1,
+        },
+      });
+    }
+
+    // Show/hide digital layers based on selectedTab
+    const visibility = selectedTab === "digital" ? "visible" : "none";
+    ["digital-nodes", "digital-pulse", "digital-labels"].forEach((layerId) => {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visibility);
+      }
+    });
+
+    // Pulse animation
+    let pulseFrame = 0;
+    let pulseAnimId: number;
+    function animatePulse() {
+      const map = mapRef.current && mapRef.current.getMap();
+      if (!map) return;
+      if (selectedTab === "digital" && map.getLayer("digital-pulse")) {
+        pulseFrame += 0.05;
+        const pulseOpacity = 0.1 + (0.3 * (Math.sin(pulseFrame) + 1)) / 2;
+        map.setPaintProperty("digital-pulse", "circle-opacity", pulseOpacity);
+      }
+      pulseAnimId = requestAnimationFrame(animatePulse);
+    }
+    if (selectedTab === "digital") animatePulse();
+    return () => {
+      if (pulseAnimId) cancelAnimationFrame(pulseAnimId);
+    };
+  }, [latestReports, selectedTab]);
+
+  // Digital click/hover handlers
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map) return;
+    function onNodeClick(e: any) {
+      if (!map) return;
+      const feature = e.features[0];
+      const companyName = feature.properties.parentName;
+      const isParent = feature.properties.isParent;
+      // Implement your expand/collapse logic here
+      // Example: toggle expandedCompanies state
+    }
+    function setPointer() {
+      if (map) map.getCanvas().style.cursor = "pointer";
+    }
+    function unsetPointer() {
+      if (map) map.getCanvas().style.cursor = "";
+    }
+    if (map?.getLayer("digital-nodes")) {
+      map.on("click", "digital-nodes", onNodeClick);
+      map.on("mouseenter", "digital-nodes", setPointer);
+      map.on("mouseleave", "digital-nodes", unsetPointer);
+    }
+    if (map?.getLayer("digital-pulse")) {
+      map.on("click", "digital-pulse", onNodeClick);
+      map.on("mouseenter", "digital-pulse", setPointer);
+      map.on("mouseleave", "digital-pulse", unsetPointer);
+    }
+    return () => {
+      if (!map) return;
+      if (map?.getLayer("digital-nodes")) {
+        map.off("click", "digital-nodes", onNodeClick);
+        map.off("mouseenter", "digital-nodes", setPointer);
+        map.off("mouseleave", "digital-nodes", unsetPointer);
+      }
+      if (map?.getLayer("digital-pulse")) {
+        map.off("click", "digital-pulse", onNodeClick);
+        map.off("mouseenter", "digital-pulse", setPointer);
+        map.off("mouseleave", "digital-pulse", unsetPointer);
+      }
+    };
+  }, [selectedTab]);
+
   useEffect(() => {
     // Connect to the WebSocket endpoint
     const ws = new WebSocket(
@@ -658,11 +958,16 @@ export default function GlobeView() {
     );
 
     ws.onopen = function () {
-      console.log("Connected to report listener");
+      console.log("=== WebSocket Connected ===");
+      console.log(
+        "Connected to report listener at:",
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`
+      );
     };
 
     ws.onmessage = function (event) {
       const message = JSON.parse(event.data);
+
       if (message.type === "reports") {
         const batch = message.data;
         const currentLocale = getCurrentLocale();
@@ -709,30 +1014,36 @@ export default function GlobeView() {
         });
 
         // for displaying on Latest Reports modal
-        setLatestReportsWithAnalysis((prev) => {
-          // const newReports = filteredReports;
-          // Remove duplicates by id (keep the newest)
+        if (
+          filteredReports.length > 0 &&
+          filteredReports[0].analysis[0] &&
+          selectedTab === filteredReports[0].analysis[0].classification
+        ) {
+          setLatestReportsWithAnalysis((prev) => {
+            // const newReports = filteredReports;
+            // Remove duplicates by id (keep the newest)
 
-          const newReports = filteredReports.map((report) => ({
-            report: {
-              seq: report.report.seq,
-              timestamp: report.report.timestamp,
-              id: report.report.id,
-              latitude: report.report.latitude,
-              longitude: report.report.longitude,
-              image: report.report.image,
-            },
-            analysis: report.analysis[0],
-          }));
-          const seen = new Set();
-          const combined = [...newReports, ...prev].filter((item) => {
-            const seq = item.report?.seq;
-            if (seen.has(seq)) return false;
-            seen.add(seq);
-            return true;
+            const newReports = filteredReports.map((report) => ({
+              report: {
+                seq: report.report.seq,
+                timestamp: report.report.timestamp,
+                id: report.report.id,
+                latitude: report.report.latitude,
+                longitude: report.report.longitude,
+                image: report.report.image,
+              },
+              analysis: report.analysis[0],
+            }));
+            const seen = new Set();
+            const combined = [...newReports, ...prev].filter((item) => {
+              const seq = item.report?.seq;
+              if (seen.has(seq)) return false;
+              seen.add(seq);
+              return true;
+            });
+            return combined;
           });
-          return combined;
-        });
+        }
       }
     };
 
@@ -746,9 +1057,10 @@ export default function GlobeView() {
 
     // Cleanup on unmount
     return () => {
+      console.log("Closing WebSocket connection");
       ws.close();
     };
-  }, []);
+  }, [handleNewReport, selectedTab]);
 
   // Fetch last 10 reports on mount
   useEffect(() => {
@@ -780,8 +1092,9 @@ export default function GlobeView() {
     async function fetchLastReports() {
       try {
         const locale = getCurrentLocale();
+        const full_data = selectedTab === "digital" ? true : false;
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=false&classification=${selectedTab}`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=${full_data}&classification=${selectedTab}`
         );
         if (!res.ok) throw new Error("Failed to fetch last reports");
         const data = await res.json();
