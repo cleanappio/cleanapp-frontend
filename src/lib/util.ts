@@ -1,3 +1,4 @@
+import { ReportAnalysis } from "@/components/GlobeView";
 import { sha256 } from "js-sha256";
 
 /**
@@ -122,4 +123,23 @@ export function stringToLatLonColor(key: string): LatLongColor {
     .join("")}`;
 
   return { lat, lon, color };
+}
+
+export function getBrandNameDisplay(reportAnalysis: ReportAnalysis): {
+  brandName: string;
+  brandDisplayName: string;
+} {
+  const brandName = reportAnalysis?.brand_name;
+  if (!brandName) {
+    return { brandName: "other", brandDisplayName: "Other" };
+  }
+
+  const blackList = ["", "null", "unknown"];
+  if (blackList.includes(brandName.toLowerCase())) {
+    return { brandName: "other", brandDisplayName: "Other" };
+  }
+  return {
+    brandName,
+    brandDisplayName: reportAnalysis?.brand_display_name ?? brandName,
+  };
 }
