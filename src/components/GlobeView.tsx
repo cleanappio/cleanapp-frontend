@@ -340,16 +340,21 @@ export default function GlobeView() {
         }
         // Define click handler function
         const handleReportPinClick = (e: any) => {
-          // if (selectedTab === "digital") {
-          //   console.log("ignoring digital");
-          //   e.preventDefault();
-          //   return;
-          // }
-
           if (e.features && e.features[0]) {
             const feature = e.features[0];
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
+              const analysis = latestReports[reportIndex].analysis;
+              if (selectedTab === "digital" && analysis.length > 1) {
+                const { brandName } = getBrandNameDisplay(analysis[0]);
+
+                if (brandName === "other") {
+                  console.log("ignoring other report");
+                  e.preventDefault();
+                  return;
+                }
+              }
+
               setSelectedReport(latestReports[reportIndex]);
               flyToReport(latestReports[reportIndex]);
               setIsCleanAppProOpen(true);
@@ -418,7 +423,7 @@ export default function GlobeView() {
         return;
       }
       const { brandName } = getBrandNameDisplay(reportAnalysis);
-      const { lat, lon, color } = stringToLatLonColor(brandName);
+      const { lat, lon } = stringToLatLonColor(brandName);
       const latLon: [number, number] = isPhysical
         ? [report.longitude, report.latitude]
         : [lon, lat];
