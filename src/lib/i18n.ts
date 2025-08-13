@@ -476,6 +476,7 @@ export const translations: {
     drawnAreasCreatedForSubscription: "{count} drawn area{plural} created",
     drawnAreas: "Drawn Areas",
     custom: "Custom",
+    moreReports: "More Reports",
   },
   me: {
     // Common
@@ -953,6 +954,7 @@ export const translations: {
     drawnAreasCreatedForSubscription: "{count} nacrtana zona{plural} kreirana",
     drawnAreas: "Nacrtane zone",
     custom: "Prilagođeno",
+    moreReports: "Više izveštaja",
   },
 };
 
