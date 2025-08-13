@@ -9,6 +9,7 @@ import {
   getCurrentLocale,
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
+import { getBrandNameDisplay } from "@/lib/util";
 
 interface RecentReportsProps {
   reportItem?: ReportWithAnalysis | null;
@@ -34,7 +35,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // Otherwise, fetch the latest reports
       let url = "";
       if (reportItem?.analysis[0].classification === "digital") {
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.analysis[0].brand_name}&n=10&lang=${locale}`;
+        const reportAnalysis = reportItem.analysis.find(
+          (analysis) => analysis.language === locale
+        );
+        if (!reportAnalysis) {
+          console.error("No report analysis found");
+          return;
+        }
+
+        const { brandName } = getBrandNameDisplay(reportAnalysis);
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brandName}&n=10&lang=${locale}`;
       } else {
         if (reportItem?.report?.id) {
           url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`;
