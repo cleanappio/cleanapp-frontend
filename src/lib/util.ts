@@ -122,6 +122,10 @@ export function stringToLatLonColor(key: string): LatLongColor {
     .map((n) => n.toString(16).padStart(2, "0"))
     .join("")}`;
 
+  if (key === "other") {
+    return { lat, lon, color: "#666666" };
+  }
+
   return { lat, lon, color };
 }
 
