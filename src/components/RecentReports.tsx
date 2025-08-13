@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
 import { ReportAnalysis, ReportWithAnalysis } from "./GlobeView";
@@ -25,10 +25,6 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const { t } = useTranslations();
   const locale = getCurrentLocale();
 
-  useEffect(() => {
-    fetchRecentReports();
-  }, [reportItem]);
-
   const fetchRecentReports = async () => {
     setLoading(true);
     setError(null);
@@ -36,9 +32,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       const locale = getCurrentLocale();
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
-      const url = reportItem?.report?.id
-        ? `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`
-        : `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+      let url = "";
+      if (reportItem?.analysis[0].classification === "digital") {
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.analysis[0].brand_name}&n=10&lang=${locale}`;
+      } else {
+        if (reportItem?.report?.id) {
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+        } else {
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+        }
+      }
 
       const response = await fetch(url);
       if (response.ok) {
@@ -51,6 +54,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       } else {
         setError(`${t("failedToFetchReports")}: ${response.status}`);
       }
+
+      // // create a mock api call with a timeout of 2 seconds
+      // await new Promise((resolve) => setTimeout(resolve, 2000));
+      // console.log("recent reports fetched");
     } catch (error) {
       console.error("Error fetching recent reports:", error);
       setError(t("failedToFetchRecentReports"));
@@ -58,6 +65,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRecentReports();
+  }, [reportItem]);
 
   const getPriorityColor = (severityLevel: number) => {
     if (severityLevel >= 0.7) return "bg-red-500";
@@ -211,15 +222,25 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       t("noDescriptionAvailable")}
                   </p>
                 </div>
-                <div className="flex items-center justify-between mt-auto">
-                  <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
-                    {getCategory(analysis)}
-                  </span>
-                  <span className="text-xs px-2 py-1 sm:px-3 sm:py-1 text-gray-500">
-                    {report?.latitude?.toFixed(4)},{" "}
-                    {report?.longitude?.toFixed(4)}
-                  </span>
-                </div>
+                {matchingAnalysis?.classification !== "digital" && (
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
+                      {getCategory(analysis)}
+                    </span>
+                    <span className="text-xs px-2 py-1 sm:px-3 sm:py-1 text-gray-500">
+                      {report?.latitude?.toFixed(4)},{" "}
+                      {report?.longitude?.toFixed(4)}
+                    </span>
+                  </div>
+                )}
+
+                {matchingAnalysis?.classification === "digital" && (
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
+                      {matchingAnalysis?.brand_display_name?.toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 {!isEmbeddedMode && (
                   <button
                     className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
@@ -243,9 +264,18 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
               key={report?.seq || index}
               className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden"
             >
+              {!isEmbeddedMode && (
+                <button
+                  className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg absolute z-20 bottom-4 right-4 left-4"
+                  onClick={() => router.push("/pricing")}
+                >
+                  {t("subscribe")}
+                </button>
+              )}
+
               {/* Blur overlay */}
               <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="text-center">
+                <div className="flex flex-col items-center justify-center text-center">
                   <FaLock className="text-white text-2xl mb-2" />
                   <p className="text-white text-sm font-medium">
                     {t("upgradeToPro")}
@@ -334,6 +364,21 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           );
         })}
       </div>
+
+      {recentReports.length > 6 && (
+        <div className="text-center bg-white mt-8 p-4 rounded-md">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-row items-center justify-center gap-1">
+              <span className="bg-gray-500 rounded-full w-2 h-2"></span>
+              <span className="bg-gray-500 rounded-full w-2 h-2"></span>
+              <span className="bg-gray-500 rounded-full w-2 h-2"></span>
+            </div>
+            <p className="text-gray-500 text-xs sm:text-sm">
+              {recentReports.length - 6} {t("moreReports")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* AI Insights Card - Keep the premium features section - Mobile responsive */}
       <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

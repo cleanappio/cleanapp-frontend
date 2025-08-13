@@ -43,6 +43,7 @@ export interface ReportAnalysis {
   description?: string;
   litter_probability?: number;
   hazard_probability?: number;
+  digital_bug_probability?: number;
   severity_level: number;
   summary?: string;
   language?: string;
@@ -339,11 +340,11 @@ export default function GlobeView() {
         }
         // Define click handler function
         const handleReportPinClick = (e: any) => {
-          if (selectedTab === "digital") {
-            console.log("ignoring digital");
-            e.preventDefault();
-            return;
-          }
+          // if (selectedTab === "digital") {
+          //   console.log("ignoring digital");
+          //   e.preventDefault();
+          //   return;
+          // }
 
           if (e.features && e.features[0]) {
             const feature = e.features[0];
