@@ -409,7 +409,15 @@ export default function GlobeView() {
       const severity_level = analysis[0].severity_level;
       const classification = analysis[0].classification;
       const isPhysical = classification === "physical";
-      const { brandName } = getBrandNameDisplay(analysis[0]);
+      const locale = getCurrentLocale();
+      const reportAnalysis = analysis.find(
+        (analysis) => analysis.language === locale
+      );
+      if (!reportAnalysis) {
+        console.error("No report analysis found");
+        return;
+      }
+      const { brandName } = getBrandNameDisplay(reportAnalysis);
       const { lat, lon, color } = stringToLatLonColor(brandName);
       const latLon: [number, number] = isPhysical
         ? [report.longitude, report.latitude]
@@ -722,8 +730,16 @@ export default function GlobeView() {
 
       // Group reports by brand name
       const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
+      const locale = getCurrentLocale();
       digitalReports.forEach((report) => {
-        const { brandName } = getBrandNameDisplay(report.analysis[0]);
+        const reportAnalysis = report.analysis.find(
+          (analysis) => analysis.language === locale
+        );
+        if (!reportAnalysis) {
+          console.error("No report analysis found");
+          return;
+        }
+        const { brandName } = getBrandNameDisplay(reportAnalysis);
         if (!reportsByBrand[brandName]) {
           reportsByBrand[brandName] = [];
         }
@@ -735,8 +751,12 @@ export default function GlobeView() {
         reportsByBrand
       ).map(([brandName, reports]) => {
         const { lat, lon, color } = stringToLatLonColor(brandName);
+        const reportAnalysis = reports[0].analysis.find(
+          (analysis) => analysis.language === locale
+        );
+
         const { brandDisplayName } = getBrandNameDisplay(
-          reports[0].analysis[0]
+          reportAnalysis || reports[0].analysis[0]
         );
         const reportCount = reports.length;
 
@@ -1116,7 +1136,15 @@ export default function GlobeView() {
     const analysis = reportWithAnalysis.analysis;
     const classification = analysis[0].classification;
     const isPhysical = classification === "physical";
-    const { brandName } = getBrandNameDisplay(analysis[0]);
+    const locale = getCurrentLocale();
+    const reportAnalysis = analysis.find(
+      (analysis) => analysis.language === locale
+    );
+    if (!reportAnalysis) {
+      console.error("No report analysis found");
+      return;
+    }
+    const { brandName } = getBrandNameDisplay(reportAnalysis);
     const { lat, lon, color } = stringToLatLonColor(brandName);
     const lonLat: [number, number] = isPhysical
       ? [report.longitude, report.latitude]
