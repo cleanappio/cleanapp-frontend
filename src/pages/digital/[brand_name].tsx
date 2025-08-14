@@ -1,3 +1,4 @@
+"use client";
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import { useReportsByBrand } from "@/hooks/useReportsByBrand";
@@ -7,6 +8,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import { FaLock } from "react-icons/fa";
 import { getBrandNameDisplay } from "@/lib/util";
+import { ReportAnalysis, ReportWithAnalysis } from "../../components/GlobeView";
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
@@ -68,17 +70,25 @@ export default function DigitalBrandPage() {
   const firstRow = visibleReports.slice(0, 3);
   const secondRow = visibleReports.slice(3, 6);
 
-  const reportAnalysis = brandReports[0].analysis.find(
-    (a) => a.language === locale
-  );
+  const getAnalysis = (
+    brandReports: ReportWithAnalysis[]
+  ): ReportAnalysis | undefined => {
+    if (brandReports.length === 0) {
+      return undefined;
+    }
+    return (
+      brandReports[0].analysis.find((a) => a.language === locale) ||
+      brandReports[0].analysis[0]
+    );
+  };
 
   return (
     <div className="bg-gray-50">
       <PageHeader />
       <div className="max-w-7xl mx-auto my-6 sm:my-8 px-6 md:px-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-4">
-          {reportAnalysis &&
-            getBrandNameDisplay(reportAnalysis).brandDisplayName}
+          {getAnalysis(brandReports) &&
+            getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName}
         </h1>
         <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
           {t("recentReports")} ({brandReports.length})
