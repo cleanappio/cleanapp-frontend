@@ -1,11 +1,11 @@
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { LogOut } from 'lucide-react';
-import { useAuthStore } from '@/lib/auth-store';
-import { useTranslations } from '@/lib/i18n';
-import { useRouter } from 'next/router';
-import LanguageSwitcher from './LanguageSwitcher';
+import React from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { useAuthStore } from "@/lib/auth-store";
+import { useTranslations } from "@/lib/i18n";
+import { useRouter } from "next/router";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const PageHeader: React.FC = () => {
   const router = useRouter();
@@ -25,7 +25,7 @@ const PageHeader: React.FC = () => {
             <Link href="/" className="flex items-center">
               <Image
                 src="/cleanapp-logo.png"
-                alt={t('cleanAppLogo')}
+                alt={t("cleanAppLogo")}
                 width={200}
                 height={60}
                 className="h-12 w-auto"
@@ -44,7 +44,7 @@ const PageHeader: React.FC = () => {
                     <button
                       onClick={handleLogout}
                       className="text-gray-500 hover:text-gray-700"
-                      title={t('logout')}
+                      title={t("logout")}
                     >
                       <LogOut className="h-5 w-5" />
                     </button>
@@ -55,13 +55,13 @@ const PageHeader: React.FC = () => {
                       href="/login"
                       className="text-gray-500 hover:text-gray-700 text-sm font-medium"
                     >
-                      {t('signIn')}
+                      {t("signIn")}
                     </Link>
                     <Link
                       href="/signup"
                       className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
                     >
-                      {t('getStarted')}
+                      {t("getStarted")}
                     </Link>
                   </div>
                 )}
@@ -74,4 +74,4 @@ const PageHeader: React.FC = () => {
   );
 };
 
-export default PageHeader; 
+export default PageHeader;

@@ -6,6 +6,7 @@ import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { FaLock } from "react-icons/fa";
+import { getBrandNameDisplay } from "@/lib/util";
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
@@ -67,13 +68,21 @@ export default function DigitalBrandPage() {
   const firstRow = visibleReports.slice(0, 3);
   const secondRow = visibleReports.slice(3, 6);
 
+  const reportAnalysis = brandReports[0].analysis.find(
+    (a) => a.language === locale
+  );
+
   return (
     <div className="bg-gray-50">
       <PageHeader />
       <div className="max-w-7xl mx-auto my-6 sm:my-8 px-6 md:px-8">
-        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
-          {t("recentReports")}
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-4">
+          {reportAnalysis &&
+            getBrandNameDisplay(reportAnalysis).brandDisplayName}
         </h1>
+        <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
+          {t("recentReports")} ({brandReports.length})
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {firstRow.map((item, index) => {
             const report = item.report;
