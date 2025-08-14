@@ -8,6 +8,8 @@ import {
   getCurrentLocale,
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
+import { getBrandNameDisplay } from "@/lib/util";
+import Link from "next/link";
 
 interface ReportOverviewProps {
   reportItem?: ReportWithAnalysis | null;
@@ -356,6 +358,28 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                 <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
                 <p className="text-sm">{formatTime(report.report.timestamp)}</p>
               </div>
+
+              {isDigital && (
+                <>
+                  <Link
+                    href={`/digital/${getBrandNameDisplay(analysis).brandName}`}
+                    className="text-blue-300 hover:text-blue-400 text-sm underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <div>
+                      <h3 className="font-semibold text-sm mb-1">
+                        {t("brandDashboard")}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {getBrandNameDisplay(analysis).brandDisplayName}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </>
+              )}
 
               {!isDigital && (
                 <>
