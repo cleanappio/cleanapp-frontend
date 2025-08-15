@@ -445,6 +445,13 @@ export default function GlobeView() {
           essential: true,
         });
       }
+
+      // Update latestReports state to include the new report
+      setLatestReports((prev) => {
+        const newReports = [reportWithAnalysis, ...prev];
+        return newReports;
+      });
+
       // Create a temporary animated pin for the new report
       const animatedPinId = `animated-pin-${report.seq}`;
 
@@ -562,7 +569,10 @@ export default function GlobeView() {
 
     // Get current reports data
     const currentSource = map.getSource("reports") as any;
-    if (!currentSource) return;
+    if (!currentSource) {
+      console.error("❌ Reports source not found when adding new pin");
+      return;
+    }
 
     const currentData = currentSource._data || {
       type: "FeatureCollection",
@@ -581,7 +591,7 @@ export default function GlobeView() {
         seq: report.seq,
         title: title,
         severity: severity_level || 0,
-        index: currentData.features.length, // Add to end of list
+        index: 0, // New reports are added at index 0
       },
     };
 
