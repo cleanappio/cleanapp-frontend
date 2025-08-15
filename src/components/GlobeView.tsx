@@ -1139,6 +1139,10 @@ export default function GlobeView() {
   const flyToReport = (reportWithAnalysis: ReportWithAnalysis) => {
     const report = reportWithAnalysis.report;
     const analysis = reportWithAnalysis.analysis;
+    if (analysis.length === 0) {
+      console.error("No report analysis found");
+      return;
+    }
     const classification = analysis[0].classification;
     const isPhysical = classification === "physical";
     const locale = getCurrentLocale();
