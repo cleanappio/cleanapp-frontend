@@ -100,6 +100,7 @@ export const translations: {
     failed: "Failed",
     cleanAppReport: "CleanApp Report",
     lastUpdated: "Last updated",
+    viewReport: "View Report",
 
     // Montenegro specific
     montenegro: "Montenegro",
@@ -573,6 +574,7 @@ export const translations: {
     failed: "Neuspešno",
     cleanAppReport: "CleanApp izveštaj",
     lastUpdated: "Poslednji put ažurirano",
+    viewReport: "Pogledaj izveštaj",
 
     // Montenegro specific
     montenegro: "Crna Gora",
