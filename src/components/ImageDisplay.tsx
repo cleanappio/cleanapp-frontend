@@ -17,7 +17,7 @@ export default function ImageDisplay({
 }) {
   return (
     <Dialog>
-      <DialogTrigger asChild>
+      <DialogTrigger className="flex justify-center items-center w-full">
         <Image
           src={imageUrl}
           alt={`t("report")`}
@@ -31,7 +31,7 @@ export default function ImageDisplay({
           }}
         />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-screen overflow-scroll p-0">
+      <DialogContent className="max-w-[90%] sm:max-w-md max-h-[90%] overflow-scroll p-0">
         <Image
           src={imageUrl}
           alt={`t("report")`}
