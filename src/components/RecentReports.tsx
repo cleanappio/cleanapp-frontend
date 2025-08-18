@@ -70,7 +70,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // console.log("recent reports fetched");
     } catch (error) {
       console.error("Error fetching recent reports:", error);
-      setError(t("failedToFetchRecentReports"));
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError(t("failedToFetchReports"));
+      }
     } finally {
       setLoading(false);
     }
@@ -136,7 +140,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           <div className="text-center">
             <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
             <p className="text-red-600 font-medium text-sm sm:text-base">
-              {t("errorLoadingReports")}
+              {t("failedToFetchReport")}
             </p>
             <p className="text-sm text-red-500 mt-1">{error}</p>
             <button
