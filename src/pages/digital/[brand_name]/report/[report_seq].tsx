@@ -8,6 +8,7 @@ import { getBrandNameDisplay } from "@/lib/util";
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import Link from "next/link";
+import ImageDisplay from "@/components/ImageDisplay";
 
 export default function ReportDetailPage() {
   const router = useRouter();
@@ -93,12 +94,7 @@ export default function ReportDetailPage() {
         <nav className="mb-6">
           <ol className="flex items-center space-x-2 text-sm text-gray-500">
             <li>
-              <button
-                onClick={() => router.push("/digital")}
-                className="hover:text-blue-600 transition-colors"
-              >
-                Digital
-              </button>
+              <span>Digital</span>
             </li>
             <li>/</li>
             <li>
@@ -136,11 +132,7 @@ export default function ReportDetailPage() {
             {/* Report Image */}
             {imageUrl && (
               <div className="mb-6">
-                <img
-                  src={imageUrl}
-                  alt={matchingAnalysis?.title || "Report image"}
-                  className="w-full h-64 object-cover rounded-lg"
-                />
+                <ImageDisplay imageUrl={imageUrl} />
               </div>
             )}
 
