@@ -9,6 +9,7 @@ import {
   getCurrentLocale,
   useTranslations,
 } from "@/lib/i18n";
+import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 
 interface CleanAppProModalProps {
   isOpen: boolean;
@@ -133,12 +134,12 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
 
             {/* Latest Reports in fixed position outside scrollable container - Hidden on mobile */}
             {showLatestReports && (
-              <LatestReports
+              <CollapsibleLatestReports
                 reports={allReports}
                 loading={false}
                 onReportClick={onReportChange}
                 isModalActive={true}
-                selectedReport={report}
+                report={report}
               />
             )}
           </>

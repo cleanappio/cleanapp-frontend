@@ -1,5 +1,5 @@
 import React from "react";
-import { ReportWithAnalysis } from "./GlobeView";
+import { ReportWithAnalysis, useIsMobile } from "./GlobeView";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 
 interface LatestReportsProps {
@@ -19,12 +19,13 @@ const LatestReports: React.FC<LatestReportsProps> = ({
 }) => {
   const { t } = useTranslations();
   const locale = getCurrentLocale();
+  const isMobile = useIsMobile();
 
   return (
     <div
-      className={`absolute left-4 bottom-8 p-2 h-[40vh] flex flex-col ${
-        isModalActive ? "z-60" : "z-10"
-      }`}
+      className={`absolute left-4 bottom-8 p-2 ${
+        isMobile ? "h-[50vh] max-h-[400px]" : "h-[40vh]"
+      } flex flex-col ${isModalActive ? "z-60" : "z-10"}`}
     >
       {/* Create translucent div with a gradient */}
       <div className="h-full bg-gradient-to-b from-[#14213d] to-black text-white px-4 py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[300px]">
