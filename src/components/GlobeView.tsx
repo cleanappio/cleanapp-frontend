@@ -22,6 +22,7 @@ import {
 } from "@/lib/i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
+import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 
 // Type for report data
 export interface Report {
@@ -61,7 +62,7 @@ export interface ReportWithAnalysis {
 }
 
 // Responsive hook for mobile detection
-function useIsMobile() {
+export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -1308,19 +1309,17 @@ export default function GlobeView() {
       </div>
 
       {/* Latest Reports - only show when modal is not open and not on mobile */}
-      {!isCleanAppProOpen && !isMobile && (
-        <LatestReports
-          reports={latestReportsWithAnalysis}
-          loading={reportsWithAnalysisLoading}
-          onReportClick={(report) => {
-            setSelectedReport(report);
-            setIsCleanAppProOpen(true);
-            flyToReport(report);
-          }}
-          isModalActive={true}
-          selectedReport={null}
-        />
-      )}
+      <CollapsibleLatestReports
+        reports={latestReportsWithAnalysis}
+        loading={reportsWithAnalysisLoading}
+        onReportClick={(report) => {
+          setSelectedReport(report);
+          setIsCleanAppProOpen(true);
+          flyToReport(report);
+        }}
+        isModalActive={true}
+        report={selectedReport}
+      />
 
       {/* Bottom center logo */}
       {!isEmbeddedMode && (
