@@ -5,7 +5,7 @@ import { useReportsByBrand } from "@/hooks/useReportsByBrand";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { useRouter } from "next/router";
 import { getBrandNameDisplay } from "@/lib/util";
-import { ReportAnalysis, ReportWithAnalysis } from "../../components/GlobeView";
+import { ReportAnalysis, ReportWithAnalysis } from "@/components/GlobeView";
 import PublicBrandDashboard from "@/components/brand/PublicBrandDashboard";
 import { useEffect, useState } from "react";
 import SubscribedBrandDashboard from "@/components/brand/SubscribedBrandDashboard";

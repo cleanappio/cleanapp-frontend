@@ -4,6 +4,8 @@ import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import Image from "next/image";
 import { ReportWithAnalysis } from "../../components/GlobeView";
+import Link from "next/link";
+import ImageDisplay from "../ImageDisplay";
 
 export default function SubscribedBrandDashboard({
   brandReports,
@@ -12,7 +14,6 @@ export default function SubscribedBrandDashboard({
 }) {
   const locale = getCurrentLocale();
   const { t } = useTranslations();
-
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -29,20 +30,7 @@ export default function SubscribedBrandDashboard({
             >
               <div className="relative">
                 {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={matchingAnalysis?.title || t("report")}
-                    width={400}
-                    height={160}
-                    className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
-                    onError={(e) => {
-                      console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden"
-                      );
-                    }}
-                  />
+                  <ImageDisplay imageUrl={imageUrl} className="h-40 sm:h-40" />
                 ) : (
                   <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                     <p className="text-gray-500 text-sm sm:text-sm">
@@ -81,6 +69,16 @@ export default function SubscribedBrandDashboard({
                   <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
                     {matchingAnalysis?.brand_display_name?.toUpperCase()}
                   </span>
+                </div>
+
+                <div className="mt-4">
+                  <Link
+                    href={`/digital/${matchingAnalysis?.brand_name}/report/${report?.seq}`}
+                  >
+                    <button className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium w-full">
+                      {t("viewReport")}
+                    </button>
+                  </Link>
                 </div>
               </div>
             </div>
