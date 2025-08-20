@@ -98,8 +98,10 @@ export default function GlobeView() {
   } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [mapStyleLoaded, setMapStyleLoaded] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapRef | null>(null);
+  const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [latestReports, setLatestReports] = useState<ReportWithAnalysis[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
@@ -108,6 +110,239 @@ export default function GlobeView() {
   const [reportsWithAnalysisLoading, setReportsWithAnalysisLoading] =
     useState(true);
   const [reportsLoading, setReportsLoading] = useState(true);
+
+  // Safe map access utility function
+  const getSafeMap = () => {
+    if (!mapRef.current || !mapLoaded || !mapStyleLoaded) {
+      return null;
+    }
+
+    try {
+      const map = mapRef.current.getMap();
+      if (!map || !map.isStyleLoaded()) {
+        return null;
+      }
+      return map;
+    } catch (error) {
+      console.warn("Map access error:", error);
+      return null;
+    }
+  };
+
+  // Retry mechanism for map operations
+  const retryMapOperation = async <T,>(
+    operation: () => T,
+    maxRetries: number = 3,
+    delay: number = 100
+  ): Promise<T | null> => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const map = getSafeMap();
+        if (map) {
+          return operation();
+        }
+
+        if (i < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      } catch (error) {
+        console.warn(`Map operation attempt ${i + 1} failed:`, error);
+        if (i < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+    return null;
+  };
+
+  // Safe map source and layer management
+  const safeAddSource = (id: string, source: any) => {
+    return retryMapOperation(() => {
+      const map = getSafeMap();
+      if (map && !map.getSource(id)) {
+        map.addSource(id, source);
+        return true;
+      }
+      return false;
+    });
+  };
+
+  const safeAddLayer = (layer: any) => {
+    return retryMapOperation(() => {
+      const map = getSafeMap();
+      if (map && !map.getLayer(layer.id)) {
+        map.addLayer(layer);
+        return true;
+      }
+      return false;
+    });
+  };
+
+  const safeRemoveLayer = (id: string) => {
+    return retryMapOperation(() => {
+      const map = getSafeMap();
+      if (map && map.getLayer(id)) {
+        map.removeLayer(id);
+        return true;
+      }
+      return false;
+    });
+  };
+
+  const safeRemoveSource = (id: string) => {
+    return retryMapOperation(() => {
+      const map = getSafeMap();
+      if (map && map.getSource(id)) {
+        map.removeSource(id);
+        return true;
+      }
+      return false;
+    });
+  };
+
+  // Debug logging for map states
+  useEffect(() => {
+    if (mapLoaded && mapStyleLoaded) {
+      console.log("🎉 Map fully loaded and ready!");
+    } else if (mapLoaded) {
+      console.log("📊 Map loaded, waiting for style...");
+    } else {
+      console.log("⏳ Map still loading...");
+    }
+  }, [mapLoaded, mapStyleLoaded]);
+
+  // Fallback mechanism to check style loading status
+  useEffect(() => {
+    if (mapLoaded && !mapStyleLoaded && mapRef.current) {
+      const checkStyleStatus = () => {
+        // Don't check if already loaded
+        if (mapStyleLoaded) return;
+
+        try {
+          const map = mapRef.current?.getMap();
+          if (map && map.isStyleLoaded()) {
+            console.log("Fallback: Map style is loaded");
+            setMapStyleLoaded(true);
+          } else if (map) {
+            // Try to check if the map is usable even without style fully loaded
+            try {
+              const zoom = map.getZoom();
+              const center = map.getCenter();
+              if (zoom !== undefined && center) {
+                console.log(
+                  "Fallback: Map appears usable (zoom:",
+                  zoom,
+                  "center:",
+                  center,
+                  ")"
+                );
+                setMapStyleLoaded(true);
+                return;
+              }
+            } catch (e) {
+              // Map not ready yet
+            }
+
+            console.log("Fallback: Style still loading, retrying in 500ms...");
+            setTimeout(checkStyleStatus, 500);
+          }
+        } catch (error) {
+          console.log("Fallback: Error checking style status:", error);
+        }
+      };
+
+      // Start checking after a short delay
+      const timer = setTimeout(checkStyleStatus, 1000);
+
+      // Add a timeout to prevent infinite loading (10 seconds max)
+      const timeout = setTimeout(() => {
+        if (!mapStyleLoaded) {
+          console.warn(
+            "Style loading timeout reached, forcing map to be ready"
+          );
+          setMapStyleLoaded(true);
+        }
+      }, 10000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timeout);
+      };
+    }
+  }, [mapLoaded, mapStyleLoaded]);
+
+  // Periodic check to ensure map becomes usable
+  useEffect(() => {
+    if (mapLoaded && !mapStyleLoaded) {
+      // Clear any existing interval
+      if (styleCheckIntervalRef.current) {
+        clearInterval(styleCheckIntervalRef.current);
+      }
+
+      styleCheckIntervalRef.current = setInterval(() => {
+        // Don't check if already loaded
+        if (mapStyleLoaded) {
+          if (styleCheckIntervalRef.current) {
+            clearInterval(styleCheckIntervalRef.current);
+            styleCheckIntervalRef.current = null;
+          }
+          return;
+        }
+
+        try {
+          if (mapRef.current) {
+            const map = mapRef.current.getMap();
+            if (map) {
+              // Try to access basic map properties
+              try {
+                const zoom = map.getZoom();
+                const center = map.getCenter();
+                if (zoom !== undefined && center) {
+                  console.log(
+                    "Periodic check: Map is usable (zoom:",
+                    zoom,
+                    "center:",
+                    center,
+                    ")"
+                  );
+                  setMapStyleLoaded(true);
+                  return;
+                }
+              } catch (e) {
+                // Map not ready yet
+              }
+
+              // Check if style is loaded
+              if (map.isStyleLoaded()) {
+                console.log("Periodic check: Style is loaded");
+                setMapStyleLoaded(true);
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.log("Periodic check error:", error);
+        }
+      }, 1000);
+
+      return () => {
+        if (styleCheckIntervalRef.current) {
+          clearInterval(styleCheckIntervalRef.current);
+          styleCheckIntervalRef.current = null;
+        }
+      };
+    }
+  }, [mapLoaded, mapStyleLoaded]);
+
+  // Cleanup effect to clear all intervals and timeouts
+  useEffect(() => {
+    return () => {
+      if (styleCheckIntervalRef.current) {
+        clearInterval(styleCheckIntervalRef.current);
+        styleCheckIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Get user's current location on component mount
   useEffect(() => {
@@ -201,27 +436,37 @@ export default function GlobeView() {
     if (userLocation && mapLoaded && mapRef.current) {
       console.log("Flying to user location:", userLocation);
 
-      // Try using the MapRef's flyTo method first
-      try {
-        mapRef.current.flyTo({
-          center: [userLocation.longitude, userLocation.latitude],
-          zoom: mapRef.current.getMap()?.getZoom() || 2.5,
-          duration: 2000,
-        });
-      } catch (error) {
-        console.log("MapRef flyTo failed, trying map.flyTo:", error);
+      // Use safe map access with retry mechanism
+      retryMapOperation(
+        () => {
+          try {
+            // Try using the MapRef's flyTo method first
+            mapRef.current?.flyTo({
+              center: [userLocation.longitude, userLocation.latitude],
+              zoom: 2.5,
+              duration: 2000,
+            });
+            return true;
+          } catch (error) {
+            console.log("MapRef flyTo failed, trying map.flyTo:", error);
 
-        // Fallback to using the map instance directly
-        const map = mapRef.current.getMap();
-        if (map) {
-          map.flyTo({
-            center: [userLocation.longitude, userLocation.latitude],
-            zoom: map.getZoom() || 2.5,
-            duration: 2000,
-            essential: true,
-          });
-        }
-      }
+            // Fallback to using the map instance directly
+            const map = getSafeMap();
+            if (map) {
+              map.flyTo({
+                center: [userLocation.longitude, userLocation.latitude],
+                zoom: map.getZoom() || 2.5,
+                duration: 2000,
+                essential: true,
+              });
+              return true;
+            }
+            return false;
+          }
+        },
+        3,
+        200
+      );
     }
   }, [userLocation, mapLoaded]);
 
@@ -1170,19 +1415,43 @@ export default function GlobeView() {
       ? [report.longitude, report.latitude]
       : [lon, lat];
 
-    if (!mapRef.current) return;
-    const map = mapRef.current.getMap();
-    if (!map) return;
-    map.flyTo({
-      center: lonLat,
-      zoom: map.getZoom() || 2.5,
-      duration: 2000,
-      essential: true,
-    });
+    // Use safe map access with retry mechanism
+    retryMapOperation(
+      () => {
+        const map = getSafeMap();
+        if (map) {
+          map.flyTo({
+            center: lonLat,
+            zoom: map.getZoom() || 2.5,
+            duration: 2000,
+            essential: true,
+          });
+          return true;
+        }
+        return false;
+      },
+      3,
+      200
+    );
   };
 
   return (
     <div className="flex flex-col h-screen relative">
+      {/* Map Loading Indicator */}
+      {(!mapLoaded || !mapStyleLoaded) && (
+        <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="text-center text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-lg font-medium">
+              {!mapLoaded ? "Loading map..." : "Loading map style..."}
+            </p>
+            <p className="text-sm text-gray-300 mt-2">
+              Please wait while we prepare your map
+            </p>
+          </div>
+        </div>
+      )}
+
       <main className="mainStyle">
         <Map
           ref={mapRef}
@@ -1199,6 +1468,46 @@ export default function GlobeView() {
           onLoad={() => {
             console.log("Map loaded");
             setMapLoaded(true);
+
+            // Immediately check if style is already loaded
+            if (mapRef.current && !mapStyleLoaded) {
+              const map = mapRef.current.getMap();
+              if (map && map.isStyleLoaded()) {
+                console.log("Style already loaded in onLoad");
+                setMapStyleLoaded(true);
+              } else {
+                console.log("Style not loaded yet in onLoad");
+              }
+            }
+          }}
+          onStyleData={() => {
+            if (mapRef.current && !mapStyleLoaded) {
+              const map = mapRef.current.getMap();
+              if (map && map.isStyleLoaded()) {
+                console.log("Map style fully loaded");
+                setMapStyleLoaded(true);
+              } else {
+                console.log(
+                  "Style data received but style not fully loaded yet"
+                );
+              }
+            } else if (mapRef.current) {
+              // Style already loaded, just log once
+              console.log("Style data received (already loaded)");
+            } else {
+              console.log("map ref not found in onStyleData");
+            }
+          }}
+          onError={(error) => {
+            console.error("Map error:", error);
+            // Try to recover from map errors
+            if (
+              error.error &&
+              error.error.message === "Style is not done loading"
+            ) {
+              console.log("Recovering from style loading error...");
+              // The style will continue loading, so we just need to wait
+            }
           }}
           antialias={true}
           attributionControl={false}
