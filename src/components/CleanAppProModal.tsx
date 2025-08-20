@@ -115,16 +115,15 @@ const CleanAppProModal: React.FC<CleanAppProModalProps> = ({
         ) : (
           /* Desktop Layout */
           <>
+            {/* Close button */}
+            <button
+              onClick={handleCloseModal}
+              className="absolute top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+              aria-label={t("close")}
+            >
+              <X className="w-6 h-6" />
+            </button>
             <div className="fixed top-[0px] left-[50px] right-[50px] bottom-[0px] overflow-y-auto scrollbar-hide">
-              {/* Close button */}
-              <button
-                onClick={handleCloseModal}
-                className="fixed top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-                aria-label={t("close")}
-              >
-                <X className="w-6 h-6" />
-              </button>
-
               {/* Content */}
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
                 <ReportOverview reportItem={report} />

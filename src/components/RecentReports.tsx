@@ -30,11 +30,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     setLoading(true);
     setError(null);
     try {
-      const locale = getCurrentLocale();
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       let url = "";
-      if (reportItem?.analysis[0].classification === "digital") {
+      if (reportItem?.analysis[0]?.classification === "digital") {
         const reportAnalysis = reportItem.analysis.find(
           (analysis) => analysis.language === locale
         );
