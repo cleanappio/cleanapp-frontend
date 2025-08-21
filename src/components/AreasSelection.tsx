@@ -11,14 +11,16 @@ interface AreasSelectionProps {
   onAreasChange?: (selectedAreas: Area[]) => void;
   onDrawnAreasChange?: (drawnAreas: Area[]) => void;
   initialSelectedAreas?: string[];
+  onPublicAreasChange?: (publicAreaIds: Set<number>) => void;
 }
 
-export default function AreasSelection({ onAreasChange, onDrawnAreasChange, initialSelectedAreas = [] }: AreasSelectionProps) {
+export default function AreasSelection({ onAreasChange, onDrawnAreasChange, initialSelectedAreas = [], onPublicAreasChange }: AreasSelectionProps) {
   const { t } = useTranslations();
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [fetchedAreas, setFetchedAreas] = useState<Area[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  const [publicAreaIds, setPublicAreaIds] = useState<Set<number>>(new Set());
 
   // Handle area click for selection/deselection
   const handleAreaClick = (area: Area) => {
@@ -75,6 +77,18 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
       onDrawnAreasChange?.(newDrawnAreas);
       return newDrawnAreas;
     });
+  };
+
+  // Handle public checkbox changes
+  const handlePublicChange = (areaId: number, isPublic: boolean) => {
+    const newPublicAreaIds = new Set(publicAreaIds);
+    if (isPublic) {
+      newPublicAreaIds.add(areaId);
+    } else {
+      newPublicAreaIds.delete(areaId);
+    }
+    setPublicAreaIds(newPublicAreaIds);
+    onPublicAreasChange?.(newPublicAreaIds);
   };
 
   // Fetch areas based on map bounds
@@ -142,14 +156,25 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
                   <MapPin className="w-3 h-3 text-green-600" />
                   <span className="text-sm text-green-800">{area.name}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleAreaDelete(area)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                  title="Remove area from selection"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center space-x-1 text-xs text-green-700">
+                    <input
+                      type="checkbox"
+                      checked={publicAreaIds.has(area.id || 0)}
+                      onChange={(e) => handlePublicChange(area.id || 0, e.target.checked)}
+                      className="w-3 h-3 text-green-600 focus:ring-green-500 border-green-300 rounded"
+                    />
+                    <span>{t('public')}</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAreaDelete(area)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                    title="Remove area from selection"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -164,12 +189,23 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
           </h3>
           <div className="space-y-1">
             {drawnAreas.map((area, index) => (
-              <div key={`drawn-${index}`} className="flex items-center space-x-2">
-                <MapPin className="w-3 h-3 text-purple-600" />
-                <span className="text-sm text-purple-800">{area.name}</span>
-                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                  {t('custom')}
-                </span>
+              <div key={`drawn-${index}`} className="flex items-center justify-between group">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-3 h-3 text-purple-600" />
+                  <span className="text-sm text-purple-800">{area.name}</span>
+                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                    {t('custom')}
+                  </span>
+                </div>
+                <label className="flex items-center space-x-1 text-xs text-purple-700">
+                  <input
+                    type="checkbox"
+                    checked={publicAreaIds.has(area.id || 0)}
+                    onChange={(e) => handlePublicChange(area.id || 0, e.target.checked)}
+                    className="w-3 h-3 text-purple-600 focus:ring-purple-500 border-purple-300 rounded"
+                  />
+                  <span>{t('public')}</span>
+                </label>
               </div>
             ))}
           </div>

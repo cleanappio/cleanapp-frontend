@@ -80,12 +80,26 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
-  const [brandName, setBrandName] = useState('');
+  const [brands, setBrands] = useState<Array<{ name: string; isPublic: boolean }>>([{ name: '', isPublic: false }]);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
+  const [publicAreaIds, setPublicAreaIds] = useState<Set<number>>(new Set());
   const { t } = useTranslations();
 
+  // Brand management functions
+  const addBrand = () => {
+    setBrands(prev => [...prev, { name: '', isPublic: false }]);
+  };
 
+  const removeBrand = (index: number) => {
+    setBrands(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateBrand = (index: number, field: 'name' | 'isPublic', value: string | boolean) => {
+    setBrands(prev => prev.map((brand, i) => 
+      i === index ? { ...brand, [field]: value } : brand
+    ));
+  };
 
   // Check if user exists on email blur
   const handleEmailBlur = async () => {
@@ -282,7 +296,13 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           console.log(`Total area IDs for customer: ${allAreaIds.length} (${selectedAreaIds.length} selected + ${drawnAreaIds.length} drawn)`, allAreaIds);
           
           // Step 4: Update customer with all area IDs
-          const updateResponse = await apiClient.updateCustomerAreas(allAreaIds);
+          const customerAreas = allAreaIds.map(areaId => ({
+            customer_id: '', // Will be set by backend based on authenticated user
+            area_id: areaId,
+            is_public: publicAreaIds.has(areaId), // Use checkbox value
+            created_at: new Date().toISOString()
+          }));
+          const updateResponse = await apiClient.updateCustomerAreas({ areas: customerAreas });
           console.log('Customer areas updated successfully:', updateResponse);
           
           // Show success messages
@@ -314,13 +334,18 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
         await createSubscription(planType, billingCycle, paymentMethodId);
         toast.success(t('subscriptionCreatedSuccessfully'));
 
-        // Add brand name if provided
-        if (brandName.trim()) {
+        // Add brand names if provided
+        const validBrands = brands.filter(brand => brand.name.trim());
+        if (validBrands.length > 0) {
           try {
-            await addCustomerBrands([brandName.trim()]);
+            const brandData = validBrands.map(brand => ({
+              brand_name: brand.name.trim(),
+              is_public: brand.isPublic
+            }));
+            await addCustomerBrands({ brands: brandData });
             toast.success(t('brandNameAdded'));
           } catch (error) {
-            console.error('Failed to add brand name:', error);
+            console.error('Failed to add brand names:', error);
             toast.error(t('brandNameError'));
           }
         }
@@ -417,17 +442,29 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
               {t('brandName')}
             </h3>
             <p className="text-gray-500 text-sm mb-4">{t('brandNameDescription')}</p>
-            <div>
-              <label htmlFor="brand-name-disabled" className="block text-sm font-medium text-gray-400 mb-1">{t('brandName')}</label>
-              <input
-                type="text"
-                id="brand-name-disabled"
-                value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
-                placeholder={t('brandNamePlaceholder')}
-                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
-                disabled
-              />
+            <div className="space-y-3">
+              {brands.map((brand, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={brand.name}
+                    onChange={(e) => updateBrand(index, 'name', e.target.value)}
+                    placeholder={t('brandNamePlaceholder')}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                    disabled
+                  />
+                  <label className="flex items-center space-x-2 text-xs text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={brand.isPublic}
+                      onChange={(e) => updateBrand(index, 'isPublic', e.target.checked)}
+                      disabled
+                      className="w-3 h-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span>{t('public')}</span>
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -622,16 +659,49 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           {t('brandName')}
         </h3>
         <p className="text-gray-500 text-sm mb-4">{t('brandNameDescription')}</p>
-        <div>
-          <label htmlFor="brand-name" className="block text-sm font-medium text-gray-700 mb-1">{t('brandName')}</label>
-          <input
-            type="text"
-            id="brand-name"
-            value={brandName}
-            onChange={(e) => setBrandName(e.target.value)}
-            placeholder={t('brandNamePlaceholder')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
+        <div className="space-y-3">
+          {brands.map((brand, index) => (
+            <div key={index} className="flex items-center space-x-3">
+              <input
+                type="text"
+                value={brand.name}
+                onChange={(e) => updateBrand(index, 'name', e.target.value)}
+                placeholder={t('brandNamePlaceholder')}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <label className="flex items-center space-x-2 text-xs text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={brand.isPublic}
+                  onChange={(e) => updateBrand(index, 'isPublic', e.target.checked)}
+                  className="w-3 h-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <span>{t('public')}</span>
+              </label>
+              {brands.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeBrand(index)}
+                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                  title="Remove brand"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addBrand}
+            className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center space-x-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>{t('addBrand')}</span>
+          </button>
         </div>
       </div>
 
@@ -653,6 +723,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
             onAreasChange={setSelectedAreas}
             onDrawnAreasChange={setDrawnAreas}
             initialSelectedAreas={selectedAreas.map(area => area.id?.toString() || '')}
+            onPublicAreasChange={setPublicAreaIds}
           />
         </div>
       </div>

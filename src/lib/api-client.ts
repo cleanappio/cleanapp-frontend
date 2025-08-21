@@ -120,48 +120,64 @@ export interface UpdatePaymentMethodRequest {
 
 // ==================== CUSTOMER BRAND ENDPOINTS ====================
 
-export interface CustomerBrandsResponse {
+export interface CustomerBrand {
   customer_id: string;
-  brand_names: string[];
+  brand_name: string;
+  is_public: boolean;
 }
 
+export interface CustomerBrandsResponse {
+  customer_id: string;
+  brands: CustomerBrand[];
+}
+
+// Request interfaces for adding/updating/removing brands
+// These don't include customer_id since it's derived from the authenticated user
 export interface AddCustomerBrandsRequest {
-  brand_names: string[];
+  brands: {
+    brand_name: string;
+    is_public: boolean;
+  }[];
 }
 
 export interface RemoveCustomerBrandsRequest {
-  brand_names: string[];
+  brands: {
+    brand_name: string;
+    is_public: boolean;
+  }[];
 }
 
 export interface UpdateCustomerBrandsRequest {
-  brand_names: string[];
+  brands: {
+    brand_name: string;
+    is_public: boolean;
+  }[];
 }
 
 // ==================== CUSTOMER AREAS ENDPOINTS ====================
 
-export interface CustomerAreasResponse {
+export interface CustomerArea {
   customer_id: string;
-  area_ids: number[];
+  area_id: number;
+  is_public: boolean;
+  created_at: string;
+}
+
+export interface CustomerAreasResponse {
+  areas: CustomerArea[];
   count: number;
 }
 
 export interface AddCustomerAreasRequest {
-  customer_id: string;
-  area_ids: number[];
+  areas: CustomerArea[];  
 }
 
 export interface DeleteCustomerAreasRequest {
-  customer_id: string;
-  area_ids: number[];
+  areas: CustomerArea[];
 }
 
 export interface UpdateCustomerAreasRequest {
-  customer_id: string;
-  area_ids: number[];
-}
-
-export interface GetCustomerAreasRequest {
-  customer_id: string;
+  areas: CustomerArea[];
 }
 
 // ==================== API CLIENT ====================
@@ -329,25 +345,19 @@ export class ApiClient {
     return data;
   }
 
-  async addCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
-    const { data } = await this.axios.post<MessageResponse>('/api/v3/customers/me/brands', {
-      brand_names: brandNames
-    });
+  async addCustomerBrands(request: AddCustomerBrandsRequest): Promise<MessageResponse> {
+    const { data } = await this.axios.post<MessageResponse>('/api/v3/customers/me/brands', request);
     return data;
   }
 
-  async updateCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
-    const { data } = await this.axios.put<MessageResponse>('/api/v3/customers/me/brands', {
-      brand_names: brandNames
-    });
+  async updateCustomerBrands(request: UpdateCustomerBrandsRequest): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>('/api/v3/customers/me/brands', request);
     return data;
   }
 
-  async removeCustomerBrands(brandNames: string[]): Promise<MessageResponse> {
+  async removeCustomerBrands(request: RemoveCustomerBrandsRequest): Promise<MessageResponse> {
     const { data } = await this.axios.delete<MessageResponse>('/api/v3/customers/me/brands', {
-      data: {
-        brand_names: brandNames
-      }
+      data: request
     });
     return data;
   }
@@ -359,26 +369,20 @@ export class ApiClient {
     return data;
   }
 
-  async addCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
-    const { data } = await this.axios.post<MessageResponse>(`/api/v3/customers/me/areas`, {
-      area_ids: area_ids
-    });
+  async addCustomerAreas(request: AddCustomerAreasRequest): Promise<MessageResponse> {
+    const { data } = await this.axios.post<MessageResponse>(`/api/v3/customers/me/areas`, request);
     return data;
   }
 
-  async deleteCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
+  async deleteCustomerAreas(request: DeleteCustomerAreasRequest): Promise<MessageResponse> {
     const { data } = await this.axios.delete<MessageResponse>(`/api/v3/customers/me/areas`, {
-      data: {
-        area_ids: area_ids
-      }
+      data: request
     });
     return data;
   }
 
-  async updateCustomerAreas(area_ids: number[]): Promise<MessageResponse> {
-    const { data } = await this.axios.put<MessageResponse>(`/api/v3/customers/me/areas`, {
-      area_ids: area_ids
-    });
+  async updateCustomerAreas(request: UpdateCustomerAreasRequest): Promise<MessageResponse> {
+    const { data } = await this.axios.put<MessageResponse>(`/api/v3/customers/me/areas`, request);
     return data;
   }
 
