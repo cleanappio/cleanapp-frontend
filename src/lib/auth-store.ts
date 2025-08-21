@@ -50,7 +50,7 @@ interface AuthState {
   fetchPrices: () => Promise<void>;
   
   // Brand actions
-  addCustomerBrands: (brandNames: string[]) => Promise<void>;
+      addCustomerBrands: (brandData: { brands: Array<{ brand_name: string; is_public: boolean }> }) => Promise<void>;
   getBrands: () => Promise<Brand[]>;
   getBrandReports: (brandId: string, params?: { page?: number; limit?: number }) => Promise<any[]>;
 }
@@ -344,10 +344,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   // Brand actions
-  addCustomerBrands: async (brandNames: string[]) => {
-    if (brandNames.length === 0) return;
+  addCustomerBrands: async (brandData: { brands: Array<{ brand_name: string; is_public: boolean }> }) => {
+    if (brandData.brands.length === 0) return;
     try {
-      await apiClient.addCustomerBrands(brandNames);
+      await apiClient.addCustomerBrands(brandData);
     } catch (error) {
       console.error('Failed to add customer brands:', error);
       throw error;
