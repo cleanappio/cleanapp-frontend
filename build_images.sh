@@ -151,7 +151,8 @@ done
 
 if [ -n "${SSH_KEYFILE}" ]; then
   SETUP_SCRIPT="https://raw.githubusercontent.com/cleanappio/cleanapp_back_end_v2/refs/heads/main/setup/setup.sh"
-  
-  # Copy deployment script on target VM and run it 
-  curl ${SETUP_SCRIPT} | ssh -i ${SSH_KEYFILE} deployer@${TARGET_VM_IP} "cat > deploy.sh && chmod +x deploy.sh && ./deploy.sh -e ${OPT}"
+  curl ${SETUP_SCRIPT} > deploy.sh
+  chmod +x deploy.sh
+  ./deploy.sh -e ${OPT} --ssh-keyfile ${SSH_KEYFILE}
+  rm deploy.sh
 fi
