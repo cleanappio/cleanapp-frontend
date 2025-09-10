@@ -288,15 +288,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                         </div>
                       </div>
                     )}
-
-                    {/* Digital Bug Probability */}
-                    {analysis?.digital_bug_probability !== undefined && (
-                      <div>
-                        <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                          {t("digitalBug")}
-                        </h3>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
