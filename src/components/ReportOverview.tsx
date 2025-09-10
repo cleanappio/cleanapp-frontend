@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import router from "next/router";
 import { ReportWithAnalysis } from "./GlobeView";
@@ -10,6 +10,8 @@ import {
 } from "@/lib/i18n";
 import { getBrandNameDisplay } from "@/lib/util";
 import Link from "next/link";
+import { useReverseGeocoding } from "@/hooks/useReverseGeocoding";
+import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
 
 interface ReportOverviewProps {
   reportItem?: ReportWithAnalysis | null;
@@ -30,16 +32,20 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     reportItem?.analysis?.[0]?.classification === "digital"
   );
 
-  useEffect(() => {
-    if (reportItem?.report?.seq) {
-      fetchFullReport();
-    } else {
-      setFullReport(null);
-      setError(null);
-    }
-  }, [reportItem]);
+  // Reverse geocoding hook to get human-readable address
+  const {
+    address,
+    loading: addressLoading,
+    error: addressError,
+    refetch: refetchAddress,
+  } = useReverseGeocoding({
+    latitude: reportItem?.report.latitude,
+    longitude: reportItem?.report.longitude,
+    language: "en",
+    autoFetch: true,
+  });
 
-  const fetchFullReport = async () => {
+  const fetchFullReport = useCallback(async () => {
     if (!reportItem?.report?.seq) return;
 
     setLoading(true);
@@ -66,7 +72,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [reportItem?.report?.seq, t]);
+
+  useEffect(() => {
+    if (reportItem?.report?.seq) {
+      fetchFullReport();
+    } else {
+      setFullReport(null);
+      setError(null);
+    }
+  }, [reportItem, fetchFullReport]);
 
   useEffect(() => {
     const locale = getCurrentLocale();
@@ -198,8 +213,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
                       >
-                        {report.report.latitude.toFixed(4)},{" "}
-                        {report.report.longitude.toFixed(4)}
+                        <ReverseGeocodingDisplay
+                          address={address}
+                          loading={addressLoading}
+                          error={addressError}
+                          onRetry={refetchAddress}
+                        />
                       </a>
                     </div>
                   )}
@@ -338,8 +357,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                     rel="noopener noreferrer"
                     className="text-blue-300 hover:text-blue-200 text-sm underline"
                   >
-                    {report.report.latitude.toFixed(4)},{" "}
-                    {report.report.longitude.toFixed(4)}
+                    <ReverseGeocodingDisplay
+                      address={address}
+                      loading={addressLoading}
+                      error={addressError}
+                      onRetry={refetchAddress}
+                    />
                   </a>
                 </div>
               )}
