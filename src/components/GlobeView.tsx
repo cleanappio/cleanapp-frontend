@@ -657,8 +657,8 @@ export default function GlobeView() {
 
       const report = reportWithAnalysis.report;
       const analysis = reportWithAnalysis.analysis;
-      const severity_level = analysis[0].severity_level;
-      const classification = analysis[0].classification;
+      const severity_level = analysis.length > 0 ? analysis[0].severity_level : 0;
+      const classification = analysis.length > 0 ? analysis[0].classification : "physical";
       const isPhysical = classification === "physical";
       const locale = getCurrentLocale();
       const reportAnalysis = analysis.find(
