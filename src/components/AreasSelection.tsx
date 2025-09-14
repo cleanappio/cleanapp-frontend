@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import SearchableMap from './SearchableMap';
 import { MapPin, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
@@ -21,6 +21,7 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
   const [fetchedAreas, setFetchedAreas] = useState<Area[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
   const [publicAreaIds, setPublicAreaIds] = useState<Set<number>>(new Set());
+  const featureGroupRef = useRef<any>(null);
 
   // Handle area click for selection/deselection
   const handleAreaClick = (area: Area) => {
@@ -128,7 +129,7 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
       <div className="bg-white border border-gray-200 rounded-lg p-4">
 
         {/* Map */}
-                <SearchableMap 
+        <SearchableMap 
           initialCenter={[40.7128, -74.0060]} // New York
           initialZoom={12}
           height="400px"
@@ -140,6 +141,7 @@ export default function AreasSelection({ onAreasChange, onDrawnAreasChange, init
           areas={fetchedAreas}
           onAreaClick={handleAreaClick}
           selectedAreas={selectedAreas}
+          featureGroupRef={featureGroupRef}
         />
       </div>
 
