@@ -480,6 +480,8 @@ export const translations: {
     public: "Public",
     custom: "Custom",
     moreReports: "More Reports",
+    digitalBug: "Digital Bug",
+    description: "Description",
   },
   me: {
     // Common
@@ -961,6 +963,8 @@ export const translations: {
     public: "Javno",
     custom: "Prilagođeno",
     moreReports: "Više izveštaja",
+    digitalBug: "Digitalna greška",
+    description: "Opis",
   },
 };
 
