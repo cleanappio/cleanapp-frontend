@@ -105,13 +105,14 @@ export function DrawControl({
   onAreaCreated,
   onAreaEdited,
   onAreaDeleted,
+  featureGroupRef,
 }: {
   enableDrawing: boolean;
   onAreaCreated?: (area: Area) => void;
   onAreaEdited?: (area: Area, index: number) => void;
   onAreaDeleted?: (index: number) => void;
+  featureGroupRef: React.RefObject<any>;
 }) {
-  const featureGroupRef = useRef<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingArea, setPendingArea] = useState<Area | null>(null);
   const [pendingLayer, setPendingLayer] = useState<any>(null);
@@ -121,9 +122,20 @@ export function DrawControl({
     injectStyles();
   }, []);
 
+  // Set up the edit control with featureGroup after mount
+  useEffect(() => {
+    if (enableDrawing && featureGroupRef.current) {
+      // The edit control will automatically use the FeatureGroup it's rendered inside
+      // No need to explicitly set it in the configuration
+    }
+  }, [enableDrawing, featureGroupRef]);
+
   if (!enableDrawing) return null;
 
   const handleCreated = (e: any) => {
+    if (featureGroupRef.current) {
+      featureGroupRef.current.removeLayer(e.layer);
+    }
     const layer = e.layer;
     const coordinates = layer.toGeoJSON().geometry.coordinates;
     
@@ -161,7 +173,6 @@ export function DrawControl({
   };
 
   const handleEdited = (e: any) => {
-    console.log('Polygon edited:', e);
     const layers = e.layers;
     layers.eachLayer((layer: any) => {
       const coordinates = layer.toGeoJSON().geometry.coordinates;
@@ -221,46 +232,41 @@ export function DrawControl({
   };
 
   return React.createElement(React.Fragment, null,
-    React.createElement(FeatureGroup, {
-      ref: featureGroupRef
-    }, 
-      React.createElement(EditControl, {
-        position: "topright",
-        onCreated: handleCreated,
-        onEdited: handleEdited,
-        onDeleted: handleDeleted,
-        draw: {
-          rectangle: false,
-          circle: false,
-          circlemarker: false,
-          marker: false,
-          polyline: false,
-          polygon: {
-            allowIntersection: false,
-            drawError: {
-              color: '#e1e100',
-              message: '<strong>Oh snap!<strong> you can\'t draw that!'
-            },
-            shapeOptions: {
-              color: '#ae11c6',
-              fillColor: '#ae11c6',
-              fillOpacity: 0.5,
-              weight: 3
-            }
-          }
-        },
-        edit: {
-          featureGroup: featureGroupRef.current,
-          remove: true,
-          edit: {
-            selectedPathOptions: {
-              maintainColor: true,
-              dashArray: '10, 10'
-            }
+    React.createElement(EditControl, {
+      position: "topright",
+      onCreated: handleCreated,
+      onEdited: handleEdited,
+      onDeleted: handleDeleted,
+      draw: {
+        rectangle: false,
+        circle: false,
+        circlemarker: false,
+        marker: false,
+        polyline: false,
+        polygon: {
+          allowIntersection: false,
+          drawError: {
+            color: '#e1e100',
+            message: '<strong>Oh snap!<strong> you can\'t draw that!'
+          },
+          shapeOptions: {
+            color: '#ae11c6',
+            fillColor: '#ae11c6',
+            fillOpacity: 0.5,
+            weight: 3
           }
         }
-      })
-    ),
+      },
+      edit: {
+        remove: true,
+        edit: {
+          selectedPathOptions: {
+            maintainColor: true,
+            dashArray: '10, 10'
+          }
+        }
+      }
+    }),
     pendingArea && React.createElement(AreaCreationModal, {
       isOpen: isModalOpen,
       onClose: handleModalClose,

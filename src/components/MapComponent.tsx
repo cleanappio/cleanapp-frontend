@@ -1,11 +1,65 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON, FeatureGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
 import { DrawControl } from './useMapWithDraw';
 import { Area } from '@/lib/areas-api-client';
+
+// Custom zoom control component
+function CustomZoomControl() {
+  const map = useMap();
+
+  useEffect(() => {
+    // Add CSS for zoom control positioning
+    const addZoomControlCSS = () => {
+      const existingStyle = document.getElementById('zoom-control-fix');
+      if (!existingStyle) {
+        const style = document.createElement('style');
+        style.id = 'zoom-control-fix';
+        style.textContent = `
+          .leaflet-control-zoom {
+            position: absolute !important;
+            bottom: 10px !important;
+            left: 10px !important;
+            right: auto !important;
+            top: auto !important;
+            z-index: 10000 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    };
+
+    // Move zoom control to bottom left with a delay to ensure it's rendered
+    const moveZoomControl = () => {
+      const zoomControl = document.querySelector('.leaflet-control-zoom') as HTMLElement;
+      if (zoomControl) {
+        zoomControl.style.position = 'absolute';
+        zoomControl.style.bottom = '10px';
+        zoomControl.style.left = '10px';
+        zoomControl.style.right = 'auto';
+        zoomControl.style.top = 'auto';
+        zoomControl.style.zIndex = '10000';
+      } else {
+        // Retry if not found yet
+        setTimeout(moveZoomControl, 100);
+      }
+    };
+
+    // Add CSS first
+    addZoomControlCSS();
+    
+    // Initial attempt
+    moveZoomControl();
+    
+    // Also try after map is ready
+    setTimeout(moveZoomControl, 500);
+  }, [map]);
+
+  return null;
+}
 
 // Fix for default markers in react-leaflet
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -82,6 +136,8 @@ interface MapComponentProps {
   areas?: Area[];
   onAreaClick?: (area: Area) => void;
   selectedAreas?: Area[];
+  clickedAreaId?: number | null;
+  featureGroupRef: React.RefObject<any>;
 }
 
 export default function MapComponent({
@@ -98,6 +154,8 @@ export default function MapComponent({
   areas = [],
   onAreaClick,
   selectedAreas = [],
+  clickedAreaId = null,
+  featureGroupRef,
 }: MapComponentProps) {
   const [isClient, setIsClient] = useState(false);
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
@@ -140,6 +198,7 @@ export default function MapComponent({
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
       minZoom={4}
+      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -149,16 +208,22 @@ export default function MapComponent({
       {/* Map Controller for programmatic updates */}
       <MapController center={center} zoom={zoom} />
 
+      {/* Custom Zoom Control Position */}
+      <CustomZoomControl />
+
       {/* Bounds Change Handler */}
       <BoundsChangeHandler onBoundsChange={onBoundsChange} />
 
       {/* Draw Control for drawing tools */}
-      <DrawControl 
-        enableDrawing={enableDrawing}
-        onAreaCreated={handlePolygonCreated}
-        onAreaEdited={handlePolygonEdited}
-        onAreaDeleted={handlePolygonDeleted}
-      />
+      <FeatureGroup ref={featureGroupRef}>
+        <DrawControl 
+          enableDrawing={enableDrawing}
+          onAreaCreated={handlePolygonCreated}
+          onAreaEdited={handlePolygonEdited}
+          onAreaDeleted={handlePolygonDeleted}
+          featureGroupRef={featureGroupRef}
+        />
+      </FeatureGroup>
 
       {/* Render markers for search results */}
       {searchResults.map((result) => (
@@ -202,15 +267,16 @@ export default function MapComponent({
       {/* Render GeoJSON polygons */}
       {areas.map((area, index) => {
         const isSelected = selectedAreas.some(selectedArea => selectedArea.id === area.id);
+        const isClicked = clickedAreaId === area.id;
         return (
           <GeoJSON
             key={`area-${area.id}`}
             data={area.coordinates}
             style={{
-              color: isSelected ? '#10b981' : '#0023d6',
-              fillColor: isSelected ? '#10b981' : '#0023d6',
-              fillOpacity: isSelected ? 0.5 : 0.3,
-              weight: isSelected ? 3 : 2,
+              color: isClicked ? '#8b5cf6' : (isSelected ? '#10b981' : '#0023d6'),
+              fillColor: isClicked ? '#8b5cf6' : (isSelected ? '#10b981' : '#0023d6'),
+              fillOpacity: isClicked ? 0.6 : (isSelected ? 0.5 : 0.3),
+              weight: isClicked ? 4 : (isSelected ? 3 : 2),
               opacity: 1,
             }}
             onEachFeature={(feature, layer) => {
