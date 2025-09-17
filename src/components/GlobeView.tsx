@@ -728,7 +728,7 @@ export default function GlobeView() {
         );
         return;
       }
-      if (!isEmbeddedMode) {
+      if (!isEmbeddedMode && selectedTab === "physical") {
         map.flyTo({
           center: latLon,
           zoom: map.getZoom() || 2.5,
