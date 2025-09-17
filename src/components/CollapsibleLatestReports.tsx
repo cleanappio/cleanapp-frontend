@@ -29,7 +29,7 @@ export function CollapsibleLatestReports({
   isModalActive?: boolean;
   isMenuOpen?: boolean;
 }) {
-  const [isOpen, setIsOpen] = React.useState(isMenuOpen);
+  const [isOpen, setIsOpen] = React.useState(!isMenuOpen);
   const { t } = useTranslations();
   const isMobile = useIsMobile();
 
