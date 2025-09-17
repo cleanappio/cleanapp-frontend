@@ -124,6 +124,35 @@ export default function GlobeView() {
     CompanyData[]
   >([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const listRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null); // Reference to your input field
+
+  useEffect(() => {
+    console.log("Setting useEffect");
+    const handleScroll = () => {
+      if (document.activeElement === inputRef.current) {
+        console.log("Dismissing keyboard");
+        inputRef.current?.blur(); // Dismiss the keyboard
+      } else {
+        console.log("Not dismissing keyboard");
+      }
+    };
+
+    const currentListRef = listRef.current as HTMLElement | null;
+    if (currentListRef) {
+      console.log("Adding scroll listener");
+      currentListRef?.addEventListener("scroll", handleScroll);
+    } else {
+      console.log("No list ref");
+    }
+
+    return () => {
+      if (currentListRef) {
+        currentListRef?.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, []);
 
   // Safe map access utility function
   const getSafeMap = () => {
@@ -925,7 +954,7 @@ export default function GlobeView() {
 
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
 
     // Only works for Mapbox Standard or Standard Satellite styles
     if (selectedTab === "digital") {
@@ -944,7 +973,7 @@ export default function GlobeView() {
   // Digital click/hover handlers
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
     function onNodeClick(e: any) {
       if (!map) return;
       const feature = e.features[0];
@@ -970,7 +999,7 @@ export default function GlobeView() {
       map.on("mouseleave", "digital-pulse", unsetPointer);
     }
     return () => {
-      if (!map) return;
+      if (!map || !mapLoaded || !mapStyleLoaded) return;
       if (map?.getLayer("digital-nodes")) {
         map.off("click", "digital-nodes", onNodeClick);
         map.off("mouseenter", "digital-nodes", setPointer);
@@ -987,7 +1016,7 @@ export default function GlobeView() {
   // Digital layers logic
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
 
     // Helper to convert DIGITAL_PROPERTIES to GeoJSON FeatureCollection
     function getDigitalTerritoriesGeoJSON() {
@@ -1078,6 +1107,8 @@ export default function GlobeView() {
       setDigitalReportsByBrand(_digitalReportsByBrand);
       return { type: "FeatureCollection", features };
     }
+
+    if (!mapLoaded || !mapStyleLoaded) return;
 
     // Add digital-territories source if not present
     if (!map.getSource("digital-territories")) {
@@ -1188,7 +1219,7 @@ export default function GlobeView() {
     let pulseAnimId: number;
     function animatePulse() {
       const map = mapRef.current && mapRef.current.getMap();
-      if (!map) return;
+      if (!map || !mapLoaded || !mapStyleLoaded) return;
       if (selectedTab === "digital" && map.getLayer("digital-pulse")) {
         pulseFrame += 0.05;
         const pulseOpacity = 0.1 + (0.3 * (Math.sin(pulseFrame) + 1)) / 2;
@@ -1202,10 +1233,14 @@ export default function GlobeView() {
     };
   }, [latestReports, selectedTab]);
 
+  useEffect(() => {
+    console.log("Sidemenu state changed:", isMenuOpen);
+  }, [isMenuOpen]);
+
   // Digital click/hover handlers
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
     function onNodeClick(e: any) {
       if (!map) return;
       const feature = e.features[0];
@@ -1231,7 +1266,7 @@ export default function GlobeView() {
       map.on("mouseleave", "digital-pulse", unsetPointer);
     }
     return () => {
-      if (!map) return;
+      if (!map || !mapLoaded || !mapStyleLoaded) return;
       if (map?.getLayer("digital-nodes")) {
         map.off("click", "digital-nodes", onNodeClick);
         map.off("mouseenter", "digital-nodes", setPointer);
@@ -1495,15 +1530,15 @@ export default function GlobeView() {
                 console.log("Map style fully loaded");
                 setMapStyleLoaded(true);
               } else {
-                console.log(
-                  "Style data received but style not fully loaded yet"
-                );
+                // console.log(
+                //   "Style data received but style not fully loaded yet"
+                // );
               }
             } else if (mapRef.current) {
               // Style already loaded, just log once
-              console.log("Style data received (already loaded)");
+              // console.log("Style data received (already loaded)");
             } else {
-              console.log("map ref not found in onStyleData");
+              // console.log("map ref not found in onStyleData");
             }
           }}
           onError={(error) => {
@@ -1619,12 +1654,106 @@ export default function GlobeView() {
         </div>
       )}
 
+      {selectedTab === "digital" && isMobileSearchOpen && (
+        <div className="absolute top-0 bottom-0 left-0 right-0 flex flex-col items-start gap-4 z-50 bg-gray-800">
+          <div className="top-0 right-0 absolute p-2">
+            <FiX
+              className="text-gray-300 w-6"
+              size={24}
+              onClick={() => setIsMobileSearchOpen(false)}
+            />
+          </div>
+
+          <div className="w-full flex mt-12">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search"
+              className="bg-gray-800 focus:outline-none focus:border-b-2 text-white w-full border border-gray-400 py-2 px-4 mx-4"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {searchQuery && (
+            <div
+              ref={listRef}
+              className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full"
+            >
+              {digitalReportsByBrand
+                .filter((company) =>
+                  company.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((company) => (
+                  <button
+                    key={company.name}
+                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setIsMobileSearchOpen(false);
+
+                      const lonLat: [number, number] = [
+                        company.position[0],
+                        company.position[1],
+                      ];
+
+                      retryMapOperation(
+                        () => {
+                          const map = getSafeMap();
+                          if (map) {
+                            map.flyTo({
+                              center: lonLat,
+                              zoom: 2.75,
+                              duration: 2000,
+                              essential: true,
+                            });
+                            return true;
+                          }
+                          return false;
+                        },
+                        3,
+                        200
+                      );
+                    }}
+                  >
+                    <p className="line-clamp-1">{company.name}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+
+          {searchQuery &&
+            digitalReportsByBrand.filter((company) =>
+              company.name.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length === 0 && (
+              <div className="bg-gray-800 -mt-4">
+                <p className="p-3 text-gray-400">No results found</p>
+              </div>
+            )}
+        </div>
+      )}
+
+      {selectedTab === "digital" && isMobile && (
+        <div className="absolute bottom-12 right-4">
+          <button
+            className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
+            onClick={() => {
+              setIsMobileSearchOpen((prev) => !prev);
+            }}
+          >
+            <FiSearch className="text-gray-300 w-6" size={24} />
+          </button>
+        </div>
+      )}
+
       {/* Right side menu */}
       {!isEmbeddedMode && (
         <div className="absolute top-4 right-4 flex flex-col items-end">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => {
+              setIsMenuOpen((prev) => !prev);
+            }}
           >
             <FiMenu className="text-gray-300" size={24} />
           </button>
@@ -1715,13 +1844,16 @@ export default function GlobeView() {
           flyToReport(report);
         }}
         isModalActive={true}
+        isMenuOpen={isMenuOpen}
         report={selectedReport}
       />
 
       {/* Bottom center logo */}
       {!isEmbeddedMode && (
         <div
-          className={`bg-black/10 p-2 text-center text-white text-sm absolute bottom-0 ${
+          className={`${
+            isMobile ? "bg-black" : "bg-black/10"
+          } p-2 text-center text-white text-sm absolute bottom-0 ${
             isMobile ? "right-0 left-0" : "right-1/3 left-1/3"
           } z-10`}
         >
