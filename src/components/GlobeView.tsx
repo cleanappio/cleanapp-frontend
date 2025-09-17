@@ -1444,7 +1444,7 @@ export default function GlobeView() {
   };
 
   return (
-    <div className="flex flex-col h-screen relative">
+    <div className="flex flex-col h-svh relative">
       {/* Map Loading Indicator */}
       {(!mapLoaded || !mapStyleLoaded) && (
         <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
