@@ -5,7 +5,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { FiMenu } from "react-icons/fi";
+import { FiMenu, FiSearch, FiX } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
 import CleanAppProModal from "./CleanAppProModal";
@@ -23,6 +23,15 @@ import {
 import LanguageSwitcher from "./LanguageSwitcher";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
+
+// Define interface for company object
+interface CompanyData {
+  name: string;
+  position: number[];
+  color: string;
+  size: number;
+  subsidiaries: any[];
+}
 
 // Type for report data
 export interface Report {
@@ -110,6 +119,11 @@ export default function GlobeView() {
   const [reportsWithAnalysisLoading, setReportsWithAnalysisLoading] =
     useState(true);
   const [reportsLoading, setReportsLoading] = useState(true);
+
+  const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
+    CompanyData[]
+  >([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Safe map access utility function
   const getSafeMap = () => {
@@ -657,8 +671,10 @@ export default function GlobeView() {
 
       const report = reportWithAnalysis.report;
       const analysis = reportWithAnalysis.analysis;
-      const severity_level = analysis.length > 0 ? analysis[0].severity_level : 0;
-      const classification = analysis.length > 0 ? analysis[0].classification : "physical";
+      const severity_level =
+        analysis.length > 0 ? analysis[0].severity_level : 0;
+      const classification =
+        analysis.length > 0 ? analysis[0].classification : "physical";
       const isPhysical = classification === "physical";
       const locale = getCurrentLocale();
       const reportAnalysis = analysis.find(
@@ -980,15 +996,6 @@ export default function GlobeView() {
         (report) => report.analysis[0].classification === "digital"
       );
 
-      // Define interface for company object
-      interface CompanyData {
-        name: string;
-        position: number[];
-        color: string;
-        size: number;
-        subsidiaries: any[];
-      }
-
       // Group reports by brand name
       const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
       const locale = getCurrentLocale();
@@ -1008,7 +1015,7 @@ export default function GlobeView() {
       });
 
       // Convert to array with one entry per brand
-      const digitalReportsByBrand: CompanyData[] = Object.entries(
+      const _digitalReportsByBrand: CompanyData[] = Object.entries(
         reportsByBrand
       ).map(([brandName, reports]) => {
         const { lat, lon, color } = stringToLatLonColor(brandName);
@@ -1040,7 +1047,7 @@ export default function GlobeView() {
         };
       });
 
-      for (const company of digitalReportsByBrand) {
+      for (const company of _digitalReportsByBrand) {
         features.push({
           type: "Feature",
           geometry: { type: "Point", coordinates: company.position },
@@ -1068,6 +1075,7 @@ export default function GlobeView() {
           }
         }
       }
+      setDigitalReportsByBrand(_digitalReportsByBrand);
       return { type: "FeatureCollection", features };
     }
 
@@ -1517,7 +1525,7 @@ export default function GlobeView() {
 
       {/* Logo */}
       {!isEmbeddedMode && (
-        <div className="absolute top-2 left-4 p-2">
+        <div className="absolute top-2 left-0 sm:left-4 p-2">
           <Link href="/" className="flex items-center">
             <Image
               src="/cleanapp-sticker-logo.png"
@@ -1528,6 +1536,86 @@ export default function GlobeView() {
               priority
             />
           </Link>
+        </div>
+      )}
+
+      {!isMobile && selectedTab === "digital" && (
+        <div className="absolute top-4 right-20 flex flex-col gap-4 w-48 lg:w-80 xl:w-96  max-w-48 lg:max-w-80 xl:max-w-96">
+          <button
+            className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
+            onClick={() => {
+              // setIsMenuOpen(!isMenuOpen)
+            }}
+          >
+            <FiSearch className="text-gray-300 w-6" size={24} />
+            <input
+              type="text"
+              placeholder="Search"
+              className="bg-gray-800 border-none focus:outline-none focus:border-b-2 text-white flex-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            {searchQuery && (
+              <FiX
+                className="text-gray-300 w-6"
+                size={24}
+                onClick={() => setSearchQuery("")}
+              />
+            )}
+          </button>
+
+          {searchQuery && (
+            <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80">
+              {digitalReportsByBrand
+                .filter((company) =>
+                  company.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((company) => (
+                  <button
+                    key={company.name}
+                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
+                    onClick={() => {
+                      setSearchQuery("");
+
+                      const lonLat: [number, number] = [
+                        company.position[0],
+                        company.position[1],
+                      ];
+
+                      retryMapOperation(
+                        () => {
+                          const map = getSafeMap();
+                          if (map) {
+                            map.flyTo({
+                              center: lonLat,
+                              zoom: 2.75,
+                              duration: 2000,
+                              essential: true,
+                            });
+                            return true;
+                          }
+                          return false;
+                        },
+                        3,
+                        200
+                      );
+                    }}
+                  >
+                    <p className="line-clamp-1">{company.name}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+
+          {searchQuery &&
+            digitalReportsByBrand.filter((company) =>
+              company.name.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length === 0 && (
+              <div className="bg-gray-800 -mt-4">
+                <p className="p-3 text-gray-400">No results found</p>
+              </div>
+            )}
         </div>
       )}
 
@@ -1543,7 +1631,7 @@ export default function GlobeView() {
 
           <div
             ref={menuRef}
-            className={`px-3 py-2 bg-gray-900 rounded-md mt-2 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
+            className={`px-3 py-2 bg-gray-900 rounded-md mt-4 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
               isMenuOpen ? "block" : "hidden"
             }`}
           >
