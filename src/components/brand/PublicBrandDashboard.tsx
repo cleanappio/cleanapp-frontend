@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import { FaLock } from "react-icons/fa";
 import { ReportWithAnalysis } from "../../components/GlobeView";
+import TextToImage from "../TextToImage";
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
@@ -33,6 +34,8 @@ export default function PublicBrandDashboard({
           const matchingAnalysis =
             analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
+          const text =
+            matchingAnalysis?.summary || matchingAnalysis?.description || "";
           return (
             <div
               key={report?.seq || index}
@@ -56,9 +59,13 @@ export default function PublicBrandDashboard({
                   />
                 ) : (
                   <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">
-                      {t("noImage")}
-                    </p>
+                    {text ? (
+                      <TextToImage text={text} />
+                    ) : (
+                      <p className="text-gray-500 text-sm sm:text-sm">
+                        {t("noImage")}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
