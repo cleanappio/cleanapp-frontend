@@ -12,6 +12,7 @@ import { getBrandNameDisplay } from "@/lib/util";
 import Link from "next/link";
 import { useReverseGeocoding } from "@/hooks/useReverseGeocoding";
 import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
+import TextToImage from "./TextToImage";
 
 interface ReportOverviewProps {
   reportItem?: ReportWithAnalysis | null;
@@ -72,7 +73,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     } finally {
       setLoading(false);
     }
-  }, [reportItem?.report?.seq, t]);
+  }, [reportItem?.report?.seq]);
 
   useEffect(() => {
     if (reportItem?.report?.seq) {
@@ -150,6 +151,38 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     (analysis: any) => analysis.language === locale
   );
 
+  var imageComponent;
+
+  if (imageUrl) {
+    imageComponent = (
+      <Image
+        src={imageUrl}
+        alt={t("reportAnalysis")}
+        width={1000}
+        height={1000}
+        className="w-full h-full rounded-b-md object-cover"
+        onError={(e) => {
+          console.error("Failed to load image:", imageUrl);
+          e.currentTarget.style.display = "none";
+          e.currentTarget.nextElementSibling?.classList.remove("hidden");
+        }}
+      />
+    );
+  } else {
+    const text = analysis?.summary || analysis?.description || "";
+
+    if (text === "") {
+      imageComponent = (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
+          <p className="text-gray-500 text-sm sm:text-base">{t("loading")}</p>
+        </div>
+      );
+    } else {
+      imageComponent = <TextToImage text={text} />;
+    }
+  }
+
   return (
     <div className="border rounded-md bg-white shadow-md">
       <div className="p-4">
@@ -158,7 +191,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
         </h1>
       </div>
 
-      <div className="relative min-h-[400px] sm:h-96">
+      <div className="relative min-h-[400px] sm:h-96 overflow-hidden">
         {error ? (
           <div className="w-full h-full bg-red-50 rounded-b-md flex items-center justify-center">
             <div className="text-center">
@@ -169,24 +202,8 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               <p className="text-sm text-red-500 mt-1">{error}</p>
             </div>
           </div>
-        ) : imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={t("reportAnalysis")}
-            width={1000}
-            height={1000}
-            className="w-full h-full rounded-b-md object-cover"
-            onError={(e) => {
-              console.error("Failed to load image:", imageUrl);
-              e.currentTarget.style.display = "none";
-              e.currentTarget.nextElementSibling?.classList.remove("hidden");
-            }}
-          />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
-            <p className="text-gray-500 text-sm sm:text-base">{t("loading")}</p>
-          </div>
+          imageComponent
         )}
 
         {/* Mobile Layout - Content below image */}
