@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:24-alpine AS builder
+FROM node:24-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -22,6 +22,18 @@ ENV NEXT_PUBLIC_REF_API_URL={{NEXT_PUBLIC_REF_API_URL}}
 ENV NEXT_PUBLIC_REPORT_PROCESSING_API_URL={{NEXT_PUBLIC_REPORT_PROCESSING_API_URL}}
 ENV NEXT_PUBLIC_EMAIL_API_URL={{NEXT_PUBLIC_EMAIL_API_URL}}
 
+# Install system dependencies required for canvas and native modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
@@ -39,13 +51,22 @@ RUN cat next.config.js
 RUN npm run build
 
 # Stage 2: Run the application with minimal footprint
-FROM node:24-alpine AS runner
+FROM node:24-slim AS runner
 
 # Set environment variables
 ENV NODE_ENV=production
 
 # Set working directory
 WORKDIR /app
+
+# Install runtime dependencies for canvas
+RUN apt-get update && apt-get install -y \
+    libcairo2 \
+    libpango-1.0-0 \
+    libjpeg62-turbo \
+    libgif7 \
+    librsvg2-2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Only copy necessary files from the builder stage
 COPY --from=builder /app/public ./public
