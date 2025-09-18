@@ -10,6 +10,7 @@ import {
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
 import { getBrandNameDisplay } from "@/lib/util";
+import TextToImage from "./TextToImage";
 
 interface RecentReportsProps {
   reportItem?: ReportWithAnalysis | null;
@@ -171,6 +172,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           const matchingAnalysis =
             analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
+          const text =
+            matchingAnalysis?.summary || matchingAnalysis?.description || "";
           return (
             <div
               key={report?.seq || index}
@@ -193,10 +196,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     }}
                   />
                 ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">
-                      {t("noImage")}
-                    </p>
+                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
+                    {text ? (
+                      <TextToImage text={text} />
+                    ) : (
+                      <p className="text-gray-500 text-sm sm:text-sm">
+                        {t("noImage")}
+                      </p>
+                    )}
                   </div>
                 )}
                 {matchingAnalysis?.severity_level !== undefined &&
@@ -272,6 +279,8 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           const matchingAnalysis =
             analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
+          const text =
+            matchingAnalysis?.summary || matchingAnalysis?.description || "";
           return (
             <div
               key={report?.seq || index}
@@ -313,10 +322,14 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                     }}
                   />
                 ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">
-                      {t("noImage")}
-                    </p>
+                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
+                    {text ? (
+                      <TextToImage text={text} />
+                    ) : (
+                      <p className="text-gray-500 text-sm sm:text-sm">
+                        {t("noImage")}
+                      </p>
+                    )}
                   </div>
                 )}
                 {matchingAnalysis?.severity_level !== undefined &&
