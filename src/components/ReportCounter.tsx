@@ -34,6 +34,7 @@ const ReportCounter = () => {
       <div className="w-1 h-1 bg-green-400 rounded-full"></div>
       <div className="flex flex-row items-center justify-center gap-1">
         <AnimatedNumbers
+          useThousandsSeparator
           transitions={(index) => ({
             type: "keyframes",
             duration: index / 10 + 0.5,
