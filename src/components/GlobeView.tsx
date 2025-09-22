@@ -25,6 +25,8 @@ import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 
 // Define interface for company object
+import ReportCounter from "./ReportCounter";
+
 interface CompanyData {
   name: string;
   position: number[];
@@ -1624,7 +1626,7 @@ export default function GlobeView() {
                           if (map) {
                             map.flyTo({
                               center: lonLat,
-                              zoom: 2.75,
+                              zoom: 5.5,
                               duration: 2000,
                               essential: true,
                             });
@@ -1703,7 +1705,7 @@ export default function GlobeView() {
                           if (map) {
                             map.flyTo({
                               center: lonLat,
-                              zoom: 2.75,
+                              zoom: 5.5,
                               duration: 2000,
                               essential: true,
                             });
@@ -1876,6 +1878,14 @@ export default function GlobeView() {
           </Link>
         </div>
       )}
+
+      <div
+        className={`absolute ${
+          isMobile ? "bottom-12 right-20" : "bottom-10 right-4"
+        }`}
+      >
+        <ReportCounter />
+      </div>
 
       {/* CleanApp Pro Modal */}
       <CleanAppProModal
