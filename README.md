@@ -37,35 +37,41 @@ NEXT_PUBLIC_AUTH_API_URL=http://localhost:8082
 ## API Clients
 
 ### Main API Client (`src/lib/api-client.ts`)
+
 Handles customer, subscription, billing, and payment method operations.
 
 ### Areas API Client (`src/lib/areas-api-client.ts`)
+
 Handles service area management including:
+
 - Creating and updating areas with GeoJSON polygons
 - Retrieving areas with viewport filtering
 - Managing area counts and customer consent
 - Health check endpoint
 
 ### Authentication API Client (`src/lib/auth-api-client.ts`)
+
 Handles user authentication, registration, and session management.
 
 ## Areas API Usage
 
 ```typescript
-import { areasApiClient } from '@/lib/areas-api-client';
+import { areasApiClient } from "@/lib/areas-api-client";
 
 // Create a new service area
 await areasApiClient.createArea(
-  'Downtown Service Area',
+  "Downtown Service Area",
   geoJsonPolygon,
-  'Service area covering downtown business district',
-  'customer-123'
+  "Service area covering downtown business district",
+  "customer-123"
 );
 
 // Get areas within a bounding box
 const areas = await areasApiClient.getAreasInBounds(
-  40.7128, -74.0060, // Southwest corner
-  40.7589, -73.9857  // Northeast corner
+  40.7128,
+  -74.006, // Southwest corner
+  40.7589,
+  -73.9857 // Northeast corner
 );
 
 // Get total areas count
@@ -125,6 +131,12 @@ The frontend integrates with a dedicated areas service that manages GeoJSON poly
 - `GET /api/v3/get_areas` - Retrieve areas with optional viewport filtering
 - `GET /api/v3/get_areas_count` - Get total areas count
 - `POST /api/v3/update_consent` - Update customer email consent
+
+### System dependencies required for text-to-image
+
+```
+brew install pkg-config cairo pango libpng jpeg giflib librsvg
+```
 
 ## Contributing
 

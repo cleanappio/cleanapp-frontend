@@ -43,7 +43,7 @@ export function CollapsibleLatestReports({
       open={isOpen}
       onOpenChange={setIsOpen}
       className={`absolute ${
-        isMobile ? "left-2 bottom-12" : "left-10 bottom-10"
+        isMobile ? "left-2 bottom-14" : "left-10 bottom-10"
       } bg-gradient-to-b from-[#14213d] to-black text-white border border-slate-700 rounded-full text-center flex flex-col h-[60px] w-[60px] z-20`}
     >
       <CollapsibleTrigger asChild>
