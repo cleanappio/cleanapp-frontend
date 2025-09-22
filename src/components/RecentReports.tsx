@@ -44,12 +44,12 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         }
 
         const { brandName } = getBrandNameDisplay(reportAnalysis);
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brandName}&n=10&lang=${locale}`;
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brandName}&n=100&lang=${locale}`;
       } else {
         if (reportItem?.report?.id) {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=100&lang=${locale}`;
         } else {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
         }
       }
 
