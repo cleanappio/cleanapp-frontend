@@ -12,7 +12,7 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=10&lang=${locale}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${locale}`
       );
       const data = await response.json();
       setBrandReports(data.reports);
