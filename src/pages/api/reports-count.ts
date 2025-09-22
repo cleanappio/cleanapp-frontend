@@ -9,16 +9,21 @@ export default async function handler(
   }
 
   try {
-    const response = await fetch(
-      `http://dev.api.cleanapp.io:8080/valid-reports-count`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const env = process.env.NODE_ENV;
+    let url = "";
+    if (env === "development") {
+      url = "http://dev.api.cleanapp.io:8080/valid-reports-count";
+    } else if (env === "production") {
+      url = "http://api.cleanapp.io:8080/valid-reports-count";
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(
