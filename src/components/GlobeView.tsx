@@ -1626,7 +1626,7 @@ export default function GlobeView() {
                           if (map) {
                             map.flyTo({
                               center: lonLat,
-                              zoom: 2.75,
+                              zoom: 5.5,
                               duration: 2000,
                               essential: true,
                             });
@@ -1705,7 +1705,7 @@ export default function GlobeView() {
                           if (map) {
                             map.flyTo({
                               center: lonLat,
-                              zoom: 2.75,
+                              zoom: 5.5,
                               duration: 2000,
                               essential: true,
                             });
@@ -1880,7 +1880,9 @@ export default function GlobeView() {
       )}
 
       <div
-        className={`absolute ${isMobile ? "bottom-12 right-20" : "bottom-10 right-4"}`}
+        className={`absolute ${
+          isMobile ? "bottom-12 right-20" : "bottom-10 right-4"
+        }`}
       >
         <ReportCounter />
       </div>

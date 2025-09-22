@@ -10,7 +10,7 @@ export default async function handler(
 
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_LIVE_API_URL}:8080/valid-reports-count`,
+      `http://dev.api.cleanapp.io:8080/valid-reports-count`,
       {
         method: "GET",
         headers: {
