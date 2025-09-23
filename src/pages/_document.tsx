@@ -20,10 +20,11 @@ export default function Document() {
         <meta property="og:type" content="website" />
         <meta property="og:title" content="CleanApp - Real-time Environmental Monitoring" />
         <meta property="og:description" content="Track environmental issues in real-time. Monitor litter, hazards, and digital pollution with AI-powered insights and live data alerts." />
-        <meta property="og:image" content="/cleanapp-logo-high-res.png" />
+        <meta property="og:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="CleanApp Logo - Environmental Monitoring Platform" />
+        <meta property="og:image:type" content="image/png" />
         <meta property="og:url" content="https://cleanapp.io" />
         <meta property="og:site_name" content="CleanApp" />
         <meta property="og:locale" content="en_US" />
@@ -34,12 +35,19 @@ export default function Document() {
         <meta name="twitter:creator" content="@cleanapp" />
         <meta name="twitter:title" content="CleanApp - Real-time Environmental Monitoring" />
         <meta name="twitter:description" content="Track environmental issues in real-time. Monitor litter, hazards, and digital pollution with AI-powered insights and live data alerts." />
-        <meta name="twitter:image" content="/cleanapp-logo-high-res.png" />
+        <meta name="twitter:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
         <meta name="twitter:image:alt" content="CleanApp Logo - Environmental Monitoring Platform" />
         
-        {/* WhatsApp Specific Meta Tags */}
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:secure_url" content="/cleanapp-logo-high-res.png" />
+        {/* Telegram Specific Meta Tags */}
+        <meta name="telegram:channel" content="@cleanapp" />
+        <meta name="telegram:site" content="@cleanapp" />
+        
+        {/* Additional Meta Tags for Better Compatibility */}
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="CleanApp" />
         
         {/* Additional Meta Tags for Better SEO */}
         <meta name="robots" content="index, follow" />
