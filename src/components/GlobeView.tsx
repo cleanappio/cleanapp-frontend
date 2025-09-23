@@ -1,6 +1,6 @@
 "use client";
 
-import Map from "react-map-gl/mapbox";
+import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
 import Image from "next/image";
@@ -106,8 +106,9 @@ export default function GlobeView() {
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
+    accuracy?: number;
   } | null>(null);
-  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapStyleLoaded, setMapStyleLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -1557,7 +1558,38 @@ export default function GlobeView() {
           antialias={true}
           attributionControl={false}
           logoPosition="bottom-right"
-        ></Map>
+        >
+          {/* Mapbox Geolocate Control - Only show in physical reports */}
+          {selectedTab === "physical" && (
+            <GeolocateControl
+              position="top-right"
+              positionOptions={{
+                enableHighAccuracy: true
+              }}
+              trackUserLocation={true}
+              showUserHeading={true}
+              onError={(error) => {
+                console.error("Mapbox geolocate error:", error);
+                setLocationLoading(false);
+              }}
+              style={{
+                marginTop: '80px',
+                marginRight: '25px',
+              }}
+            />
+          )}
+
+          {/* User Location Marker - Only show in physical reports */}
+          {selectedTab === "physical" && userLocation && (
+            <Marker
+              longitude={userLocation.longitude}
+              latitude={userLocation.latitude}
+              anchor="center"
+            >
+              <div className="w-3 h-3 bg-blue-500 rounded-full border border-white shadow-lg"></div>
+            </Marker>
+          )}
+        </Map>
       </main>
 
       {/* Logo */}
