@@ -3,9 +3,9 @@
 import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { useRouter } from "next/router";
-import Image from "next/image";
 import { FaLock } from "react-icons/fa";
 import { ReportWithAnalysis } from "../../components/GlobeView";
+import ImageDisplay from "../ImageDisplay";
 import TextToImage from "../TextToImage";
 
 // Check if embedded mode is enabled
@@ -43,22 +43,9 @@ export default function PublicBrandDashboard({
             >
               <div className="relative">
                 {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={matchingAnalysis?.title || t("report")}
-                    width={400}
-                    height={160}
-                    className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
-                    onError={(e) => {
-                      console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden"
-                      );
-                    }}
-                  />
+                  <ImageDisplay imageUrl={imageUrl} className="h-40 sm:h-40" />
                 ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
                     {text ? (
                       <TextToImage text={text} />
                     ) : (
@@ -119,6 +106,8 @@ export default function PublicBrandDashboard({
           const matchingAnalysis =
             analysis?.find((a) => a.language === locale) || analysis?.[0];
           const imageUrl = getDisplayableImage(report?.image || null);
+          const text =
+            matchingAnalysis?.summary || matchingAnalysis?.description || "";
           return (
             <div
               key={report?.seq || index}
@@ -145,25 +134,16 @@ export default function PublicBrandDashboard({
 
               <div className="relative">
                 {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={matchingAnalysis?.title || t("report")}
-                    width={400}
-                    height={160}
-                    className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
-                    onError={(e) => {
-                      console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden"
-                      );
-                    }}
-                  />
+                  <ImageDisplay imageUrl={imageUrl} className="h-40 sm:h-40" />
                 ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm sm:text-sm">
-                      {t("noImage")}
-                    </p>
+                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
+                    {text ? (
+                      <TextToImage text={text} />
+                    ) : (
+                      <p className="text-gray-500 text-sm sm:text-sm">
+                        {t("noImage")}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
