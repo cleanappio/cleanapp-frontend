@@ -1,6 +1,7 @@
 import React, { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
+import Head from 'next/head';
 import { ChevronRight, Check, MapPin, BarChart3, Sparkles, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
@@ -213,7 +214,25 @@ export default function PricingPage() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <>
+      <Head>
+        <title>CleanApp Pricing - Environmental Monitoring Plans</title>
+        <meta name="description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
+        
+        {/* Open Graph Meta Tags */}
+        <meta property="og:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
+        <meta property="og:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
+        <meta property="og:image" content="/cleanapp-logo-high-res.png" />
+        <meta property="og:url" content="https://cleanapp.io/pricing" />
+        <meta property="og:type" content="website" />
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
+        <meta name="twitter:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
+        <meta name="twitter:image" content="/cleanapp-logo-high-res.png" />
+      </Head>
+      <div className='min-h-screen bg-gray-50'>
       {/* Header */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -404,5 +423,6 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
