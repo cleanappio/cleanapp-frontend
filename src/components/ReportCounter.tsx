@@ -2,8 +2,14 @@ import React, { useState } from "react";
 import useReportCounter from "../hooks/useReportCounter";
 import AnimatedNumbers from "react-animated-numbers";
 
-const ReportCounter = () => {
+const ReportCounter = ({
+  selectedTab,
+}: {
+  selectedTab: "physical" | "digital";
+}) => {
   const { reportCounter, isLoading, error, refetch } = useReportCounter();
+
+  const isDigital = selectedTab === "digital";
 
   if (isLoading) {
     return (
@@ -40,7 +46,11 @@ const ReportCounter = () => {
             duration: index / 10 + 0.5,
           })}
           className="text-white text-sm mt-1"
-          animateToNumber={reportCounter.total_reports}
+          animateToNumber={
+            isDigital
+              ? reportCounter.total_digital_reports
+              : reportCounter.total_physical_reports
+          }
         />
         <p className="text-white text-sm">reports</p>
       </div>

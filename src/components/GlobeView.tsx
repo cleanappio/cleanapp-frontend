@@ -130,6 +130,8 @@ export default function GlobeView() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef<HTMLInputElement>(null); // Reference to your input field
+  const isPhysical = selectedTab === "physical";
+  const isDigital = selectedTab === "digital";
 
   useEffect(() => {
     console.log("Setting useEffect");
@@ -656,7 +658,7 @@ export default function GlobeView() {
 
         // Define hover handler functions
         const handleMouseEnter = () => {
-          if (selectedTab === "physical") {
+          if (isPhysical) {
             map.getCanvas().style.cursor = "pointer";
           }
         };
@@ -731,7 +733,7 @@ export default function GlobeView() {
         );
         return;
       }
-      if (!isEmbeddedMode && selectedTab === "physical") {
+      if (!isEmbeddedMode && isPhysical) {
         map.flyTo({
           center: latLon,
           zoom: map.getZoom() || 2.5,
@@ -833,7 +835,7 @@ export default function GlobeView() {
             map.removeSource(animatedPinId);
           }
 
-          if (selectedTab === "physical") {
+          if (isPhysical) {
             addReportPinToMap(reportWithAnalysis);
           }
         }
@@ -916,7 +918,7 @@ export default function GlobeView() {
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
     if (!map) return;
-    if (selectedTab === "digital") {
+    if (isDigital) {
       if (!map.getSource("gray-overlay")) {
         map.addSource("gray-overlay", {
           type: "geojson",
@@ -960,7 +962,7 @@ export default function GlobeView() {
     if (!map || !mapLoaded || !mapStyleLoaded) return;
 
     // Only works for Mapbox Standard or Standard Satellite styles
-    if (selectedTab === "digital") {
+    if (isDigital) {
       map.setConfigProperty("basemap", "showPlaceLabels", false);
       map.setConfigProperty("basemap", "showRoadLabels", false);
       map.setConfigProperty("basemap", "showPointOfInterestLabels", false);
@@ -971,7 +973,7 @@ export default function GlobeView() {
       map.setConfigProperty("basemap", "showPointOfInterestLabels", true);
       map.setConfigProperty("basemap", "showTransitLabels", true);
     }
-  }, [selectedTab]);
+  }, [isDigital]);
 
   // Digital click/hover handlers
   useEffect(() => {
@@ -1014,7 +1016,7 @@ export default function GlobeView() {
         map.off("mouseleave", "digital-pulse", unsetPointer);
       }
     };
-  }, [selectedTab]);
+  }, [mapLoaded, mapStyleLoaded, selectedTab]);
 
   // Digital layers logic
   useEffect(() => {
@@ -1122,7 +1124,7 @@ export default function GlobeView() {
     }
 
     // Update source data based on mode
-    if (selectedTab === "digital") {
+    if (isDigital) {
       const geojson = getDigitalTerritoriesGeoJSON();
       (map.getSource("digital-territories") as any).setData(geojson);
     } else {
@@ -1210,7 +1212,7 @@ export default function GlobeView() {
     }
 
     // Show/hide digital layers based on selectedTab
-    const visibility = selectedTab === "digital" ? "visible" : "none";
+    const visibility = isDigital ? "visible" : "none";
     ["digital-nodes", "digital-pulse", "digital-labels"].forEach((layerId) => {
       if (map.getLayer(layerId)) {
         map.setLayoutProperty(layerId, "visibility", visibility);
@@ -1223,18 +1225,18 @@ export default function GlobeView() {
     function animatePulse() {
       const map = mapRef.current && mapRef.current.getMap();
       if (!map || !mapLoaded || !mapStyleLoaded) return;
-      if (selectedTab === "digital" && map.getLayer("digital-pulse")) {
+      if (isDigital && map.getLayer("digital-pulse")) {
         pulseFrame += 0.05;
         const pulseOpacity = 0.1 + (0.3 * (Math.sin(pulseFrame) + 1)) / 2;
         map.setPaintProperty("digital-pulse", "circle-opacity", pulseOpacity);
       }
       pulseAnimId = requestAnimationFrame(animatePulse);
     }
-    if (selectedTab === "digital") animatePulse();
+    if (isDigital) animatePulse();
     return () => {
       if (pulseAnimId) cancelAnimationFrame(pulseAnimId);
     };
-  }, [latestReports, selectedTab]);
+  }, [isDigital, latestReports, mapLoaded, mapStyleLoaded, selectedTab]);
 
   useEffect(() => {
     console.log("Sidemenu state changed:", isMenuOpen);
@@ -1281,7 +1283,7 @@ export default function GlobeView() {
         map.off("mouseleave", "digital-pulse", unsetPointer);
       }
     };
-  }, [selectedTab]);
+  }, [mapLoaded, mapStyleLoaded, selectedTab]);
 
   useEffect(() => {
     // Connect to the WebSocket endpoint
@@ -1416,7 +1418,7 @@ export default function GlobeView() {
     async function fetchLastReports() {
       try {
         const locale = getCurrentLocale();
-        const full_data = selectedTab === "digital" ? true : false;
+        const full_data = isDigital ? true : false;
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=${full_data}&classification=${selectedTab}`
         );
@@ -1435,7 +1437,7 @@ export default function GlobeView() {
       }
     }
     fetchLastReports();
-  }, [selectedTab]);
+  }, [isDigital, selectedTab]);
 
   // Add this helper inside GlobeView
   const flyToReport = (reportWithAnalysis: ReportWithAnalysis) => {
@@ -1608,7 +1610,7 @@ export default function GlobeView() {
         </div>
       )}
 
-      {!isMobile && selectedTab === "digital" && (
+      {!isMobile && isDigital && (
         <div className="absolute top-4 right-20 flex flex-col gap-4 w-48 lg:w-80 xl:w-96  max-w-48 lg:max-w-80 xl:max-w-96">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
@@ -1688,7 +1690,7 @@ export default function GlobeView() {
         </div>
       )}
 
-      {selectedTab === "digital" && isMobileSearchOpen && (
+      {isDigital && isMobileSearchOpen && (
         <div className="absolute top-0 bottom-0 left-0 right-0 flex flex-col items-start gap-4 z-50 bg-gray-800">
           <div className="top-0 right-0 absolute p-2">
             <FiX
@@ -1916,7 +1918,7 @@ export default function GlobeView() {
           isMobile ? "bottom-12 right-20" : "bottom-10 right-4"
         }`}
       >
-        <ReportCounter />
+        <ReportCounter selectedTab={selectedTab} />
       </div>
 
       {/* CleanApp Pro Modal */}
