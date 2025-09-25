@@ -30,13 +30,8 @@ export default async function handler(
 
   try {
     // Fetch brand reports from your API
-    const env = process.env.NODE_ENV;
-    let apiUrl = "";
-    if (env === "development") {
-      apiUrl = process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
-    } else if (env === "production") {
-      apiUrl = "http://api.cleanapp.io:8080";
-    }
+    const apiUrl =
+      process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
 
     const locale = "en"; // default locale, TODO: use getCurrentLocale
     const n = 10;

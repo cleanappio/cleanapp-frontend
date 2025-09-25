@@ -40,7 +40,7 @@ case ${OPT} in
       NEXT_PUBLIC_REPORT_PROCESSING_API_URL="https://devprocessing.cleanapp.io"
       NEXT_PUBLIC_EMAIL_API_URL="https://devemail.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
-      NEXT_PUBLIC_WEBSITE_URL="https://www.dev.cleanapp.io"
+      NEXT_PUBLIC_WEBSITE_URL="https://dev.cleanapp.io"
       break
       ;;
   "prod")
