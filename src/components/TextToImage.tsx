@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { generate, GenerateOptions } from "text-to-image";
 
 interface TextToImageProps {
@@ -17,6 +17,37 @@ const defaultConfig: GenerateOptions = {
   verticalAlign: "center",
   lineHeight: 30,
   margin: 20,
+  bgColor: "#fefae0",
+};
+
+// Pastel color palette for background generation
+const PASTEL_COLORS = [
+  "#caf0f8", // Light blue
+  "#f4f1de", // Beige
+  "#bde0fe", // Light violet
+  "#e9edc9", // Light green
+  "#ffe5ec", // Light pink
+  "#f5ebe0", // Cream
+  "#ffafcc", // Light coral
+  "#d8e2dc", // Light grayish blue
+  "#f0e68c", // Khaki
+  "#ffffff", // White
+  "#dbe7e4", // Light gray
+] as const;
+
+// Generate a deterministic color based on text content
+const getColorForText = (text: string): string => {
+  // Simple hash function to convert text to a number
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // Use absolute value and modulo to get a valid index
+  const index = Math.abs(hash) % PASTEL_COLORS.length;
+  return PASTEL_COLORS[index];
 };
 
 export default function TextToImage({
@@ -27,6 +58,9 @@ export default function TextToImage({
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Memoize the background color to ensure consistency
+  const backgroundColor = useMemo(() => getColorForText(text), [text]);
 
   // Simple text wrapping function
   const wrapText = useCallback(
@@ -85,7 +119,11 @@ export default function TextToImage({
         defaultConfig.maxWidth || 600,
         defaultConfig.fontSize || 24
       );
-      const dataUri = await generate(wrappedText, defaultConfig);
+
+      const dataUri = await generate(wrappedText, {
+        ...defaultConfig,
+        bgColor: backgroundColor,
+      });
 
       setGeneratedImage(dataUri);
 
@@ -99,7 +137,7 @@ export default function TextToImage({
     } finally {
       setIsLoading(false);
     }
-  }, [text, wrapText, onImageGenerated]);
+  }, [text, wrapText, onImageGenerated, backgroundColor]);
 
   // Generate image when component mounts or text changes
   useEffect(() => {

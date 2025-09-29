@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface ReportCounterData {
   total_reports: number;
@@ -11,6 +11,9 @@ interface UseReportCounterReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+  isPolling: boolean;
+  startPolling: () => void;
+  stopPolling: () => void;
 }
 
 const useReportCounter = (): UseReportCounterReturn => {
@@ -21,10 +24,15 @@ const useReportCounter = (): UseReportCounterReturn => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const POLLING_INTERVAL = 30000; // 30 seconds
 
-  const fetchReportCounter = useCallback(async () => {
+  const fetchReportCounter = useCallback(async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      }
       setError(null);
 
       const response = await fetch(`/api/reports-count`, {
@@ -60,30 +68,61 @@ const useReportCounter = (): UseReportCounterReturn => {
       setError(errorMessage);
       console.error("useReportCounter error:", errorMessage);
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  // Polling control functions
+  const startPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    setIsPolling(true);
+    intervalRef.current = setInterval(() => {
+      fetchReportCounter(false); // Don't show loading spinner for polling
+    }, POLLING_INTERVAL);
+  }, [fetchReportCounter]);
+
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    // Initial fetch
+    fetchReportCounter();
 
-    const fetchData = async () => {
-      await fetchReportCounter();
-    };
+    // Start polling automatically
+    startPolling();
 
-    fetchData();
-
-    // Cleanup function to prevent state updates if component unmounts
+    // Cleanup on unmount
     return () => {
-      isMounted = false;
+      cleanup();
     };
-  }, [fetchReportCounter]);
+  }, [fetchReportCounter, startPolling, cleanup]);
 
   return {
     reportCounter,
     isLoading,
     error,
     refetch: fetchReportCounter,
+    isPolling,
+    startPolling,
+    stopPolling,
   };
 };
 
