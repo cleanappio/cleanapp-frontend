@@ -41,7 +41,7 @@ case ${OPT} in
       NEXT_PUBLIC_EMAIL_API_URL="https://devemail.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       NEXT_PUBLIC_WEBSITE_URL="https://dev.cleanapp.io"
-      NEXT_PUBLIC_REPORT_COUNT_URL="https://dev.api.cleanapp.io:8080"
+      NEXT_PUBLIC_REPORT_COUNT_URL="http://dev.api.cleanapp.io:8080/valid-reports-count"
       break
       ;;
   "prod")
@@ -59,7 +59,7 @@ case ${OPT} in
       NEXT_PUBLIC_EMAIL_API_URL="https://email.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       NEXT_PUBLIC_WEBSITE_URL="https://www.cleanapp.io"
-      NEXT_PUBLIC_REPORT_COUNT_URL="https://api.cleanapp.io:8080"
+      NEXT_PUBLIC_REPORT_COUNT_URL="http://api.cleanapp.io:8080/valid-reports-count"
       break
       ;;
   *)
