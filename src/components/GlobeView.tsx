@@ -26,6 +26,9 @@ import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 
 // Define interface for company object
 import ReportCounter from "./ReportCounter";
+import { useReportTabs } from "@/hooks/useReportTabs";
+import { useLiteReportsByTab } from "@/hooks/useLiteReports";
+import { ReportTabs } from "@/components/ui/ReportTabs";
 
 interface CompanyData {
   name: string;
@@ -95,10 +98,6 @@ export default function GlobeView() {
 
   const isMobile = useIsMobile();
 
-  const [selectedTab, setSelectedTab] = useState<"physical" | "digital">(
-    "physical"
-  );
-
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [selectedReport, setSelectedReport] =
@@ -119,9 +118,6 @@ export default function GlobeView() {
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
   >([]);
-  const [reportsWithAnalysisLoading, setReportsWithAnalysisLoading] =
-    useState(true);
-  const [reportsLoading, setReportsLoading] = useState(true);
 
   const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
     CompanyData[]
@@ -130,8 +126,34 @@ export default function GlobeView() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef<HTMLInputElement>(null); // Reference to your input field
-  const isPhysical = selectedTab === "physical";
-  const isDigital = selectedTab === "digital";
+
+  // Use the refactored report tabs hook with API calls
+  const {
+    selectedTab,
+    setSelectedTab,
+    isPhysical,
+    isDigital,
+    filteredReports: filteredLatestReports,
+    physicalReports,
+    digitalReports,
+    loading: reportTabsLoading,
+    errors: reportTabsErrors,
+    fetchPhysicalReports,
+    fetchDigitalReports,
+    fetchCurrentTabReports,
+    appendPhysicalFull,
+    appendDigitalFull,
+  } = useReportTabs();
+
+  // Use lite reports for the map layer with separate arrays
+  const {
+    physicalReports: latestPhysicalReports,
+    digitalReports: latestDigitalReports,
+    loading: liteLoadingByTab,
+    appendPhysicalLite,
+    appendDigitalLite,
+  } = useLiteReportsByTab({ n: MAX_REPORTS_LIMIT });
+  // No local loading state; rely on hook's loading.current
 
   useEffect(() => {
     console.log("Setting useEffect");
@@ -1315,40 +1337,44 @@ export default function GlobeView() {
           handleNewReport(filteredReports[0]);
         }
 
-        // Add new reports to the top of the list (for displaying on map)
-        setLatestReports((prev) => {
-          const newReports = filteredReports.map((report) => ({
-            report: {
-              seq: report.report.seq,
-              timestamp: report.report.timestamp,
-              id: report.report.id,
-              latitude: report.report.latitude,
-              longitude: report.report.longitude,
-              image: report.report.image,
-            },
-            analysis: report.analysis,
-          }));
-          // Remove duplicates by id (keep the newest)
-          const seen = new Set();
-          const combined = [...newReports, ...prev].filter((item) => {
-            const seq = item.report?.seq;
-            if (seen.has(seq)) return false;
-            seen.add(seq);
-            return true;
-          });
-          return combined;
-        });
+        // Append into lite arrays used by map (physical/digital) and into full arrays used by list
+        const toAppend = filteredReports.map((report) => ({
+          report: {
+            seq: report.report.seq,
+            timestamp: report.report.timestamp,
+            id: report.report.id,
+            latitude: report.report.latitude,
+            longitude: report.report.longitude,
+            image: report.report.image,
+          },
+          analysis: report.analysis,
+        }));
 
-        // for displaying on Latest Reports modal
+        if (
+          toAppend.length > 0 &&
+          toAppend[0].analysis &&
+          toAppend[0].analysis[0] &&
+          toAppend[0].analysis[0].classification
+        ) {
+          const classification = toAppend[0].analysis[0].classification;
+          if (classification === "physical") {
+            // Update lite arrays for map
+            appendPhysicalLite(toAppend as any);
+            // Update full arrays for list
+            appendPhysicalFull(toAppend);
+          } else {
+            appendDigitalLite(toAppend as any);
+            appendDigitalFull(toAppend);
+          }
+        }
+
+        // Update LatestReportsWithAnalysis only when the classification matches current tab
         if (
           filteredReports.length > 0 &&
           filteredReports[0].analysis[0] &&
           selectedTab === filteredReports[0].analysis[0].classification
         ) {
           setLatestReportsWithAnalysis((prev) => {
-            // const newReports = filteredReports;
-            // Remove duplicates by id (keep the newest)
-
             const newReports = filteredReports.map((report) => ({
               report: {
                 seq: report.report.seq,
@@ -1360,9 +1386,9 @@ export default function GlobeView() {
               },
               analysis: report.analysis[0],
             }));
-            const seen = new Set();
+            const seen = new Set<number>();
             const combined = [...newReports, ...prev].filter((item) => {
-              const seq = item.report?.seq;
+              const seq = item.report?.seq as number;
               if (seen.has(seq)) return false;
               seen.add(seq);
               return true;
@@ -1388,56 +1414,25 @@ export default function GlobeView() {
     };
   }, [handleNewReport, selectedTab]);
 
-  // Fetch last 10 reports on mount
+  // Fetch reports when tab changes using the hook
   useEffect(() => {
-    async function fetchLastReports() {
-      try {
-        setReportsWithAnalysisLoading(true);
-        const locale = getCurrentLocale();
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=true&classification=${selectedTab}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch last reports");
-        const data = await res.json();
-        const filteredReports = filterAnalysesByLanguage(
-          data.reports || [],
-          locale
-        );
-        setLatestReportsWithAnalysis(filteredReports);
-      } catch (err) {
-        console.error("Error fetching last reports:", err);
-      } finally {
-        setReportsWithAnalysisLoading(false);
-      }
-    }
-    fetchLastReports();
-  }, [selectedTab]);
+    // Fetch a small number for the list to keep UI responsive
+    fetchCurrentTabReports(10);
+  }, [selectedTab, fetchCurrentTabReports]);
 
-  // Fetch lite reports on mount
+  // Update list content from hook's filtered reports
   useEffect(() => {
-    async function fetchLastReports() {
-      try {
-        const locale = getCurrentLocale();
-        const full_data = isDigital ? true : false;
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=${MAX_REPORTS_LIMIT}&lang=${locale}&full_data=${full_data}&classification=${selectedTab}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch last reports");
-        const data = await res.json();
-        const filteredReports = filterAnalysesByLanguage(
-          data.reports || [],
-          locale
-        );
-        setLatestReports(filteredReports);
-        // console.log({ filteredReports });
-      } catch (err) {
-        console.error("Error fetching last reports:", err);
-      } finally {
-        setReportsLoading(false);
-      }
-    }
-    fetchLastReports();
-  }, [isDigital, selectedTab]);
+    setLatestReportsWithAnalysis(filteredLatestReports);
+  }, [filteredLatestReports]);
+
+  // Update map content from lite reports based on selected tab, immediately available
+  useEffect(() => {
+    setLatestReports(
+      selectedTab === "physical" ? latestPhysicalReports : latestDigitalReports
+    );
+  }, [selectedTab, latestPhysicalReports, latestDigitalReports]);
+
+  // Removed inline fetch; using hook-based fetching instead
 
   // Add this helper inside GlobeView
   const flyToReport = (reportWithAnalysis: ReportWithAnalysis) => {
@@ -1566,7 +1561,7 @@ export default function GlobeView() {
             <GeolocateControl
               position="top-right"
               positionOptions={{
-                enableHighAccuracy: true
+                enableHighAccuracy: true,
               }}
               trackUserLocation={true}
               showUserHeading={true}
@@ -1575,8 +1570,8 @@ export default function GlobeView() {
                 setLocationLoading(false);
               }}
               style={{
-                marginTop: '80px',
-                marginRight: '25px',
+                marginTop: "80px",
+                marginRight: "25px",
               }}
             />
           )}
@@ -1847,33 +1842,16 @@ export default function GlobeView() {
       {/* Center menu */}
       <div className="absolute left-1/2 -translate-x-1/2 p-2 mt-2">
         <div className="flex gap-2 rounded-full bg-black text-gray-400 p-2 border border-gray-500">
-          <p
-            className={`text-sm cursor-pointer rounded-full px-4 py-2 font-bold ${
-              selectedTab === "physical"
-                ? "text-gray-800 bg-gray-400 hover:bg-gray-400"
-                : "hover:bg-gray-800"
-            }`}
-            onClick={() => setSelectedTab("physical")}
-          >
-            {t("physical")}
-          </p>
-          <p
-            className={`text-sm cursor-pointer rounded-full px-4 py-2 font-bold ${
-              selectedTab === "digital"
-                ? "text-gray-800 bg-gray-400 hover:bg-gray-400"
-                : "hover:bg-gray-800"
-            }`}
-            onClick={() => setSelectedTab("digital")}
-          >
-            {t("digital")}
-          </p>
+          <ReportTabs selectedTab={selectedTab} onTabChange={setSelectedTab} />
         </div>
       </div>
 
       {/* Latest Reports - only show when modal is not open and not on mobile */}
       <CollapsibleLatestReports
         reports={latestReportsWithAnalysis}
-        loading={reportsWithAnalysisLoading}
+        loading={
+          reportTabsLoading.current && latestReportsWithAnalysis.length === 0
+        }
         onReportClick={(report) => {
           setSelectedReport(report);
           setIsCleanAppProOpen(true);
