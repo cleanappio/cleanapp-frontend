@@ -11,11 +11,13 @@ export default async function handler(
   try {
     const env = process.env.NODE_ENV;
     let url = "";
-    if (env === "development") {
-      url = "http://dev.api.cleanapp.io:8080/valid-reports-count";
-    } else if (env === "production") {
-      url = "http://api.cleanapp.io:8080/valid-reports-count";
-    }
+    // if (env === "development") {
+    //   url = "http://dev.api.cleanapp.io:8080/valid-reports-count";
+    // } else if (env === "production") {
+    //   url = "http://api.cleanapp.io:8080/valid-reports-count";
+    // }
+
+    url = process.env.NEXT_PUBLIC_REPORT_COUNT_URL || "http://localhost:8080";
 
     const response = await fetch(url, {
       method: "GET",
