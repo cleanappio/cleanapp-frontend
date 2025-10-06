@@ -41,6 +41,7 @@ case ${OPT} in
       NEXT_PUBLIC_EMAIL_API_URL="https://devemail.cleanapp.io"
       TARGET_VM_IP="34.132.121.53"
       NEXT_PUBLIC_WEBSITE_URL="https://dev.cleanapp.io"
+      NEXT_PUBLIC_REPORT_COUNT_URL="https://dev.api.cleanapp.io:8080"
       break
       ;;
   "prod")
@@ -58,6 +59,7 @@ case ${OPT} in
       NEXT_PUBLIC_EMAIL_API_URL="https://email.cleanapp.io"
       TARGET_VM_IP="34.122.15.16"
       NEXT_PUBLIC_WEBSITE_URL="https://www.cleanapp.io"
+      NEXT_PUBLIC_REPORT_COUNT_URL="https://api.cleanapp.io:8080"
       break
       ;;
   *)
@@ -117,6 +119,7 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL=$(echo ${NEXT_PUBLIC_REPORT_PROCESSING_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_EMAIL_API_URL=$(echo ${NEXT_PUBLIC_EMAIL_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_WEBSITE_URL=$(echo ${NEXT_PUBLIC_WEBSITE_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL=$(echo ${NEXT_PUBLIC_REPORT_COUNT_URL} | sed 's/\//\\\//g')
   if [ "${MODE}" == "full" ]; then
     NEXT_PUBLIC_EMBEDDED_MODE="false"
   else
@@ -139,7 +142,8 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_REF_API_URL}}/${ESCAPED_NEXT_PUBLIC_REF_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_REPORT_PROCESSING_API_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_EMAIL_API_URL}}/${ESCAPED_NEXT_PUBLIC_EMAIL_API_URL}/" | \
-  sed "s/{{NEXT_PUBLIC_WEBSITE_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSITE_URL}/" \
+  sed "s/{{NEXT_PUBLIC_WEBSITE_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSITE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REPORT_COUNT_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL}/" \
   > Dockerfile
 
   echo "Building and pushing docker image..."
