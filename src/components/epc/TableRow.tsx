@@ -1,4 +1,4 @@
-import { TableRowProps } from "../types";
+import { TableRowProps } from "@/types";
 
 const formatMessage = (message: string) => {
   // Split the message at "Learn more: " to separate text and link

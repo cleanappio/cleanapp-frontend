@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrandData } from "../types";
+import { BrandData } from "@/types";
 
 export const useSearch = (data: BrandData[]) => {
   const [searchTerm, setSearchTerm] = useState("");

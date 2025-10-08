@@ -1,4 +1,4 @@
-import { SearchProps } from "../types";
+import { SearchProps } from "@/types";
 
 export const SearchBar = ({
   searchTerm,

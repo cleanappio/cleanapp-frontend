@@ -1,4 +1,4 @@
-import { TableProps } from "../types";
+import { TableProps } from "@/types";
 import { TableRow } from "./TableRow";
 
 export const DataTable = ({
