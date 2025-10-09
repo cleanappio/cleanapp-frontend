@@ -1,4 +1,5 @@
 import { TableRowProps } from "@/types";
+import Link from "next/link";
 
 const formatMessage = (message: string) => {
   // Split the message at "Learn more: " to separate text and link
@@ -10,14 +11,14 @@ const formatMessage = (message: string) => {
     return (
       <>
         {textPart}Learn more:{" "}
-        <a
+        <Link
           href={linkPart}
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 hover:text-blue-800 underline"
         >
           {linkPart}
-        </a>
+        </Link>
       </>
     );
   }
