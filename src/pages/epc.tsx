@@ -1,12 +1,10 @@
-"use client";
-
 import { SearchBar, DataTable, ResultsCounter } from "../components/epc";
 import { useBrandData } from "@/hooks/epc/useBrandData";
 import { useSearch } from "@/hooks/epc/useSearch";
 import { useInfiniteScroll } from "@/hooks/epc/useInfiniteScroll";
 import Image from "next/image";
 
-export default function Home() {
+export default function EPCPage() {
   const { data, loading, hasMore, loadMore } = useBrandData();
   const { searchTerm, filteredData, handleSearchChange, handleSearchSubmit } =
     useSearch(data);
