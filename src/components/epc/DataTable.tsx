@@ -12,7 +12,7 @@ export const DataTable = ({
       {/* Table Header */}
       <div className="grid grid-cols-[1fr_1fr_3fr] gap-4 p-4 bg-gray-100 font-semibold text-gray-700 border-b">
         <div>Brand</div>
-        <div>EPC (EOA)</div>
+        <div>EPC</div>
         <div>Message</div>
       </div>
 
