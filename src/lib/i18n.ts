@@ -107,6 +107,11 @@ export const translations: {
     montenegroDashboard: "Montenegro Dashboard",
     montenegroReports: "Montenegro Reports",
 
+    // Devcon 2025 specific
+    devcon2025: "Devcon 2025",
+    devcon2025Dashboard: "Devcon 2025 Dashboard",
+    devcon2025Reports: "Devcon 2025 Reports",
+
     // New York specific
     newYork: "New York",
     newYorkDashboard: "New York Dashboard",
