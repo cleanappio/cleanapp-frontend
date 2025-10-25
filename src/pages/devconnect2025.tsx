@@ -5,7 +5,7 @@ import { useTranslations } from "@/lib/i18n";
 import CustomAreaDashboard from "../components/CustomAreaDashboard";
 import Head from "next/head";
 
-export default function Devcon2025Page() {
+export default function Devconnect2025Page() {
   const router = useRouter();
   // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -36,14 +36,14 @@ export default function Devcon2025Page() {
   return (
     <>
       <Head>
-        <title>{t("devcon2025Dashboard")} - CleanApp</title>
-        <meta name="description" content={t("devcon2025Reports")} />
+        <title>{t("devconnect2025Dashboard")} - CleanApp</title>
+        <meta name="description" content={t("devconnect2025Reports")} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <CustomAreaDashboard
-        apiUrl={process.env.NEXT_PUBLIC_DEVCON2025_API_URL || ""}
+        apiUrl={process.env.NEXT_PUBLIC_DEVCONNECT2025_API_URL || ""}
         mapCenter={mapCenter}
-        areaName="Devcon 2025"
+        areaName="Devconnect 2025"
         areaFlag="🇦🇷" // Argentina flag
       />
     </>
