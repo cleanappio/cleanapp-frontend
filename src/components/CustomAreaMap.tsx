@@ -62,12 +62,14 @@ interface CustomAreaMapProps {
   mapCenter: [number, number];
   apiUrl: string;
   areaName?: string;
+  areaZoom?: number;
 }
 
 function CustomAreaMap({
   mapCenter,
   apiUrl,
   areaName = "Custom Area",
+  areaZoom = 7,
 }: CustomAreaMapProps) {
   // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -388,7 +390,7 @@ function CustomAreaMap({
 
       <MapContainer
         center={mapCenter}
-        zoom={7}
+        zoom={areaZoom}
         style={{ height: "100%", width: "100%" }}
         zoomControl={false}
         scrollWheelZoom={true}

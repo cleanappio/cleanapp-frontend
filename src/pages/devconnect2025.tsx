@@ -13,7 +13,10 @@ export default function Devconnect2025Page() {
   const { t } = useTranslations();
 
   // Memoize the map center to prevent unnecessary re-renders
-  const mapCenter = useMemo(() => [42.7087, 19.3744] as [number, number], []);
+  const mapCenter = useMemo(
+    () => [-34.5797805, -58.4209327] as [number, number],
+    []
+  );
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -45,6 +48,7 @@ export default function Devconnect2025Page() {
         mapCenter={mapCenter}
         areaName="Devconnect 2025"
         areaFlag="🇦🇷" // Argentina flag
+        areaZoom={16}
       />
     </>
   );
