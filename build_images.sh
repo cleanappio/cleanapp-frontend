@@ -32,6 +32,7 @@ case ${OPT} in
       NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://devlive.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://devapimontenegro.cleanapp.io"
+      NEXT_PUBLIC_DEVCONNECT2025_API_URL="https://devdevconnect2025.cleanapp.io"
       NEXT_PUBLIC_NEW_YORK_API_URL="https://devapinewyork.cleanapp.io"
       NEXT_PUBLIC_REDBULL_API_URL="https://devapiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://devauth.cleanapp.io"
@@ -50,6 +51,7 @@ case ${OPT} in
       NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://live.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://apimontenegro.cleanapp.io"
+      NEXT_PUBLIC_DEVCONNECT2025_API_URL="https://devconnect2025.cleanapp.io"
       NEXT_PUBLIC_NEW_YORK_API_URL="https://apinewyork.cleanapp.io"
       NEXT_PUBLIC_REDBULL_API_URL="https://apiredbull.cleanapp.io"
       NEXT_PUBLIC_AUTH_API_URL="https://auth.cleanapp.io"
@@ -109,6 +111,7 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_LIVE_API_URL=$(echo ${NEXT_PUBLIC_LIVE_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL=$(echo ${NEXT_PUBLIC_MONTENEGRO_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_DEVCONNECT2025_API_URL=$(echo ${NEXT_PUBLIC_DEVCONNECT2025_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_NEW_YORK_API_URL=$(echo ${NEXT_PUBLIC_NEW_YORK_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_REDBULL_API_URL=$(echo ${NEXT_PUBLIC_REDBULL_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_AUTH_API_URL=$(echo ${NEXT_PUBLIC_AUTH_API_URL} | sed 's/\//\\\//g')
@@ -133,6 +136,7 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}}/${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}/" | \
   sed "s/{{NEXT_PUBLIC_EMBEDDED_MODE}}/${NEXT_PUBLIC_EMBEDDED_MODE}/" | \
   sed "s/{{NEXT_PUBLIC_MONTENEGRO_API_URL}}/${ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_DEVCONNECT2025_API_URL}}/${ESCAPED_NEXT_PUBLIC_DEVCONNECT2025_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_NEW_YORK_API_URL}}/${ESCAPED_NEXT_PUBLIC_NEW_YORK_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_REDBULL_API_URL}}/${ESCAPED_NEXT_PUBLIC_REDBULL_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" | \
