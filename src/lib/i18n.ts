@@ -112,6 +112,11 @@ export const translations: {
     devconnect2025Dashboard: "Devconnect 2025 Dashboard",
     devconnect2025Reports: "Devconnect 2025 Reports",
 
+    // Edge City specific
+    edgeCity: "Edge City",
+    edgeCityDashboard: "Edge City Dashboard",
+    edgeCityReports: "Edge City Reports",
+
     // New York specific
     newYork: "New York",
     newYorkDashboard: "New York Dashboard",
@@ -589,6 +594,16 @@ export const translations: {
     montenegro: "Crna Gora",
     montenegroDashboard: "Kontrolna tabla Crne Gore",
     montenegroReports: "Izveštaji Crne Gore",
+
+    // Devconnect 2025 specific
+    devconnect2025: "Devconnect 2025",
+    devconnect2025Dashboard: "Kontrolna tabla Devconnect 2025",
+    devconnect2025Reports: "Izveštaji Devconnect 2025",
+
+    // Edge City specific
+    edgeCity: "Edge City",
+    edgeCityDashboard: "Kontrolna tabla Edge City",
+    edgeCityReports: "Izveštaji Edge City",
 
     // New York specific
     newYork: "Njujork",

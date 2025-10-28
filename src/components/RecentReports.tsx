@@ -34,13 +34,13 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       let url = "";
-      if (reportItem?.analysis[0]?.classification === "digital") {
-        const reportAnalysis = reportItem.analysis.find(
+      if (reportItem && reportItem?.analysis && reportItem?.analysis.length > 0 && reportItem.analysis[0].classification === "digital") {
+        let reportAnalysis = reportItem.analysis.find(
           (analysis) => analysis.language === locale
         );
         if (!reportAnalysis) {
           console.error("No report analysis found");
-          return;
+          reportAnalysis = reportItem.analysis[0];
         }
 
         const { brandName } = getBrandNameDisplay(reportAnalysis);
