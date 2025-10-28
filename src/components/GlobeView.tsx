@@ -732,13 +732,19 @@ export default function GlobeView() {
       const classification =
         analysis.length > 0 ? analysis[0].classification : "physical";
       const isPhysical = classification === "physical";
+
+      if (analysis.length == 0) {
+        // console.error("No report analysis found");
+        return;
+      }
+
       const locale = getCurrentLocale();
-      const reportAnalysis = analysis.find(
+      let reportAnalysis = analysis.find(
         (analysis) => analysis.language === locale
       );
       if (!reportAnalysis) {
-        console.error("No report analysis found");
-        return;
+        // console.error("No report analysis with current locale found");
+        reportAnalysis = analysis[0];
       }
       const { brandName } = getBrandNameDisplay(reportAnalysis);
       const { lat, lon } = stringToLatLonColor(brandName);
@@ -1056,12 +1062,12 @@ export default function GlobeView() {
       const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
       const locale = getCurrentLocale();
       digitalReports.forEach((report) => {
-        const reportAnalysis = report.analysis.find(
+        let reportAnalysis = report.analysis.find(
           (analysis) => analysis.language === locale
         );
         if (!reportAnalysis) {
-          console.error("No report analysis found");
-          return;
+          // console.error("No report analysis with current locale found");
+          reportAnalysis = report.analysis[0];
         }
         const { brandName } = getBrandNameDisplay(reportAnalysis);
         if (!reportsByBrand[brandName]) {
@@ -1445,12 +1451,12 @@ export default function GlobeView() {
     const classification = analysis[0].classification;
     const isPhysical = classification === "physical";
     const locale = getCurrentLocale();
-    const reportAnalysis = analysis.find(
+    let reportAnalysis = analysis.find(
       (analysis) => analysis.language === locale
     );
     if (!reportAnalysis) {
-      console.error("No report analysis found");
-      return;
+      // console.error("No report analysis with current locale found");
+      reportAnalysis = analysis[0];
     }
     const { brandName } = getBrandNameDisplay(reportAnalysis);
     const { lat, lon, color } = stringToLatLonColor(brandName);
