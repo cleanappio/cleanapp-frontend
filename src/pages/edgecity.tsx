@@ -14,7 +14,7 @@ export default function EdgeCityDashboard() {
 
   // Memoize the map center to prevent unnecessary re-renders
   const mapCenter = useMemo(
-    () => [-34.5797805, -58.4209327] as [number, number],
+    () => [-40.1284469, -71.3460176] as [number, number],
     []
   );
 
@@ -48,7 +48,7 @@ export default function EdgeCityDashboard() {
         mapCenter={mapCenter}
         areaName="Edge City"
         areaFlag="🇦🇷" // Argentina flag
-        areaZoom={16}
+        areaZoom={11}
       />
     </>
   );
