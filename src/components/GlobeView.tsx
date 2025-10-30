@@ -8,8 +8,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { FiMenu, FiSearch, FiX } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
-import CleanAppProModal from "./CleanAppProModal";
-import LatestReports from "./LatestReports";
 import {
   getBrandNameDisplay,
   getColorByValue,
