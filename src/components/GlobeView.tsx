@@ -29,6 +29,14 @@ import ReportCounter from "./ReportCounter";
 import { useReportTabs } from "@/hooks/useReportTabs";
 import { useLiteReportsByTab } from "@/hooks/useLiteReports";
 import { ReportTabs } from "@/components/ui/ReportTabs";
+import {
+  UseLiteReportsByTabReturn,
+  useLiteReportsByTabV2,
+} from "@/hooks/v2/useLiteReports";
+import { ReportResponse } from "@/types/reports/api";
+import { DigitalReportResponse } from "@/types/reports/api/digital";
+import CleanAppProModalV2 from "./CleanAppProModalV2";
+import { PhysicalReportResponse } from "@/types/reports/api/physical";
 
 interface CompanyData {
   name: string;
@@ -100,8 +108,9 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
-  const [selectedReport, setSelectedReport] =
-    useState<ReportWithAnalysis | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportResponse | null>(
+    null
+  );
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -114,13 +123,13 @@ export default function GlobeView() {
   const mapRef = useRef<MapRef | null>(null);
   const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [latestReports, setLatestReports] = useState<ReportWithAnalysis[]>([]);
+  const [latestReports, setLatestReports] = useState<ReportResponse[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
   >([]);
 
   const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
-    CompanyData[]
+    GeoJSON.Feature[]
   >([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -146,14 +155,22 @@ export default function GlobeView() {
   } = useReportTabs();
 
   // Use lite reports for the map layer with separate arrays
-  const {
-    physicalReports: latestPhysicalReports,
-    digitalReports: latestDigitalReports,
-    loading: liteLoadingByTab,
-    appendPhysicalLite,
-    appendDigitalLite,
-  } = useLiteReportsByTab({ n: MAX_REPORTS_LIMIT });
+  // const {
+  //   physicalReports: latestPhysicalReports,
+  //   digitalReports: latestDigitalReports,
+  //   loading: liteLoadingByTab,
+  //   appendPhysicalLite,
+  //   appendDigitalLite,
+  // } = useLiteReportsByTab({ n: MAX_REPORTS_LIMIT });
   // No local loading state; rely on hook's loading.current
+
+  const {
+    physicalReports: latestPhysicalReportsV2,
+    digitalReports: latestDigitalReportsV2,
+    loading: liteLoadingByTabV2,
+    appendPhysicalLite: appendPhysicalLiteV2,
+    appendDigitalLite: appendDigitalLiteV2,
+  } = useLiteReportsByTabV2();
 
   useEffect(() => {
     console.log("Setting useEffect");
@@ -543,14 +560,18 @@ export default function GlobeView() {
   // Add report pins to the map when reports are loaded
   useEffect(() => {
     if (mapLoaded && mapRef.current && latestReports.length > 0) {
+      console.log("latestReports", latestReports);
       const map = mapRef.current.getMap();
       if (map) {
+        // console.log("map", map);
         // Create GeoJSON data from reports
         const reportFeatures = latestReports.map((report, index) => {
-          const locale = getCurrentLocale();
-          const reportAnalysis = report.analysis.find(
-            (analysis) => analysis.language === locale
-          );
+          // const locale = getCurrentLocale();
+          // const reportAnalysis = report.analysis.find(
+          //   (analysis) => analysis.language === locale
+          // );
+
+          const classification = report.classification;
 
           // Default value to digital lat, lon
           var latitude = 0,
@@ -558,11 +579,21 @@ export default function GlobeView() {
             color = "",
             title = "";
 
-          const isDigital = reportAnalysis?.classification === "digital";
+          const isDigital = classification === "digital";
+          const isPhysical = classification === "physical";
+
+          if (isPhysical) {
+            latitude = report.latitude;
+            longitude = report.longitude;
+            color = getColorByValue(report.severity_level);
+          }
 
           if (isDigital) {
-            const { brandName, brandDisplayName } =
-              getBrandNameDisplay(reportAnalysis);
+            const brandName = report.brand_name;
+            const brandDisplayName = report.brand_display_name;
+
+            // console.log("brandName", brandName);
+            // console.log("brandDisplayName", brandDisplayName);
             const {
               lat,
               lon,
@@ -571,13 +602,7 @@ export default function GlobeView() {
             color = brandColor;
             latitude = lat;
             longitude = lon;
-            title = `${brandDisplayName} (${report.analysis.length})`;
-          }
-
-          if (!isDigital) {
-            latitude = report.report.latitude;
-            longitude = report.report.longitude;
-            title = reportAnalysis?.title ?? "";
+            title = `${brandDisplayName} (${report.total})`;
           }
 
           return {
@@ -587,16 +612,17 @@ export default function GlobeView() {
               coordinates: [longitude, latitude],
             },
             properties: {
-              color: isDigital ? color : undefined,
-              id: report.report.id,
-              seq: report.report.seq,
+              color: color,
+              seq: isPhysical ? report.seq : undefined,
               title: title,
               index: index,
-              severity: reportAnalysis?.severity_level ?? 0.0,
-              classification: reportAnalysis?.classification ?? "physical",
+              severity: isPhysical ? report.severity_level : undefined,
+              classification: classification,
             },
           };
         });
+
+        console.log("reportFeatures", reportFeatures);
 
         // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
@@ -660,20 +686,32 @@ export default function GlobeView() {
             const feature = e.features[0];
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
-              const analysis = latestReports[reportIndex].analysis;
-              if (selectedTab === "digital" && analysis.length > 1) {
-                const { brandName } = getBrandNameDisplay(analysis[0]);
-
-                if (brandName === "other") {
-                  console.log("ignoring other report");
-                  e.preventDefault();
-                  return;
-                }
-              }
-
+              console.log("report clicked", latestReports[reportIndex]);
               setSelectedReport(latestReports[reportIndex]);
-              flyToReport(latestReports[reportIndex]);
+              // flyToReport(latestReports[reportIndex]);
               setIsCleanAppProOpen(true);
+
+              const report = latestReports[reportIndex];
+
+              if (report.classification === "digital") {
+                const brandName = report.brand_name;
+
+                // call api to fetch digital report details
+              }
+              // const analysis = latestReports[reportIndex].analysis;
+              // if (selectedTab === "digital" && analysis.length > 1) {
+              //   const { brandName } = getBrandNameDisplay(analysis[0]);
+
+              //   if (brandName === "other") {
+              //     console.log("ignoring other report");
+              //     e.preventDefault();
+              //     return;
+              //   }
+              // }
+
+              // setSelectedReport(latestReports[reportIndex]);
+              // flyToReport(latestReports[reportIndex]);
+              // setIsCleanAppProOpen(true);
             }
           }
         };
@@ -709,7 +747,7 @@ export default function GlobeView() {
         };
       }
     }
-  }, [mapLoaded, latestReports, selectedTab]);
+  }, [isPhysical, mapLoaded, latestReports, selectedTab]);
 
   // Handle new report from WebSocket
   const handleNewReport = useCallback(
@@ -770,11 +808,11 @@ export default function GlobeView() {
         });
       }
 
-      // Update latestReports state to include the new report
-      setLatestReports((prev) => {
-        const newReports = [reportWithAnalysis, ...prev];
-        return newReports;
-      });
+      // TODO: Update latestReports state to include the new report
+      // setLatestReports((prev) => {
+      //   const newReports = [reportWithAnalysis, ...prev];
+      //   return newReports;
+      // });
 
       // Create a temporary animated pin for the new report
       const animatedPinId = `animated-pin-${report.seq}`;
@@ -1001,7 +1039,7 @@ export default function GlobeView() {
       map.setConfigProperty("basemap", "showPointOfInterestLabels", true);
       map.setConfigProperty("basemap", "showTransitLabels", true);
     }
-  }, [isDigital]);
+  }, [isDigital, mapLoaded, mapStyleLoaded]);
 
   // Digital click/hover handlers
   useEffect(() => {
@@ -1055,89 +1093,97 @@ export default function GlobeView() {
     function getDigitalTerritoriesGeoJSON() {
       const features = [];
       const digitalReports = latestReports.filter(
-        (report) => report.analysis[0].classification === "digital"
+        (report) => report.classification === "digital"
       );
 
       // Group reports by brand name
-      const reportsByBrand: Record<string, ReportWithAnalysis[]> = {};
-      const locale = getCurrentLocale();
-      digitalReports.forEach((report) => {
-        let reportAnalysis = report.analysis.find(
-          (analysis) => analysis.language === locale
-        );
-        if (!reportAnalysis) {
-          // console.error("No report analysis with current locale found");
-          reportAnalysis = report.analysis[0];
-        }
-        const { brandName } = getBrandNameDisplay(reportAnalysis);
-        if (!reportsByBrand[brandName]) {
-          reportsByBrand[brandName] = [];
-        }
-        reportsByBrand[brandName].push(report);
-      });
+      // const reportsByBrand: Record<string, DigitalReportResponse[]> = {};
+      // const locale = getCurrentLocale();
+      // digitalReports.forEach((report) => {
+      //   const brandName = report.brand_name;
+      //   if (!reportsByBrand[brandName]) {
+      //     reportsByBrand[brandName] = [];
+      //   }
+      //   reportsByBrand[brandName].push(report as DigitalReportResponse);
+      // });
 
       // Convert to array with one entry per brand
-      const _digitalReportsByBrand: CompanyData[] = Object.entries(
-        reportsByBrand
-      ).map(([brandName, reports]) => {
-        const { lat, lon, color } = stringToLatLonColor(brandName);
-        const reportAnalysis = reports[0].analysis.find(
-          (analysis) => analysis.language === locale
-        );
+      // const _digitalReportsByBrand: CompanyData[] = Object.entries(
+      //   reportsByBrand
+      // ).map(([brandName, reports]) => {
+      //   const { lat, lon, color } = stringToLatLonColor(brandName);
+      //   const reportAnalysis = reports[0].analysis.find(
+      //     (analysis) => analysis.language === locale
+      //   );
 
-        const { brandDisplayName } = getBrandNameDisplay(
-          reportAnalysis || reports[0].analysis[0]
-        );
-        const reportCount = reports.length;
+      //   const { brandDisplayName } = getBrandNameDisplay(
+      //     reportAnalysis || reports[0].analysis[0]
+      //   );
+      //   const reportCount = reports.length;
+
+      //   // Calculate size based on report count
+      //   let size = 10;
+      //   if (reportCount >= 50) {
+      //     size += 5;
+      //   } else if (reportCount >= 3) {
+      //     size += 3;
+      //   } else if (reportCount >= 2) {
+      //     size += 2;
+      //   }
+
+      //   return {
+      //     name: `${brandDisplayName} (${reportCount})`,
+      //     position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
+      //     color: color,
+      //     size: size,
+      //     subsidiaries: [],
+      //   };
+      // });
+
+      for (const report of digitalReports) {
+        const brandName = report.brand_name;
+        const brandDisplayName = report.brand_display_name;
+        const total = report.total;
 
         // Calculate size based on report count
         let size = 10;
-        if (reportCount >= 50) {
+        if (total >= 50) {
           size += 5;
-        } else if (reportCount >= 3) {
+        } else if (total >= 3) {
           size += 3;
-        } else if (reportCount >= 2) {
+        } else if (total >= 2) {
           size += 2;
         }
 
-        return {
-          name: `${brandDisplayName} (${reportCount})`,
-          position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
-          color: color,
-          size: size,
-          subsidiaries: [],
-        };
-      });
-
-      for (const company of _digitalReportsByBrand) {
+        const { lat, lon, color } = stringToLatLonColor(brandName);
         features.push({
           type: "Feature",
-          geometry: { type: "Point", coordinates: company.position },
+          geometry: { type: "Point", coordinates: [lon, lat] },
           properties: {
-            name: company.name,
-            color: company.color,
-            size: company.size,
-            isParent: !!company.subsidiaries,
-            parentName: company.name,
+            name: `${brandDisplayName} (${total})`,
+            color: color,
+            size: size,
+            isParent: false,
+            parentName: brandName,
           },
         });
-        if (company.subsidiaries) {
-          for (const sub of company.subsidiaries) {
-            features.push({
-              type: "Feature",
-              geometry: { type: "Point", coordinates: sub.position },
-              properties: {
-                name: sub.name,
-                color: sub.color,
-                size: sub.size,
-                isParent: false,
-                parentName: company.name,
-              },
-            });
-          }
-        }
+        // if (report.subsidiaries) {
+        //   for (const sub of company.subsidiaries) {
+        //     features.push({
+        //       type: "Feature",
+        //       geometry: { type: "Point", coordinates: sub.position },
+        //       properties: {
+        //         name: sub.name,
+        //         color: sub.color,
+        //         size: sub.size,
+        //         isParent: false,
+        //         parentName: company.name,
+        //       },
+        //     });
+        //   }
+        // }
       }
-      setDigitalReportsByBrand(_digitalReportsByBrand);
+      setDigitalReportsByBrand(features as GeoJSON.Feature[]);
       return { type: "FeatureCollection", features };
     }
 
@@ -1365,11 +1411,11 @@ export default function GlobeView() {
           const classification = toAppend[0].analysis[0].classification;
           if (classification === "physical") {
             // Update lite arrays for map
-            appendPhysicalLite(toAppend as any);
+            appendPhysicalLiteV2(toAppend as any);
             // Update full arrays for list
             appendPhysicalFull(toAppend);
           } else {
-            appendDigitalLite(toAppend as any);
+            appendDigitalLiteV2(toAppend as any);
             appendDigitalFull(toAppend);
           }
         }
@@ -1434,9 +1480,11 @@ export default function GlobeView() {
   // Update map content from lite reports based on selected tab, immediately available
   useEffect(() => {
     setLatestReports(
-      selectedTab === "physical" ? latestPhysicalReports : latestDigitalReports
+      selectedTab === "physical"
+        ? latestPhysicalReportsV2
+        : latestDigitalReportsV2
     );
-  }, [selectedTab, latestPhysicalReports, latestDigitalReports]);
+  }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
 
   // Removed inline fetch; using hook-based fetching instead
 
@@ -1640,19 +1688,25 @@ export default function GlobeView() {
           {searchQuery && (
             <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80">
               {digitalReportsByBrand
-                .filter((company) =>
-                  company.name.toLowerCase().includes(searchQuery.toLowerCase())
+                .filter((company: GeoJSON.Feature) =>
+                  company.properties?.name
+                    ?.toLowerCase()
+                    .includes(searchQuery.toLowerCase())
                 )
-                .map((company) => (
+                .map((company: GeoJSON.Feature) => (
                   <button
-                    key={company.name}
+                    key={company.properties?.name}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       setSearchQuery("");
 
                       const lonLat: [number, number] = [
-                        company.position[0],
-                        company.position[1],
+                        company.geometry.type === "Point"
+                          ? company.geometry.coordinates[0]
+                          : 0,
+                        company.geometry.type === "Point"
+                          ? company.geometry.coordinates[1]
+                          : 0,
                       ];
 
                       retryMapOperation(
@@ -1674,15 +1728,17 @@ export default function GlobeView() {
                       );
                     }}
                   >
-                    <p className="line-clamp-1">{company.name}</p>
+                    <p className="line-clamp-1">{company.properties?.name}</p>
                   </button>
                 ))}
             </div>
           )}
 
           {searchQuery &&
-            digitalReportsByBrand.filter((company) =>
-              company.name.toLowerCase().includes(searchQuery.toLowerCase())
+            digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
+              company.properties?.name
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase())
             ).length === 0 && (
               <div className="bg-gray-800 -mt-4">
                 <p className="p-3 text-gray-400">No results found</p>
@@ -1718,20 +1774,26 @@ export default function GlobeView() {
               className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full"
             >
               {digitalReportsByBrand
-                .filter((company) =>
-                  company.name.toLowerCase().includes(searchQuery.toLowerCase())
+                .filter((company: GeoJSON.Feature) =>
+                  company.properties?.name
+                    ?.toLowerCase()
+                    .includes(searchQuery.toLowerCase())
                 )
-                .map((company) => (
+                .map((company: GeoJSON.Feature) => (
                   <button
-                    key={company.name}
+                    key={company.properties?.name}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       setSearchQuery("");
                       setIsMobileSearchOpen(false);
 
                       const lonLat: [number, number] = [
-                        company.position[0],
-                        company.position[1],
+                        company.geometry.type === "Point"
+                          ? company.geometry.coordinates[0]
+                          : 0,
+                        company.geometry.type === "Point"
+                          ? company.geometry.coordinates[1]
+                          : 0,
                       ];
 
                       retryMapOperation(
@@ -1753,15 +1815,17 @@ export default function GlobeView() {
                       );
                     }}
                   >
-                    <p className="line-clamp-1">{company.name}</p>
+                    <p className="line-clamp-1">{company.properties?.name}</p>
                   </button>
                 ))}
             </div>
           )}
 
           {searchQuery &&
-            digitalReportsByBrand.filter((company) =>
-              company.name.toLowerCase().includes(searchQuery.toLowerCase())
+            digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
+              company.properties?.name
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase())
             ).length === 0 && (
               <div className="bg-gray-800 -mt-4">
                 <p className="p-3 text-gray-400">No results found</p>
@@ -1859,13 +1923,31 @@ export default function GlobeView() {
           reportTabsLoading.current && latestReportsWithAnalysis.length === 0
         }
         onReportClick={(report) => {
-          setSelectedReport(report);
+          if (isPhysical && report.analysis[0].classification === "physical") {
+            setSelectedReport(
+              latestReports.find(
+                (r) =>
+                  r.classification === "physical" && r.seq === report.report.seq
+              ) as PhysicalReportResponse | null
+            );
+          } else if (
+            isDigital &&
+            report.analysis[0].classification === "digital"
+          ) {
+            setSelectedReport(
+              latestReports.find(
+                (r) =>
+                  r.classification === "digital" &&
+                  r.brand_name === report.analysis[0].brand_name
+              ) as ReportResponse | null
+            );
+          }
           setIsCleanAppProOpen(true);
           flyToReport(report);
         }}
         isModalActive={true}
         isMenuOpen={isMenuOpen}
-        report={selectedReport}
+        report={selectedReport as ReportWithAnalysis | null}
       />
 
       {/* Bottom center logo */}
@@ -1906,15 +1988,26 @@ export default function GlobeView() {
       </div>
 
       {/* CleanApp Pro Modal */}
-      <CleanAppProModal
+      {/* <CleanAppProModal
         isOpen={isCleanAppProOpen}
         onClose={() => setIsCleanAppProOpen(false)}
         report={selectedReport}
         allReports={latestReportsWithAnalysis}
         onReportChange={(report) => {
-          setSelectedReport(report);
-          flyToReport(report);
+          // setSelectedReport(report);
+          // flyToReport(report);
         }}
+      /> */}
+
+      <CleanAppProModalV2
+        isOpen={isCleanAppProOpen}
+        onClose={() => setIsCleanAppProOpen(false)}
+        report={selectedReport}
+        // allReports={latestReportsWithAnalysis}
+        // onReportChange={(report) => {
+        //   // setSelectedReport(report);
+        //   // flyToReport(report);
+        // }}
       />
     </div>
   );
