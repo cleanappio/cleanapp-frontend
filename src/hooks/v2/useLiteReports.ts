@@ -34,7 +34,7 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
   const fetchAll = useCallback(async () => {
     const locale = getCurrentLocale();
     const apiUrl =
-      process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
+      process.env.NEXT_PUBLIC_RENDERER_API_URL || "http://localhost:8080";
 
     setLoading({ physical: true, digital: true });
     setErrors({ physical: null, digital: null });
