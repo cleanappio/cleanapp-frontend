@@ -11,9 +11,10 @@ import {
 } from "@/lib/i18n";
 import { getBrandNameDisplay } from "@/lib/util";
 import TextToImage from "./TextToImage";
+import { ReportResponse } from "@/types/reports/api";
 
 interface RecentReportsProps {
-  reportItem?: ReportWithAnalysis | null;
+  reportItem?: ReportResponse | null;
 }
 
 // Check if embedded mode is enabled
@@ -34,23 +35,16 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       // If we have a specific report, fetch recent reports around that ID
       // Otherwise, fetch the latest reports
       let url = "";
-      if (reportItem && reportItem?.analysis && reportItem?.analysis.length > 0 && reportItem.analysis[0].classification === "digital") {
-        let reportAnalysis = reportItem.analysis.find(
-          (analysis) => analysis.language === locale
-        );
-        if (!reportAnalysis) {
-          console.error("No report analysis found");
-          reportAnalysis = reportItem.analysis[0];
-        }
-
-        const { brandName } = getBrandNameDisplay(reportAnalysis);
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brandName}&n=100&lang=${locale}`;
+      if (
+        reportItem &&
+        reportItem?.classification === "digital" &&
+        reportItem?.brand_name
+      ) {
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
+      } else if (reportItem?.classification === "physical") {
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
       } else {
-        if (reportItem?.report?.id) {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.report.latitude}&longitude=${reportItem.report.longitude}&radius_km=0.5&n=100&lang=${locale}`;
-        } else {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
-        }
+        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
       }
 
       const response = await fetch(url);
@@ -64,10 +58,6 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
       } else {
         setError(`${t("failedToFetchReports")}: ${response.status}`);
       }
-
-      // // create a mock api call with a timeout of 2 seconds
-      // await new Promise((resolve) => setTimeout(resolve, 2000));
-      // console.log("recent reports fetched");
     } catch (error) {
       console.error("Error fetching recent reports:", error);
       if (error instanceof Error) {
