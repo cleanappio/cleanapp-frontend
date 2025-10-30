@@ -575,7 +575,8 @@ export default function GlobeView() {
           var latitude = 0,
             longitude = 0,
             color = "",
-            title = "";
+            title = "",
+            size = 10;
 
           const isDigital = classification === "digital";
           const isPhysical = classification === "physical";
@@ -601,6 +602,17 @@ export default function GlobeView() {
             latitude = lat;
             longitude = lon;
             title = `${brandDisplayName} (${report.total})`;
+
+            const total = report.total;
+
+            // Calculate size based on report count
+            if (total >= 50) {
+              size += 5;
+            } else if (total >= 3) {
+              size += 3;
+            } else if (total >= 2) {
+              size += 2;
+            }
           }
 
           return {
@@ -616,6 +628,7 @@ export default function GlobeView() {
               index: index,
               severity: isPhysical ? report.severity_level : undefined,
               classification: classification,
+              size: size,
             },
           };
         });
@@ -649,13 +662,18 @@ export default function GlobeView() {
             source: "reports",
             paint: {
               "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["get", "severity"],
-                0.0,
-                6.6,
-                0.9,
-                13.2,
+                "case",
+                ["==", ["get", "classification"], "digital"],
+                ["get", "size"],
+                [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "severity"],
+                  0.0,
+                  6.6,
+                  0.9,
+                  13.2,
+                ],
               ],
               "circle-color": [
                 "case",
