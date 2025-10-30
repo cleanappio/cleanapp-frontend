@@ -98,7 +98,7 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
             </button>
 
             {/* Mobile content container with transparency */}
-            {/* <div className="min-h-screen">
+            <div className="min-h-screen">
               <div className="px-4 py-6">
                 {loading ? (
                   <div className="flex justify-center items-center h-full">
@@ -111,7 +111,7 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
                   {!isEmbeddedMode && <RecentReports reportItem={report} />}
                 </div>
               </div>
-            </div> */}
+            </div>
           </div>
         ) : (
           /* Desktop Layout */
