@@ -1397,14 +1397,7 @@ export default function GlobeView() {
       console.log("Closing WebSocket connection");
       ws.close();
     };
-  }, [
-    handleNewReport,
-    selectedTab,
-    appendPhysicalLiteV2,
-    appendDigitalLiteV2,
-    appendPhysicalFull,
-    appendDigitalFull,
-  ]);
+  }, [handleNewReport, selectedTab]);
 
   // Fetch reports when tab changes using the hook
   useEffect(() => {
