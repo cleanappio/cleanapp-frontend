@@ -152,16 +152,6 @@ export default function GlobeView() {
     appendDigitalFull,
   } = useReportTabs();
 
-  // Use lite reports for the map layer with separate arrays
-  // const {
-  //   physicalReports: latestPhysicalReports,
-  //   digitalReports: latestDigitalReports,
-  //   loading: liteLoadingByTab,
-  //   appendPhysicalLite,
-  //   appendDigitalLite,
-  // } = useLiteReportsByTab({ n: MAX_REPORTS_LIMIT });
-  // No local loading state; rely on hook's loading.current
-
   const {
     physicalReports: latestPhysicalReportsV2,
     digitalReports: latestDigitalReportsV2,
