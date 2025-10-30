@@ -197,7 +197,7 @@ export default function GlobeView() {
   }, []);
 
   // Safe map access utility function
-  const getSafeMap = () => {
+  const getSafeMap = useCallback(() => {
     if (!mapRef.current || !mapLoaded || !mapStyleLoaded) {
       return null;
     }
@@ -212,33 +212,67 @@ export default function GlobeView() {
       console.warn("Map access error:", error);
       return null;
     }
-  };
+  }, [mapLoaded, mapStyleLoaded]);
 
   // Retry mechanism for map operations
-  const retryMapOperation = async <T,>(
-    operation: () => T,
-    maxRetries: number = 3,
-    delay: number = 100
-  ): Promise<T | null> => {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const map = getSafeMap();
-        if (map) {
-          return operation();
-        }
+  const retryMapOperation = useCallback(
+    async <T,>(
+      operation: () => T,
+      maxRetries: number = 3,
+      delay: number = 100
+    ): Promise<T | null> => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const map = getSafeMap();
+          if (map) {
+            return operation();
+          }
 
-        if (i < maxRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      } catch (error) {
-        console.warn(`Map operation attempt ${i + 1} failed:`, error);
-        if (i < maxRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (i < maxRetries - 1) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        } catch (error) {
+          console.warn(`Map operation attempt ${i + 1} failed:`, error);
+          if (i < maxRetries - 1) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
         }
       }
-    }
-    return null;
-  };
+      return null;
+    },
+    [getSafeMap]
+  );
+
+  // Fly to a lon/lat with retries
+  const flyToReport = useCallback(
+    ({ lon, lat }: { lon?: number; lat?: number }) => {
+      if (!lon || !lat) {
+        console.log("Lon or lat is not defined");
+        return;
+      }
+
+      const lonLat: [number, number] = [lon, lat];
+
+      retryMapOperation(
+        () => {
+          const map = getSafeMap();
+          if (map) {
+            map.flyTo({
+              center: lonLat,
+              zoom: map.getZoom() || 2.5,
+              duration: 2000,
+              essential: true,
+            });
+            return true;
+          }
+          return false;
+        },
+        3,
+        200
+      );
+    },
+    [getSafeMap, retryMapOperation]
+  );
 
   // Safe map source and layer management
   const safeAddSource = (id: string, source: any) => {
@@ -553,7 +587,7 @@ export default function GlobeView() {
         200
       );
     }
-  }, [userLocation, mapLoaded]);
+  }, [userLocation, mapLoaded, retryMapOperation, getSafeMap]);
 
   // Add report pins to the map when reports are loaded
   useEffect(() => {
@@ -604,15 +638,9 @@ export default function GlobeView() {
             title = `${brandDisplayName} (${report.total})`;
 
             const total = report.total;
-
-            // Calculate size based on report count
-            if (total >= 50) {
-              size += 5;
-            } else if (total >= 3) {
-              size += 3;
-            } else if (total >= 2) {
-              size += 2;
-            }
+            // Calculate size based on report count (shared helper)
+            const baseSize = 10;
+            size = baseSize + computeDigitalSizeIncrement(total);
           }
 
           return {
@@ -749,7 +777,7 @@ export default function GlobeView() {
         };
       }
     }
-  }, [isPhysical, mapLoaded, latestReports, selectedTab]);
+  }, [isPhysical, mapLoaded, latestReports, selectedTab, flyToReport]);
 
   // Handle new report from WebSocket
   const handleNewReport = useCallback(
@@ -1023,7 +1051,7 @@ export default function GlobeView() {
         map.setLayoutProperty("gray-overlay", "visibility", "none");
       }
     }
-  }, [selectedTab]);
+  }, [selectedTab, isDigital]);
 
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
@@ -1060,15 +1088,8 @@ export default function GlobeView() {
         const brandDisplayName = report.brand_display_name;
         const total = report.total;
 
-        // Calculate size based on report count
-        let size = 10;
-        if (total >= 50) {
-          size += 5;
-        } else if (total >= 3) {
-          size += 3;
-        } else if (total >= 2) {
-          size += 2;
-        }
+        // Calculate size based on report count (shared helper)
+        let size = 10 + computeDigitalSizeIncrement(total);
 
         const { lat, lon, color } = stringToLatLonColor(brandName);
         features.push({
@@ -1222,11 +1243,23 @@ export default function GlobeView() {
     if (!map || !mapLoaded || !mapStyleLoaded) return;
     function onNodeClick(e: any) {
       if (!map) return;
+      if (!e.features || !e.features[0]) return;
       const feature = e.features[0];
-      const companyName = feature.properties.parentName;
-      const isParent = feature.properties.isParent;
-      // Implement your expand/collapse logic here
-      // Example: toggle expandedCompanies state
+      const brandName = feature.properties?.parentName;
+      if (!brandName) return;
+
+      const report = latestReports.find(
+        (r) => r.classification === "digital" && r.brand_name === brandName
+      ) as unknown as DigitalReportResponse | undefined;
+
+      if (!report) return;
+
+      setSelectedReport(report as unknown as ReportResponse);
+      const { lat, lon } = stringToLatLonColor(
+        (report as DigitalReportResponse).brand_name
+      );
+      flyToReport({ lon: lon, lat: lat });
+      setIsCleanAppProOpen(true);
     }
     function setPointer() {
       if (map) map.getCanvas().style.cursor = "pointer";
@@ -1238,6 +1271,11 @@ export default function GlobeView() {
       map.on("click", "digital-nodes", onNodeClick);
       map.on("mouseenter", "digital-nodes", setPointer);
       map.on("mouseleave", "digital-nodes", unsetPointer);
+    }
+    if (map?.getLayer("digital-labels")) {
+      map.on("click", "digital-labels", onNodeClick);
+      map.on("mouseenter", "digital-labels", setPointer);
+      map.on("mouseleave", "digital-labels", unsetPointer);
     }
     if (map?.getLayer("digital-pulse")) {
       map.on("click", "digital-pulse", onNodeClick);
@@ -1251,13 +1289,18 @@ export default function GlobeView() {
         map.off("mouseenter", "digital-nodes", setPointer);
         map.off("mouseleave", "digital-nodes", unsetPointer);
       }
+      if (map?.getLayer("digital-labels")) {
+        map.off("click", "digital-labels", onNodeClick);
+        map.off("mouseenter", "digital-labels", setPointer);
+        map.off("mouseleave", "digital-labels", unsetPointer);
+      }
       if (map?.getLayer("digital-pulse")) {
         map.off("click", "digital-pulse", onNodeClick);
         map.off("mouseenter", "digital-pulse", setPointer);
         map.off("mouseleave", "digital-pulse", unsetPointer);
       }
     };
-  }, [mapLoaded, mapStyleLoaded, selectedTab]);
+  }, [mapLoaded, mapStyleLoaded, selectedTab, latestReports, flyToReport]);
 
   useEffect(() => {
     // Connect to the WebSocket endpoint
@@ -1364,7 +1407,14 @@ export default function GlobeView() {
       console.log("Closing WebSocket connection");
       ws.close();
     };
-  }, [handleNewReport, selectedTab]);
+  }, [
+    handleNewReport,
+    selectedTab,
+    appendPhysicalLiteV2,
+    appendDigitalLiteV2,
+    appendPhysicalFull,
+    appendDigitalFull,
+  ]);
 
   // Fetch reports when tab changes using the hook
   useEffect(() => {
@@ -1388,33 +1438,14 @@ export default function GlobeView() {
 
   // Removed inline fetch; using hook-based fetching instead
 
-  // Add this helper inside GlobeView
-  const flyToReport = ({ lon, lat }: { lon?: number; lat?: number }) => {
-    if (!lon || !lat) {
-      console.log("Lon or lat is not defined");
-      return;
-    }
+  // (moved) flyToReport defined above
 
-    const lonLat: [number, number] = [lon, lat];
-
-    // Use safe map access with retry mechanism
-    retryMapOperation(
-      () => {
-        const map = getSafeMap();
-        if (map) {
-          map.flyTo({
-            center: lonLat,
-            zoom: map.getZoom() || 2.5,
-            duration: 2000,
-            essential: true,
-          });
-          return true;
-        }
-        return false;
-      },
-      3,
-      200
-    );
+  // Shared helper for digital size increment based on total count
+  const computeDigitalSizeIncrement = (total?: number) => {
+    if (!total || total < 2) return 0;
+    if (total >= 50) return 5;
+    if (total >= 3) return 3;
+    return 2;
   };
 
   return (
