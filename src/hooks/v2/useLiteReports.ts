@@ -52,7 +52,6 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
               classification: "physical",
             })
           );
-          console.log("Physical reports", physicalReports);
           setPhysicalReports(physicalReports);
         })
         .catch((error) => {
@@ -73,7 +72,6 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
             ...report,
             classification: "digital",
           }));
-          console.log("Digital reports", digitalReports);
           setDigitalReports(digitalReports);
         })
         .catch((error) => {
