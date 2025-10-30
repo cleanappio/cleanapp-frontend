@@ -1037,50 +1037,6 @@ export default function GlobeView() {
         (report) => report.classification === "digital"
       );
 
-      // Group reports by brand name
-      // const reportsByBrand: Record<string, DigitalReportResponse[]> = {};
-      // const locale = getCurrentLocale();
-      // digitalReports.forEach((report) => {
-      //   const brandName = report.brand_name;
-      //   if (!reportsByBrand[brandName]) {
-      //     reportsByBrand[brandName] = [];
-      //   }
-      //   reportsByBrand[brandName].push(report as DigitalReportResponse);
-      // });
-
-      // Convert to array with one entry per brand
-      // const _digitalReportsByBrand: CompanyData[] = Object.entries(
-      //   reportsByBrand
-      // ).map(([brandName, reports]) => {
-      //   const { lat, lon, color } = stringToLatLonColor(brandName);
-      //   const reportAnalysis = reports[0].analysis.find(
-      //     (analysis) => analysis.language === locale
-      //   );
-
-      //   const { brandDisplayName } = getBrandNameDisplay(
-      //     reportAnalysis || reports[0].analysis[0]
-      //   );
-      //   const reportCount = reports.length;
-
-      //   // Calculate size based on report count
-      //   let size = 10;
-      //   if (reportCount >= 50) {
-      //     size += 5;
-      //   } else if (reportCount >= 3) {
-      //     size += 3;
-      //   } else if (reportCount >= 2) {
-      //     size += 2;
-      //   }
-
-      //   return {
-      //     name: `${brandDisplayName} (${reportCount})`,
-      //     position: [lon, lat], // Note: stringToLatLonColor returns {lat, lon} but we need [lon, lat] for GeoJSON
-      //     color: color,
-      //     size: size,
-      //     subsidiaries: [],
-      //   };
-      // });
-
       for (const report of digitalReports) {
         const brandName = report.brand_name;
         const brandDisplayName = report.brand_display_name;
@@ -1108,21 +1064,6 @@ export default function GlobeView() {
             parentName: brandName,
           },
         });
-        // if (report.subsidiaries) {
-        //   for (const sub of company.subsidiaries) {
-        //     features.push({
-        //       type: "Feature",
-        //       geometry: { type: "Point", coordinates: sub.position },
-        //       properties: {
-        //         name: sub.name,
-        //         color: sub.color,
-        //         size: sub.size,
-        //         isParent: false,
-        //         parentName: company.name,
-        //       },
-        //     });
-        //   }
-        // }
       }
       setDigitalReportsByBrand(features as GeoJSON.Feature[]);
       return { type: "FeatureCollection", features };
