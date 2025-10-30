@@ -1859,18 +1859,6 @@ export default function GlobeView() {
         <ReportCounter selectedTab={selectedTab} />
       </div>
 
-      {/* CleanApp Pro Modal */}
-      {/* <CleanAppProModal
-        isOpen={isCleanAppProOpen}
-        onClose={() => setIsCleanAppProOpen(false)}
-        report={selectedReport}
-        allReports={latestReportsWithAnalysis}
-        onReportChange={(report) => {
-          // setSelectedReport(report);
-          // flyToReport(report);
-        }}
-      /> */}
-
       <CleanAppProModalV2
         isOpen={isCleanAppProOpen}
         onClose={() => setIsCleanAppProOpen(false)}
