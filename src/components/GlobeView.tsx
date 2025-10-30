@@ -684,32 +684,18 @@ export default function GlobeView() {
             const feature = e.features[0];
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
-              console.log("report clicked", latestReports[reportIndex]);
-              setSelectedReport(latestReports[reportIndex]);
-              // flyToReport(latestReports[reportIndex]);
-              setIsCleanAppProOpen(true);
-
               const report = latestReports[reportIndex];
+              console.log("report clicked", report);
+              setSelectedReport(report);
 
-              if (report.classification === "digital") {
-                const brandName = report.brand_name;
-
-                // call api to fetch digital report details
+              if (report.classification === "physical") {
+                flyToReport({ lon: report.longitude, lat: report.latitude });
+              } else {
+                const { lat, lon } = stringToLatLonColor(report.brand_name);
+                flyToReport({ lon: lon, lat: lat });
               }
-              // const analysis = latestReports[reportIndex].analysis;
-              // if (selectedTab === "digital" && analysis.length > 1) {
-              //   const { brandName } = getBrandNameDisplay(analysis[0]);
 
-              //   if (brandName === "other") {
-              //     console.log("ignoring other report");
-              //     e.preventDefault();
-              //     return;
-              //   }
-              // }
-
-              // setSelectedReport(latestReports[reportIndex]);
-              // flyToReport(latestReports[reportIndex]);
-              // setIsCleanAppProOpen(true);
+              setIsCleanAppProOpen(true);
             }
           }
         };
@@ -1038,49 +1024,6 @@ export default function GlobeView() {
       map.setConfigProperty("basemap", "showTransitLabels", true);
     }
   }, [isDigital, mapLoaded, mapStyleLoaded]);
-
-  // Digital click/hover handlers
-  useEffect(() => {
-    const map = mapRef.current && mapRef.current.getMap();
-    if (!map || !mapLoaded || !mapStyleLoaded) return;
-    function onNodeClick(e: any) {
-      if (!map) return;
-      const feature = e.features[0];
-      const companyName = feature.properties.parentName;
-      const isParent = feature.properties.isParent;
-      // Implement your expand/collapse logic here
-      // Example: toggle expandedCompanies state
-    }
-    function setPointer() {
-      if (map) map.getCanvas().style.cursor = "pointer";
-    }
-    function unsetPointer() {
-      if (map) map.getCanvas().style.cursor = "";
-    }
-    if (map?.getLayer("digital-nodes")) {
-      map.on("click", "digital-nodes", onNodeClick);
-      map.on("mouseenter", "digital-nodes", setPointer);
-      map.on("mouseleave", "digital-nodes", unsetPointer);
-    }
-    if (map?.getLayer("digital-pulse")) {
-      map.on("click", "digital-pulse", onNodeClick);
-      map.on("mouseenter", "digital-pulse", setPointer);
-      map.on("mouseleave", "digital-pulse", unsetPointer);
-    }
-    return () => {
-      if (!map || !mapLoaded || !mapStyleLoaded) return;
-      if (map?.getLayer("digital-nodes")) {
-        map.off("click", "digital-nodes", onNodeClick);
-        map.off("mouseenter", "digital-nodes", setPointer);
-        map.off("mouseleave", "digital-nodes", unsetPointer);
-      }
-      if (map?.getLayer("digital-pulse")) {
-        map.off("click", "digital-pulse", onNodeClick);
-        map.off("mouseenter", "digital-pulse", setPointer);
-        map.off("mouseleave", "digital-pulse", unsetPointer);
-      }
-    };
-  }, [mapLoaded, mapStyleLoaded, selectedTab]);
 
   // Digital layers logic
   useEffect(() => {
@@ -1487,28 +1430,13 @@ export default function GlobeView() {
   // Removed inline fetch; using hook-based fetching instead
 
   // Add this helper inside GlobeView
-  const flyToReport = (reportWithAnalysis: ReportWithAnalysis) => {
-    const report = reportWithAnalysis.report;
-    const analysis = reportWithAnalysis.analysis;
-    if (analysis.length === 0) {
-      console.error("No report analysis found");
+  const flyToReport = ({ lon, lat }: { lon?: number; lat?: number }) => {
+    if (!lon || !lat) {
+      console.log("Lon or lat is not defined");
       return;
     }
-    const classification = analysis[0].classification;
-    const isPhysical = classification === "physical";
-    const locale = getCurrentLocale();
-    let reportAnalysis = analysis.find(
-      (analysis) => analysis.language === locale
-    );
-    if (!reportAnalysis) {
-      // console.error("No report analysis with current locale found");
-      reportAnalysis = analysis[0];
-    }
-    const { brandName } = getBrandNameDisplay(reportAnalysis);
-    const { lat, lon, color } = stringToLatLonColor(brandName);
-    const lonLat: [number, number] = isPhysical
-      ? [report.longitude, report.latitude]
-      : [lon, lat];
+
+    const lonLat: [number, number] = [lon, lat];
 
     // Use safe map access with retry mechanism
     retryMapOperation(
@@ -1922,26 +1850,31 @@ export default function GlobeView() {
         }
         onReportClick={(report) => {
           if (isPhysical && report.analysis[0].classification === "physical") {
-            setSelectedReport(
-              latestReports.find(
-                (r) =>
-                  r.classification === "physical" && r.seq === report.report.seq
-              ) as PhysicalReportResponse | null
-            );
+            const physicalReport = latestReports.find(
+              (r) =>
+                r.classification === "physical" && r.seq === report.report.seq
+            ) as PhysicalReportResponse | null;
+            setSelectedReport(physicalReport);
+            flyToReport({
+              lon: physicalReport?.longitude,
+              lat: physicalReport?.latitude,
+            });
           } else if (
             isDigital &&
             report.analysis[0].classification === "digital"
           ) {
-            setSelectedReport(
-              latestReports.find(
-                (r) =>
-                  r.classification === "digital" &&
-                  r.brand_name === report.analysis[0].brand_name
-              ) as ReportResponse | null
+            const digitalReport = latestReports.find(
+              (r) =>
+                r.classification === "digital" &&
+                r.brand_name === report.analysis[0].brand_name
+            ) as ReportResponse | null;
+            setSelectedReport(digitalReport);
+            const { lat, lon } = stringToLatLonColor(
+              (digitalReport as DigitalReportResponse)?.brand_name
             );
+            flyToReport({ lon: lon, lat: lat });
           }
           setIsCleanAppProOpen(true);
-          flyToReport(report);
         }}
         isModalActive={true}
         isMenuOpen={isMenuOpen}
