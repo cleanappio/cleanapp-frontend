@@ -582,7 +582,6 @@ export default function GlobeView() {
   // Add report pins to the map when reports are loaded
   useEffect(() => {
     if (mapLoaded && mapRef.current && latestReports.length > 0) {
-      console.log("latestReports", latestReports);
       const map = mapRef.current.getMap();
       if (map) {
         // console.log("map", map);
@@ -650,8 +649,6 @@ export default function GlobeView() {
             },
           };
         });
-
-        console.log("reportFeatures", reportFeatures);
 
         // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
@@ -1397,7 +1394,8 @@ export default function GlobeView() {
       console.log("Closing WebSocket connection");
       ws.close();
     };
-  }, [handleNewReport, selectedTab]);
+    // Empty deps: WebSocket should only connect once, refs are used for latest values
+  }, []);
 
   // Fetch reports when tab changes using the hook
   useEffect(() => {
