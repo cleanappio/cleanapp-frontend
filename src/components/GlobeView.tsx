@@ -1883,7 +1883,9 @@ export default function GlobeView() {
 
       <div
         className={`absolute ${
-          isMobile ? "bottom-12 right-20" : "bottom-10 right-4"
+          isMobile
+            ? `bottom-12 ${isDigital ? "right-20" : "right-4"}`
+            : "bottom-10 right-4"
         }`}
       >
         <ReportCounter selectedTab={selectedTab} />
