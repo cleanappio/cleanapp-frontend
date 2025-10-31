@@ -1583,7 +1583,7 @@ export default function GlobeView() {
           </button>
 
           {searchQuery && (
-            <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80">
+            <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
               {digitalReportsByBrand
                 .filter((company: GeoJSON.Feature) =>
                   company.properties?.name
@@ -1659,7 +1659,7 @@ export default function GlobeView() {
               ref={inputRef}
               type="text"
               placeholder="Search"
-              className="bg-gray-800 focus:outline-none focus:border-b-2 text-white w-full border border-gray-400 py-2 px-4 mx-4"
+              className="bg-gray-800 focus:outline-none focus:border-b-2 text-white w-full border border-gray-700 rounded-md py-2 px-4 mx-4"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -1668,7 +1668,7 @@ export default function GlobeView() {
           {searchQuery && (
             <div
               ref={listRef}
-              className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full"
+              className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500"
             >
               {digitalReportsByBrand
                 .filter((company: GeoJSON.Feature) =>
