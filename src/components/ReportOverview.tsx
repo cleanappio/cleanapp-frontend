@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import router from "next/router";
 import { ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import {
@@ -14,7 +13,6 @@ import { useReverseGeocoding } from "@/hooks/useReverseGeocoding";
 import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
 import TextToImage from "./TextToImage";
 import { ReportResponse } from "@/types/reports/api";
-import { assert } from "console";
 
 interface ReportOverviewProps {
   reportItem?: ReportResponse | null;
@@ -59,28 +57,20 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
   // Location
   useEffect(() => {
-    console.log("useEffect fullReport", fullReport);
     if (fullReport) {
       setLocation({
         latitude: fullReport.report.latitude,
         longitude: fullReport.report.longitude,
       });
-      console.log("location", location);
     } else if (reportItem) {
-      console.log("reportItem", reportItem);
       if (reportItem.classification === "physical") {
         setLocation({
           latitude: reportItem.latitude,
           longitude: reportItem.longitude,
         });
-        console.log("location", location);
       }
     }
   }, [fullReport, reportItem]);
-
-  useEffect(() => {
-    console.log("useEffect location", location);
-  }, [location]);
 
   // Reverse geocoding hook to get human-readable address
   const {
@@ -95,8 +85,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     autoFetch: location?.latitude && location?.longitude ? true : false,
   });
 
-  console.log("Address:", address);
-
   const fetchPhysicalReport = useCallback(async (seq: number) => {
     setLoading(true);
     setError(null);
@@ -107,7 +95,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     try {
       if (response.ok) {
         const data = await response.json();
-        console.log("Physical report:", data);
         setFullReport(data);
 
         if (data.report.image) {
@@ -144,9 +131,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
         if (response.ok) {
           const data = await response.json();
-          console.log("Digital report:", data);
           setFullReport(data.reports[0] as ReportWithAnalysis);
-          console.log("Digital report image:", data.reports[0].image);
           if (data.reports[0].image) {
             setImageUrl(getDisplayableImage(data.reports[0].image));
           } else {
@@ -183,18 +168,13 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   }, [fetchDigitalReport, fetchPhysicalReport, reportItem, reportWithAnalysis]);
 
   useEffect(() => {
-    console.log("useEffect fullReport", fullReport);
-    console.log("useEffect reportItem", reportItem);
-    console.log("useEffect reportWithAnalysis", reportWithAnalysis);
     if (reportItem && !fullReport) {
-      console.log("fetching full report");
       fetchFullReport();
     }
   }, [fetchFullReport, fullReport, reportItem, reportWithAnalysis]);
 
   useEffect(() => {
     if (fullReport) {
-      console.log("useEffect fullReport", fullReport);
       setImageUrl(
         `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${fullReport.report.seq}`
       );
@@ -262,16 +242,10 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     );
   }
 
-  console.log("reportItem", reportItem);
-  console.log("fullReport", fullReport);
-
   const report = fullReport?.report ?? reportItem;
   const analysis = fullReport?.analysis?.find(
     (analysis: any) => analysis.language === locale
   );
-
-  console.log("report", report);
-  console.log("analysis", analysis);
 
   var imageComponent;
 

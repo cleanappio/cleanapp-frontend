@@ -725,7 +725,6 @@ export default function GlobeView() {
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
               const report = latestReports[reportIndex];
-              console.log("report clicked", report);
               setSelectedReport(report);
 
               // Set seq for physical reports, clear for digital
@@ -1836,11 +1835,6 @@ export default function GlobeView() {
           reportTabsLoading.current && latestReportsWithAnalysis.length === 0
         }
         onReportClick={(report) => {
-          console.log("report clicked", report);
-          console.log("latestReports", latestReports);
-          console.log("latestReportsWithAnalysis:", latestReportsWithAnalysis);
-          console.log("isPhsical", isPhysical);
-
           // Set reportWithAnalysis directly when clicking from LatestReports
           setReportWithAnalysis(report);
 
@@ -1849,7 +1843,6 @@ export default function GlobeView() {
               (r) =>
                 r.classification === "physical" && r.seq === report.report.seq
             ) as PhysicalReportResponse | null;
-            console.log("physicalReport", physicalReport);
             setSelectedReport(physicalReport);
             setSeq(report.report.seq);
             flyToReport({
@@ -1865,7 +1858,6 @@ export default function GlobeView() {
                 r.classification === "digital" &&
                 r.brand_name === report.analysis[0].brand_name
             ) as ReportResponse | null;
-            console.log("digitalReport", digitalReport);
             setSelectedReport(
               (prev) =>
                 digitalReport ??
