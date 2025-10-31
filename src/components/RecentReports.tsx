@@ -49,7 +49,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         } else if (reportItem?.classification === "physical") {
           url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
         } else {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
         }
 
         const response = await fetch(url);
