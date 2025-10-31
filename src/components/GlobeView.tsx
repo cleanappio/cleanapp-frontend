@@ -134,6 +134,10 @@ export default function GlobeView() {
   const listRef = useRef(null);
   const inputRef = useRef<HTMLInputElement>(null); // Reference to your input field
 
+  const [seq, setSeq] = useState<number | null>(null);
+  const [reportWithAnalysis, setReportWithAnalysis] =
+    useState<ReportWithAnalysis | null>(null);
+
   // Use the refactored report tabs hook with API calls
   const {
     selectedTab,
@@ -614,6 +618,8 @@ export default function GlobeView() {
             const brandName = report.brand_name;
             const brandDisplayName = report.brand_display_name;
 
+            if (!brandName) return;
+
             // console.log("brandName", brandName);
             // console.log("brandDisplayName", brandDisplayName);
             const {
@@ -654,7 +660,8 @@ export default function GlobeView() {
         const reportGeoJSON = {
           type: "FeatureCollection" as const,
           features: reportFeatures.filter(
-            (report) => report.properties.classification === selectedTab
+            (report) =>
+              report && report.properties.classification === selectedTab
           ),
         };
 
@@ -662,7 +669,7 @@ export default function GlobeView() {
         if (!map.getSource("reports")) {
           map.addSource("reports", {
             type: "geojson",
-            data: reportGeoJSON,
+            data: reportGeoJSON as GeoJSON.FeatureCollection,
           });
         } else {
           // Update existing source
@@ -721,12 +728,19 @@ export default function GlobeView() {
               console.log("report clicked", report);
               setSelectedReport(report);
 
+              // Set seq for physical reports, clear for digital
               if (report.classification === "physical") {
+                setSeq(report.seq);
                 flyToReport({ lon: report.longitude, lat: report.latitude });
               } else {
+                if (!report.brand_name) return;
+                setSeq(null); // Digital reports don't have seq
                 const { lat, lon } = stringToLatLonColor(report.brand_name);
                 flyToReport({ lon: lon, lat: lat });
               }
+
+              // Clear reportWithAnalysis since we're using report prop
+              setReportWithAnalysis(null);
 
               setIsCleanAppProOpen(true);
             }
@@ -1242,6 +1256,8 @@ export default function GlobeView() {
       if (!report) return;
 
       setSelectedReport(report as unknown as ReportResponse);
+      setSeq(null); // Digital reports don't have seq
+      setReportWithAnalysis(null); // Clear since we're using report prop
       const { lat, lon } = stringToLatLonColor(
         (report as DigitalReportResponse).brand_name
       );
@@ -1820,12 +1836,22 @@ export default function GlobeView() {
           reportTabsLoading.current && latestReportsWithAnalysis.length === 0
         }
         onReportClick={(report) => {
+          console.log("report clicked", report);
+          console.log("latestReports", latestReports);
+          console.log("latestReportsWithAnalysis:", latestReportsWithAnalysis);
+          console.log("isPhsical", isPhysical);
+
+          // Set reportWithAnalysis directly when clicking from LatestReports
+          setReportWithAnalysis(report);
+
           if (isPhysical && report.analysis[0].classification === "physical") {
             const physicalReport = latestReports.find(
               (r) =>
                 r.classification === "physical" && r.seq === report.report.seq
             ) as PhysicalReportResponse | null;
+            console.log("physicalReport", physicalReport);
             setSelectedReport(physicalReport);
+            setSeq(report.report.seq);
             flyToReport({
               lon: physicalReport?.longitude,
               lat: physicalReport?.latitude,
@@ -1839,9 +1865,22 @@ export default function GlobeView() {
                 r.classification === "digital" &&
                 r.brand_name === report.analysis[0].brand_name
             ) as ReportResponse | null;
-            setSelectedReport(digitalReport);
+            console.log("digitalReport", digitalReport);
+            setSelectedReport(
+              (prev) =>
+                digitalReport ??
+                ({
+                  ...report,
+                  classification: "digital",
+                  brand_name: report.analysis[0].brand_name || "other",
+                  brand_display_name:
+                    report.analysis[0].brand_display_name || "Other",
+                  total: 1,
+                } as ReportResponse)
+            );
+            setSeq(null); // Digital reports don't have seq
             const { lat, lon } = stringToLatLonColor(
-              (digitalReport as DigitalReportResponse)?.brand_name
+              (digitalReport as DigitalReportResponse)?.brand_name || "other"
             );
             flyToReport({ lon: lon, lat: lat });
           }
@@ -1893,8 +1932,15 @@ export default function GlobeView() {
 
       <CleanAppProModalV2
         isOpen={isCleanAppProOpen}
-        onClose={() => setIsCleanAppProOpen(false)}
+        onClose={() => {
+          setIsCleanAppProOpen(false);
+          // Clear state when modal closes
+          setSeq(null);
+          setReportWithAnalysis(null);
+        }}
         report={selectedReport}
+        seq={seq}
+        reportWithAnalysis={reportWithAnalysis}
         // allReports={latestReportsWithAnalysis}
         // onReportChange={(report) => {
         //   // setSelectedReport(report);
