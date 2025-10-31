@@ -42,28 +42,22 @@ export function getDisplayableImage(
   imageData: number[] | string | null
 ): string {
   if (!imageData) {
-    console.log("No image data");
     return "";
   }
 
   if (typeof imageData === "string") {
-    console.log("Image data is a string");
     // If it's already a data URL or a normal URL, return as is
     if (imageData.startsWith("data:") || imageData.startsWith("http")) {
-      console.log("Image data is a data URL or a normal URL");
       return imageData;
     }
     // Otherwise, treat as base64-encoded JPEG
-    console.log("Image data is a base64 string");
     return `data:image/jpeg;base64,${imageData}`;
   }
 
   if (Array.isArray(imageData)) {
-    console.log("Image data is a bytes array");
     // If it's a bytes array, convert to data URL
     return bytesToDataUrl(imageData);
   }
 
-  console.log("Unknown image data type");
   return "";
 }

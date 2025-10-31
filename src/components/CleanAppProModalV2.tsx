@@ -1,24 +1,19 @@
 import ReportOverview from "@/components/ReportOverview";
 import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import { X } from "lucide-react";
-import {
-  filterAnalysesByLanguage,
-  getCurrentLocale,
-  useTranslations,
-} from "@/lib/i18n";
+import { useTranslations } from "@/lib/i18n";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 import { ReportResponse } from "@/types/reports/api";
 
 interface CleanAppProModalV2Props {
   isOpen: boolean;
   onClose: () => void;
-  report: ReportResponse | null;
-  // allReports: ReportResponse[];
-  // onReportChange: (report: ReportResponse) => void;
-  // showLatestReports?: boolean;
+  report?: ReportResponse | null;
+  seq?: number | null;
+  reportWithAnalysis?: ReportWithAnalysis | null;
 }
 
 // Check if embedded mode is enabled
@@ -28,16 +23,12 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
   isOpen,
   onClose,
   report,
-  // allReports,
-  // onReportChange,
-  // showLatestReports = true,
+  seq,
+  reportWithAnalysis: propReportWithAnalysis,
 }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslations();
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Mobile detection
   useEffect(() => {
@@ -100,13 +91,10 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
             {/* Mobile content container with transparency */}
             <div className="min-h-screen">
               <div className="px-4 py-6">
-                {loading ? (
-                  <div className="flex justify-center items-center h-full">
-                    <p>Loading...</p>
-                  </div>
-                ) : (
-                  <ReportOverview reportItem={report} />
-                )}
+                <ReportOverview
+                  reportItem={report}
+                  reportWithAnalysis={propReportWithAnalysis}
+                />
                 <div className="mt-6">
                   {!isEmbeddedMode && <RecentReports reportItem={report} />}
                 </div>
@@ -127,7 +115,10 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
             <div className="fixed top-[0px] left-[50px] right-[50px] bottom-[0px] overflow-y-auto scrollbar-hide">
               {/* Content */}
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
-                <ReportOverview reportItem={report} />
+                <ReportOverview
+                  reportItem={report}
+                  reportWithAnalysis={propReportWithAnalysis}
+                />
                 {!isEmbeddedMode && <RecentReports reportItem={report} />}
               </div>
             </div>

@@ -1,106 +1,96 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { FaLock } from "react-icons/fa";
-import Image from "next/image";
-import { ReportAnalysis, ReportWithAnalysis } from "./GlobeView";
-import { getDisplayableImage } from "@/lib/image-utils";
-import { useRouter } from "next/router";
+import React, { useEffect, useState } from "react";
+import { ReportWithAnalysis } from "./GlobeView";
 import {
-  useTranslations,
-  getCurrentLocale,
   filterAnalysesByLanguage,
+  getCurrentLocale,
+  useTranslations,
 } from "@/lib/i18n";
-import { getBrandNameDisplay } from "@/lib/util";
-import TextToImage from "./TextToImage";
 import { ReportResponse } from "@/types/reports/api";
+import ReportCard from "./RecentReports/ReportCard";
+import BlurredReportCard from "./RecentReports/BlurredReportCard";
+import LocationsCard from "./RecentReports/LocationsCard";
+import StatisticsCard from "./RecentReports/StatisticsCard";
+import AIInsightsCard from "./RecentReports/AIInsightsCard";
 
 interface RecentReportsProps {
   reportItem?: ReportResponse | null;
 }
 
-// Check if embedded mode is enabled
-const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
-
 const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
   const [recentReports, setRecentReports] = useState<ReportWithAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const { t } = useTranslations();
   const locale = getCurrentLocale();
 
-  const fetchRecentReports = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // If we have a specific report, fetch recent reports around that ID
-      // Otherwise, fetch the latest reports
-      let url = "";
-      if (
-        reportItem &&
-        reportItem?.classification === "digital" &&
-        reportItem?.brand_name
-      ) {
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
-      } else if (reportItem?.classification === "physical") {
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
-      } else {
-        url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
-      }
-
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        const filteredReports = filterAnalysesByLanguage(
-          data.reports || [],
-          locale
-        );
-        setRecentReports(filteredReports as ReportWithAnalysis[]);
-      } else {
-        setError(`${t("failedToFetchReports")}: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error fetching recent reports:", error);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError(t("failedToFetchReports"));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Create stable key for reportItem to prevent infinite loops
+  const reportItemKey = reportItem
+    ? reportItem.classification === "digital"
+      ? `digital_${reportItem.brand_name}`
+      : `physical_${reportItem.latitude?.toFixed(
+          4
+        )}_${reportItem.longitude?.toFixed(4)}`
+    : "default";
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchRecentReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        let url = "";
+        if (
+          reportItem &&
+          reportItem?.classification === "digital" &&
+          reportItem?.brand_name
+        ) {
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
+        } else if (reportItem?.classification === "physical") {
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+        } else {
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+        }
+
+        const response = await fetch(url);
+        if (cancelled) return;
+
+        if (response.ok) {
+          const data = await response.json();
+          const filteredReports = filterAnalysesByLanguage(
+            data.reports || [],
+            locale
+          );
+          if (!cancelled) {
+            setRecentReports(filteredReports as ReportWithAnalysis[]);
+          }
+        } else {
+          if (!cancelled) {
+            setError(`${t("failedToFetchReports")}: ${response.status}`);
+          }
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error fetching recent reports:", error);
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError(t("failedToFetchReports"));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchRecentReports();
-  }, [reportItem]);
 
-  const getPriorityColor = (severityLevel: number) => {
-    if (severityLevel >= 0.7) return "bg-red-500";
-    if (severityLevel >= 0.4) return "bg-yellow-500";
-    return "bg-green-500";
-  };
-
-  const getPriorityText = (severityLevel: number) => {
-    if (severityLevel >= 0.7) return t("highPriority");
-    if (severityLevel >= 0.4) return t("mediumPriority");
-    return t("lowPriority");
-  };
-
-  const getCategory = (analysis: ReportAnalysis[]) => {
-    const matchingAnalysis =
-      analysis?.find((a) => a.language === locale) || analysis?.[0];
-    if (
-      matchingAnalysis?.litter_probability &&
-      matchingAnalysis.litter_probability > 0.5
-    )
-      return t("litter");
-    if (
-      matchingAnalysis?.hazard_probability &&
-      matchingAnalysis.hazard_probability > 0.5
-    )
-      return t("hazard");
-    return t("general");
-  };
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportItemKey, locale]); // Only depend on stable values
 
   if (loading) {
     return (
@@ -134,7 +124,50 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
             </p>
             <p className="text-sm text-red-500 mt-1">{error}</p>
             <button
-              onClick={fetchRecentReports}
+              onClick={() => {
+                const fetchRecentReports = async () => {
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    let url = "";
+                    if (
+                      reportItem &&
+                      reportItem?.classification === "digital" &&
+                      reportItem?.brand_name
+                    ) {
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
+                    } else if (reportItem?.classification === "physical") {
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+                    } else {
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
+                    }
+
+                    const response = await fetch(url);
+                    if (response.ok) {
+                      const data = await response.json();
+                      const filteredReports = filterAnalysesByLanguage(
+                        data.reports || [],
+                        locale
+                      );
+                      setRecentReports(filteredReports as ReportWithAnalysis[]);
+                    } else {
+                      setError(
+                        `${t("failedToFetchReports")}: ${response.status}`
+                      );
+                    }
+                  } catch (error) {
+                    console.error("Error fetching recent reports:", error);
+                    if (error instanceof Error) {
+                      setError(error.message);
+                    } else {
+                      setError(t("failedToFetchReports"));
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                fetchRecentReports();
+              }}
               className="mt-4 sm:mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-4 sm:py-2 rounded-md transition-colors text-sm"
             >
               {t("retry")}
@@ -156,229 +189,21 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         {t("recentReports")}
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {firstRow.map((item, index) => {
-          const report = item.report;
-          const analysis = item.analysis;
-          const matchingAnalysis =
-            analysis?.find((a) => a.language === locale) || analysis?.[0];
-          const imageUrl = getDisplayableImage(report?.image || null);
-          const text =
-            matchingAnalysis?.summary || matchingAnalysis?.description || "";
-          return (
-            <div
-              key={report?.seq || index}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={matchingAnalysis?.title || t("report")}
-                    width={400}
-                    height={160}
-                    className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
-                    onError={(e) => {
-                      console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden"
-                      );
-                    }}
-                  />
-                ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
-                    {text ? (
-                      <TextToImage text={text} />
-                    ) : (
-                      <p className="text-gray-500 text-sm sm:text-sm">
-                        {t("noImage")}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {matchingAnalysis?.severity_level !== undefined &&
-                  matchingAnalysis?.severity_level !== 0 && (
-                    <span
-                      className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${getPriorityColor(
-                        matchingAnalysis.severity_level
-                      )} text-white text-xs font-semibold px-2 py-1 sm:px-3 sm:py-1 rounded-full`}
-                    >
-                      {getPriorityText(matchingAnalysis.severity_level)}
-                    </span>
-                  )}
-              </div>
-              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {matchingAnalysis?.title ||
-                      `${t("report")} ${report?.seq || index + 1}`}
-                  </h2>
-                  <p className="text-gray-500 text-xs sm:text-sm mb-2">
-                    {t("reported")}:{" "}
-                    {report?.timestamp
-                      ? new Date(report.timestamp).toLocaleString()
-                      : t("unknown")}
-                  </p>
-                  <p
-                    className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 overflow-hidden text-ellipsis"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    {matchingAnalysis?.summary ||
-                      matchingAnalysis?.description ||
-                      t("noDescriptionAvailable")}
-                  </p>
-                </div>
-                {matchingAnalysis?.classification !== "digital" && (
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
-                      {getCategory(analysis)}
-                    </span>
-                    <span className="text-xs px-2 py-1 sm:px-3 sm:py-1 text-gray-500">
-                      {report?.latitude?.toFixed(4)},{" "}
-                      {report?.longitude?.toFixed(4)}
-                    </span>
-                  </div>
-                )}
-
-                {matchingAnalysis?.classification === "digital" && (
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
-                      {matchingAnalysis?.brand_display_name?.toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                {!isEmbeddedMode && (
-                  <button
-                    className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
-                    onClick={() => router.push("/pricing")}
-                  >
-                    {t("subscribe")}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {secondRow.map((item, index) => {
-          const report = item.report;
-          const analysis = item.analysis;
-          const matchingAnalysis =
-            analysis?.find((a) => a.language === locale) || analysis?.[0];
-          const imageUrl = getDisplayableImage(report?.image || null);
-          const text =
-            matchingAnalysis?.summary || matchingAnalysis?.description || "";
-          return (
-            <div
-              key={report?.seq || index}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden"
-            >
-              {!isEmbeddedMode && (
-                <button
-                  className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg absolute z-20 bottom-4 right-4 left-4"
-                  onClick={() => router.push("/pricing")}
-                >
-                  {t("subscribe")}
-                </button>
-              )}
-
-              {/* Blur overlay */}
-              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center text-center">
-                  <FaLock className="text-white text-2xl mb-2" />
-                  <p className="text-white text-sm font-medium">
-                    {t("upgradeToPro")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="relative">
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={matchingAnalysis?.title || t("report")}
-                    width={400}
-                    height={160}
-                    className="rounded-t-xl w-full h-32 sm:h-40 object-cover"
-                    onError={(e) => {
-                      console.error("Failed to load image:", imageUrl);
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden"
-                      );
-                    }}
-                  />
-                ) : (
-                  <div className="rounded-t-xl w-full h-32 sm:h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
-                    {text ? (
-                      <TextToImage text={text} />
-                    ) : (
-                      <p className="text-gray-500 text-sm sm:text-sm">
-                        {t("noImage")}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {matchingAnalysis?.severity_level !== undefined &&
-                  matchingAnalysis?.severity_level !== 0 && (
-                    <span
-                      className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${getPriorityColor(
-                        matchingAnalysis.severity_level
-                      )} text-white text-xs font-semibold px-2 py-1 sm:px-3 sm:py-1 rounded-full`}
-                    >
-                      {getPriorityText(matchingAnalysis.severity_level)}
-                    </span>
-                  )}
-              </div>
-              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {matchingAnalysis?.title ||
-                      `${t("report")} ${report?.seq || index + 1}`}
-                  </h2>
-                  <p className="text-gray-500 text-xs sm:text-sm mb-2">
-                    {t("reported")}:{" "}
-                    {report?.timestamp
-                      ? new Date(report.timestamp).toLocaleString()
-                      : t("unknown")}
-                  </p>
-                  <p
-                    className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 overflow-hidden text-ellipsis"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    {matchingAnalysis?.summary ||
-                      matchingAnalysis?.description ||
-                      t("noDescriptionAvailable")}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between mt-auto">
-                  <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-full font-medium">
-                    {getCategory(analysis)}
-                  </span>
-                  <span className="text-xs px-2 py-1 sm:px-3 sm:py-1 text-gray-500">
-                    {report?.latitude?.toFixed(4)},{" "}
-                    {report?.longitude?.toFixed(4)}
-                  </span>
-                </div>
-                {!isEmbeddedMode && (
-                  <button
-                    className="mt-3 sm:mt-6 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-6 py-2 sm:px-8 sm:py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm sm:text-lg"
-                    onClick={() => router.push("/pricing")}
-                  >
-                    {t("subscribe")}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {firstRow.map((item, index) => (
+          <ReportCard
+            key={item.report?.seq || index}
+            item={item}
+            index={index}
+            priority={index === 0}
+          />
+        ))}
+        {secondRow.map((item, index) => (
+          <BlurredReportCard
+            key={item.report?.seq || index + 3}
+            item={item}
+            index={index + 3}
+          />
+        ))}
       </div>
 
       {recentReports.length > 6 && (
@@ -398,175 +223,9 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
 
       {/* AI Insights Card - Keep the premium features section - Mobile responsive */}
       <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="flex flex-col gap-4">
-          <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">
-              {t("locations")}
-            </h1>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
-            <div className="rounded-t-xl w-full h-32 sm:h-40 flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600 relative">
-              <span className="w-4 h-4 sm:w-6 sm:h-6 bg-red-500 rounded-full block"></span>
-            </div>
-            <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-              <div>
-                <div className="text-gray-700 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <h2 className="font-semibold text-base sm:text-lg mb-1">
-                    {t("monitoringZone")}
-                  </h2>
-                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 sm:px-3 sm:py-1 rounded-md">
-                    {t("active")}
-                  </span>
-                </div>
-
-                <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    {t("reportsToday")}:
-                  </span>
-                  <span>{recentReports.length}</span>
-                </div>
-                <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    {t("status")}:
-                  </span>
-                  <span>{t("liveMonitoring")}</span>
-                </div>
-                <div className="text-gray-500 text-xs sm:text-sm mb-2 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    {t("coverage")}:
-                  </span>
-                  <span>{t("twentyFourSeven")}</span>
-                </div>
-                <div className="text-xs sm:text-sm text-green-500 flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    {t("system")}:
-                  </span>
-                  <span>{t("operational")}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">
-              {t("statistics")}
-            </h1>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full p-3 sm:p-4">
-            <div className="space-y-3 sm:space-y-4">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                  {recentReports.length}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-500">
-                  {t("totalReports")}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="text-center">
-                  <div className="text-base sm:text-lg font-semibold text-red-600">
-                    {
-                      recentReports.filter((r) => {
-                        const matchingAnalysis =
-                          r.analysis?.find((a) => a.language === locale) ||
-                          r.analysis?.[0];
-                        return (
-                          matchingAnalysis?.severity_level &&
-                          matchingAnalysis.severity_level >= 0.7
-                        );
-                      }).length
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {t("highPriority")}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-base sm:text-lg font-semibold text-yellow-600">
-                    {
-                      recentReports.filter((r) => {
-                        const matchingAnalysis =
-                          r.analysis?.find((a) => a.language === locale) ||
-                          r.analysis?.[0];
-                        return (
-                          matchingAnalysis?.severity_level &&
-                          matchingAnalysis.severity_level >= 0.4 &&
-                          matchingAnalysis.severity_level < 0.7
-                        );
-                      }).length
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {t("mediumPriority")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-base sm:text-lg font-semibold text-green-600">
-                  {
-                    recentReports.filter((r) => {
-                      const matchingAnalysis =
-                        r.analysis?.find((a) => a.language === locale) ||
-                        r.analysis?.[0];
-                      return (
-                        matchingAnalysis?.litter_probability &&
-                        matchingAnalysis.litter_probability > 0.5
-                      );
-                    }).length
-                  }
-                </div>
-                <div className="text-xs text-gray-500">{t("litterIssues")}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="text-center">
-            <h1 className="text-base sm:text-lg font-medium text-white">
-              {t("aiInsights")}
-            </h1>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-dashed border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-4 sm:p-6 h-full">
-            <div className="flex flex-col items-center">
-              <div className="bg-green-100 rounded-full p-3 sm:p-4 mb-3 sm:mb-4">
-                <FaLock className="text-green-600 text-xl sm:text-2xl" />
-              </div>
-              <h2 className="font-semibold text-base sm:text-lg mb-2">
-                {t("premiumFeatures")}
-              </h2>
-              <ul className="text-gray-700 text-xs mb-3 sm:mb-4 list-none space-y-1 text-center">
-                <li>
-                  <span className="text-green-600 mr-2">&#10003;</span>{" "}
-                  {t("predictiveRiskAssessment")}
-                </li>
-                <li>
-                  <span className="text-green-600 mr-2">&#10003;</span>{" "}
-                  {t("costImpactAnalysis")}
-                </li>
-                <li>
-                  <span className="text-green-600 mr-2">&#10003;</span>{" "}
-                  {t("aiPoweredRecommendations")}
-                </li>
-              </ul>
-              {!isEmbeddedMode && (
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-md transition-colors text-sm"
-                  onClick={() => router.push("/pricing")}
-                >
-                  {t("subscribe")}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <LocationsCard totalReports={recentReports.length} />
+        <StatisticsCard reports={recentReports} />
+        <AIInsightsCard />
       </div>
     </div>
   );
