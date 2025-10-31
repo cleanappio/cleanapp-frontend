@@ -219,11 +219,13 @@ export class ApiClient {
         if (error.response?.status === 401) {
           // Clear token on unauthorized
           authApiClient.setAuthToken(null);
-          // Only redirect if in browser context and not on login or checkout pages
-          if (typeof window !== 'undefined' && 
-              window.location.pathname !== '/login' && 
-              window.location.pathname !== '/checkout') {
-            window.location.href = '/login';
+          // Only redirect if in browser context and not on public pages
+          if (typeof window !== 'undefined') {
+            const publicPaths = ['/login', '/checkout', '/', '/pricing'];
+            const currentPath = window.location.pathname;
+            if (!publicPaths.includes(currentPath)) {
+              window.location.href = '/login';
+            }
           }
         }
         return Promise.reject(error);

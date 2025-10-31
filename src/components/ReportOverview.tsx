@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import router from "next/router";
 import { ReportWithAnalysis } from "./GlobeView";
 import { getDisplayableImage } from "@/lib/image-utils";
 import {
@@ -17,13 +16,17 @@ import { ReportResponse } from "@/types/reports/api";
 
 interface ReportOverviewProps {
   reportItem?: ReportResponse | null;
+  reportWithAnalysis?: ReportWithAnalysis | null;
 }
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
-const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
-  const [fullReport, setFullReport] = useState<any>(null);
+const ReportOverview: React.FC<ReportOverviewProps> = ({
+  reportItem,
+  reportWithAnalysis,
+}) => {
+  const [fullReport, setFullReport] = useState<any>(reportWithAnalysis);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
@@ -34,6 +37,41 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     reportItem?.classification === "digital"
   );
 
+  const [location, setLocation] = useState<{
+    latitude?: number;
+    longitude?: number;
+  } | null>(null);
+
+  // Classification
+  useEffect(() => {
+    if (fullReport) {
+      if (fullReport.analysis && fullReport.analysis.length > 0) {
+        setIsDigital(fullReport.analysis[0]?.classification === "digital");
+      } else {
+        setIsDigital(false);
+      }
+    } else if (reportItem) {
+      setIsDigital(reportItem.classification === "digital");
+    }
+  }, [fullReport, reportItem]);
+
+  // Location
+  useEffect(() => {
+    if (fullReport) {
+      setLocation({
+        latitude: fullReport.report.latitude,
+        longitude: fullReport.report.longitude,
+      });
+    } else if (reportItem) {
+      if (reportItem.classification === "physical") {
+        setLocation({
+          latitude: reportItem.latitude,
+          longitude: reportItem.longitude,
+        });
+      }
+    }
+  }, [fullReport, reportItem]);
+
   // Reverse geocoding hook to get human-readable address
   const {
     address,
@@ -41,16 +79,10 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     error: addressError,
     refetch: refetchAddress,
   } = useReverseGeocoding({
-    latitude:
-      reportItem?.classification === "physical"
-        ? reportItem?.latitude
-        : undefined,
-    longitude:
-      reportItem?.classification === "physical"
-        ? reportItem?.longitude
-        : undefined,
-    language: "en",
-    autoFetch: true,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    language: locale,
+    autoFetch: location?.latitude && location?.longitude ? true : false,
   });
 
   const fetchPhysicalReport = useCallback(async (seq: number) => {
@@ -63,7 +95,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     try {
       if (response.ok) {
         const data = await response.json();
-        console.log("Physical report:", data);
         setFullReport(data);
 
         if (data.report.image) {
@@ -89,7 +120,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
   }, []);
 
   const fetchDigitalReport = useCallback(
-    async (brand_name: string, n: number = 10) => {
+    async (brand_name: string, n: number = 1) => {
       setLoading(true);
       setError(null);
 
@@ -100,9 +131,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("Digital report:", data);
-          setFullReport(data);
-          console.log("Digital report image:", data.reports[0].image);
+          setFullReport(data.reports[0] as ReportWithAnalysis);
           if (data.reports[0].image) {
             setImageUrl(getDisplayableImage(data.reports[0].image));
           } else {
@@ -136,36 +165,45 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     } else {
       fetchDigitalReport(reportItem.brand_name || "");
     }
-  }, [fetchDigitalReport, fetchPhysicalReport, reportItem]);
+  }, [fetchDigitalReport, fetchPhysicalReport, reportItem, reportWithAnalysis]);
 
   useEffect(() => {
-    fetchFullReport();
-  }, [reportItem, fetchFullReport]);
+    if (reportItem && !fullReport) {
+      fetchFullReport();
+    }
+  }, [fetchFullReport, fullReport, reportItem, reportWithAnalysis]);
 
-  // useEffect(() => {
-  //   const locale = getCurrentLocale();
-  //   if (fullReport?.analysis) {
-  //     setTitle(
-  //       fullReport.analysis.find(
-  //         (analysis: any) => analysis.language === locale
-  //       )?.title || fullReport.analysis[0].title
-  //     );
-  //   } else if (reportItem?.report?.seq) {
-  //     setTitle(`${t("report")} ${reportItem.report.seq}`);
-  //   } else {
-  //     setTitle("");
-  //   }
-  // }, [fullReport?.analysis, reportItem, t, locale]);
+  useEffect(() => {
+    if (fullReport) {
+      setImageUrl(
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${fullReport.report.seq}`
+      );
 
-  // useEffect(() => {
-  //   if (fullReport?.report?.image) {
-  //     setImageUrl(getDisplayableImage(fullReport.report.image));
-  //   } else if (reportItem?.report?.image) {
-  //     setImageUrl(getDisplayableImage(reportItem.report.image));
-  //   } else {
-  //     setImageUrl(null);
-  //   }
-  // }, [fullReport?.report?.image, reportItem?.report?.image]);
+      setTitle(
+        fullReport.analysis.find(
+          (analysis: any) => analysis.language === locale
+        )?.title || fullReport.analysis[0].title
+      );
+    } else if (reportItem) {
+      if (reportItem.classification === "physical" && reportItem?.seq) {
+        setImageUrl(
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.seq}`
+        );
+      } else if (
+        reportItem.classification === "digital" &&
+        reportItem?.brand_name
+      ) {
+        setImageUrl(null);
+      } else {
+        setImageUrl(null);
+      }
+    } else {
+      setImageUrl(null);
+    }
+  }, [fullReport, reportItem]);
+
+  if (!reportItem && !reportWithAnalysis)
+    throw new Error("Either reportItem or reportWithAnalysis must be provided");
 
   const getGradientColor = (value: number, maxValue: number = 1) => {
     const percentage = (value / maxValue) * 100;
@@ -182,7 +220,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
   };
 
-  if (!reportItem) {
+  if (!reportItem && !fullReport) {
     return (
       <div className="border rounded-md bg-white shadow-md">
         <div className="p-4">
@@ -204,13 +242,10 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
     );
   }
 
-  const report = reportItem;
-  const analysis =
-    reportItem.classification === "physical"
-      ? fullReport?.analysis
-      : fullReport?.reports[0]?.analysis.find(
-          (analysis: any) => analysis.language === locale
-        );
+  const report = fullReport?.report ?? reportItem;
+  const analysis = fullReport?.analysis?.find(
+    (analysis: any) => analysis.language === locale
+  );
 
   var imageComponent;
 
@@ -226,6 +261,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
           console.error("Failed to load image:", imageUrl);
           e.currentTarget.style.display = "none";
           e.currentTarget.nextElementSibling?.classList.remove("hidden");
+          setImageUrl(null);
         }}
       />
     );
@@ -234,7 +270,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
 
     if (text === "") {
       imageComponent = (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full bg-white">
           <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
           <p className="text-gray-500 text-sm sm:text-base">{t("loading")}</p>
         </div>
@@ -287,11 +323,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
                         {t("location")}
                       </h3>
-                      {report.classification === "physical" && (
+                      {location && location.latitude && location.longitude && (
                         <a
                           href={getGoogleMapsUrl(
-                            report.latitude,
-                            report.longitude
+                            location.latitude,
+                            location.longitude
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -309,18 +345,16 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                   )}
 
                   {/* Time */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                      {t("time")}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {formatTime(
-                        report.classification === "physical"
-                          ? fullReport?.report?.timestamp
-                          : fullReport?.reports[0]?.report?.timestamp
-                      )}
-                    </p>
-                  </div>
+                  {fullReport?.report?.timestamp && (
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                        {t("time")}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {formatTime(fullReport.report.timestamp)}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {!isDigital && (
@@ -437,9 +471,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
                   <h3 className="font-semibold text-sm mb-1">
                     {t("location")}
                   </h3>
-                  {report.classification === "physical" && (
+                  {location && location.latitude && location.longitude && (
                     <a
-                      href={getGoogleMapsUrl(report.latitude, report.longitude)}
+                      href={getGoogleMapsUrl(
+                        location.latitude,
+                        location.longitude
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-300 hover:text-blue-200 text-sm underline"
@@ -456,17 +493,14 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({ reportItem }) => {
               )}
 
               {/* Time */}
-              <div>
-                <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
-                <p className="text-sm">
-                  {fullReport &&
-                    formatTime(
-                      report.classification === "physical"
-                        ? fullReport?.report?.timestamp
-                        : fullReport?.reports[0]?.report?.timestamp
-                    )}
-                </p>
-              </div>
+              {fullReport?.report?.timestamp && (
+                <div>
+                  <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
+                  <p className="text-sm">
+                    {formatTime(fullReport.report.timestamp)}
+                  </p>
+                </div>
+              )}
 
               {isDigital && (
                 <>

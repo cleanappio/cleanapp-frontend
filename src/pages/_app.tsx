@@ -11,7 +11,8 @@ export default function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return (
     <ErrorBoundary>
