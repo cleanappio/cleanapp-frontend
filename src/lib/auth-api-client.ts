@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from "axios";
 
 // ==================== INTERFACES ====================
 
@@ -23,7 +23,7 @@ export interface TokenResponse {
 
 // OAuth interfaces (for future backend implementation)
 export interface OAuthLoginRequest {
-  provider: 'google' | 'facebook' | 'apple';
+  provider: "google" | "facebook" | "apple";
   id_token?: string;
   access_token?: string;
   authorization_code?: string;
@@ -69,15 +69,15 @@ export class AuthApiClient {
 
   constructor() {
     if (!process.env.NEXT_PUBLIC_AUTH_API_URL) {
-      throw 'NEXT_PUBLIC_AUTH_API_URL is not set.';
+      throw "NEXT_PUBLIC_AUTH_API_URL is not set.";
     }
     this.axios = axios.create({
       baseURL: process.env.NEXT_PUBLIC_AUTH_API_URL,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      timeout: 30000 // 30 second timeout
+      timeout: 30000, // 30 second timeout
     });
 
     // Request interceptor
@@ -100,11 +100,13 @@ export class AuthApiClient {
         if (error.response?.status === 401) {
           // Clear token on unauthorized
           this.setAuthToken(null);
-          // Only redirect if in browser context and not on login or checkout pages
-          if (typeof window !== 'undefined' && 
-              window.location.pathname !== '/login' && 
-              window.location.pathname !== '/checkout') {
-            window.location.href = '/login';
+          // Only redirect if in browser context and not on public pages
+          if (typeof window !== "undefined") {
+            const publicPaths = ["/login", "/checkout", "/", "/pricing"];
+            const currentPath = window.location.pathname;
+            if (!publicPaths.includes(currentPath)) {
+              window.location.href = "/login";
+            }
           }
         }
         return Promise.reject(error);
@@ -116,11 +118,11 @@ export class AuthApiClient {
 
   setAuthToken(token: string | null) {
     this.token = token;
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (token) {
-        localStorage.setItem('auth_token', token);
+        localStorage.setItem("auth_token", token);
       } else {
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem("auth_token");
       }
     }
   }
@@ -130,8 +132,8 @@ export class AuthApiClient {
   }
 
   loadTokenFromStorage(): void {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("auth_token");
       if (token) {
         this.token = token;
       }
@@ -141,66 +143,89 @@ export class AuthApiClient {
   // ==================== AUTHENTICATION ENDPOINTS ====================
 
   async login(email: string, password: string): Promise<TokenResponse> {
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/login', {
-      email,
-      password
-    });
+    const { data } = await this.axios.post<TokenResponse>(
+      "/api/v3/auth/login",
+      {
+        email,
+        password,
+      }
+    );
     this.setAuthToken(data.token);
     return data;
   }
 
   async logout(): Promise<void> {
     try {
-      await this.axios.post('/api/v3/auth/logout');
+      await this.axios.post("/api/v3/auth/logout");
     } finally {
       this.setAuthToken(null);
     }
   }
 
   async refreshToken(refreshToken?: string): Promise<TokenResponse> {
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/refresh', {
-      refresh_token: refreshToken || this.getRefreshToken()
-    });
+    const { data } = await this.axios.post<TokenResponse>(
+      "/api/v3/auth/refresh",
+      {
+        refresh_token: refreshToken || this.getRefreshToken(),
+      }
+    );
     this.setAuthToken(data.token);
     return data;
   }
 
   private getRefreshToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('refresh_token');
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("refresh_token");
     }
     return null;
   }
 
   // OAuth methods (for when backend implements them)
-  async loginWithOAuth(provider: 'google' | 'facebook' | 'apple', credential: string): Promise<TokenResponse> {
+  async loginWithOAuth(
+    provider: "google" | "facebook" | "apple",
+    credential: string
+  ): Promise<TokenResponse> {
     const payload: OAuthLoginRequest = {
       provider,
-      ...(provider === 'apple' ? { authorization_code: credential } : { id_token: credential })
+      ...(provider === "apple"
+        ? { authorization_code: credential }
+        : { id_token: credential }),
     };
-    
-    const { data } = await this.axios.post<TokenResponse>('/api/v3/auth/oauth', payload);
+
+    const { data } = await this.axios.post<TokenResponse>(
+      "/api/v3/auth/oauth",
+      payload
+    );
     this.setAuthToken(data.token);
     return data;
   }
 
-  async getOAuthUrl(provider: 'google' | 'facebook' | 'apple'): Promise<OAuthUrlResponse> {
-    const { data } = await this.axios.get<OAuthUrlResponse>(`/api/v3/auth/oauth/${provider}`);
+  async getOAuthUrl(
+    provider: "google" | "facebook" | "apple"
+  ): Promise<OAuthUrlResponse> {
+    const { data } = await this.axios.get<OAuthUrlResponse>(
+      `/api/v3/auth/oauth/${provider}`
+    );
     return data;
   }
 
-  async signup(name: string, email: string, password: string, area_ids: number[] = [1]): Promise<User> {
-    const { data } = await this.axios.post<User>('/api/v3/auth/register', {
+  async signup(
+    name: string,
+    email: string,
+    password: string,
+    area_ids: number[] = [1]
+  ): Promise<User> {
+    const { data } = await this.axios.post<User>("/api/v3/auth/register", {
       name,
       email,
       password,
-      area_ids
+      area_ids,
     });
     return data;
   }
 
   async getCurrentUser(): Promise<User> {
-    const { data } = await this.axios.get<User>('/api/v3/users/me');
+    const { data } = await this.axios.get<User>("/api/v3/users/me");
     return data;
   }
 
@@ -213,7 +238,10 @@ export class AuthApiClient {
    */
   async userExists(email: string): Promise<boolean> {
     try {
-      const { data } = await this.axios.get<{ user_exists: boolean }>(`/api/v3/users/exists`, { params: { email } });
+      const { data } = await this.axios.get<{ user_exists: boolean }>(
+        `/api/v3/users/exists`,
+        { params: { email } }
+      );
       return !!data.user_exists;
     } catch (error: any) {
       // If API returns 404 or similar, treat as not found
@@ -227,6 +255,6 @@ export class AuthApiClient {
 export const authApiClient = new AuthApiClient();
 
 // Initialize token from storage on load
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   authApiClient.loadTokenFromStorage();
-} 
+}
