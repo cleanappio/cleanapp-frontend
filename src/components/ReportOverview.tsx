@@ -212,8 +212,29 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     return "from-red-500 to-red-400";
   };
 
+  // TODO: Display difference in time between report and current time
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
+    const reportTime = new Date(timestamp);
+    const currentTime = new Date();
+    const timeDifference = currentTime.getTime() - reportTime.getTime();
+    const timeDifferenceInMinutes = Math.floor(timeDifference / (1000 * 60));
+    const timeDifferenceInHours = Math.floor(timeDifferenceInMinutes / 60);
+    const timeDifferenceInDays = Math.floor(timeDifferenceInHours / 24);
+    const timeDifferenceInMonths = Math.floor(timeDifferenceInDays / 30);
+    const timeDifferenceInYears = Math.floor(timeDifferenceInMonths / 12);
+    if (timeDifferenceInYears > 0) {
+      return `${timeDifferenceInYears} years ago`;
+    } else if (timeDifferenceInMonths > 0) {
+      return `${timeDifferenceInMonths} months ago`;
+    } else if (timeDifferenceInDays > 0) {
+      return `${timeDifferenceInDays} days ago`;
+    } else if (timeDifferenceInHours > 0) {
+      return `${timeDifferenceInHours} hours ago`;
+    } else if (timeDifferenceInMinutes > 0) {
+      return `${timeDifferenceInMinutes} minutes ago`;
+    } else {
+      return `just now`;
+    }
   };
 
   const getGoogleMapsUrl = (lat: number, lng: number) => {
@@ -350,8 +371,19 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
                         {t("time")}
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p
+                        className="text-sm relative group"
+                        aria-describedby="tooltip"
+                      >
                         {formatTime(fullReport.report.timestamp)}
+                        <span
+                          id="tooltip"
+                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                        >
+                          {new Date(
+                            fullReport.report.timestamp
+                          ).toLocaleString()}
+                        </span>
                       </p>
                     </div>
                   )}
@@ -496,8 +528,17 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               {fullReport?.report?.timestamp && (
                 <div>
                   <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
-                  <p className="text-sm">
+                  <p
+                    className="text-sm relative group"
+                    aria-describedby="tooltip"
+                  >
                     {formatTime(fullReport.report.timestamp)}
+                    <span
+                      id="tooltip"
+                      className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                    >
+                      {new Date(fullReport.report.timestamp).toLocaleString()}
+                    </span>
                   </p>
                 </div>
               )}
