@@ -1,5 +1,5 @@
+"use client";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { generate, GenerateOptions } from "text-to-image";
 
 interface TextToImageProps {
   text: string;
@@ -7,14 +7,14 @@ interface TextToImageProps {
   onImageGenerated?: (dataUri: string) => void;
 }
 
-const defaultConfig: GenerateOptions = {
+const defaultConfig = {
   maxWidth: 600,
   fontSize: 20,
   fontFamily: "Arial, sans-serif",
   fontWeight: "normal",
   textColor: "#000000",
-  textAlign: "center",
-  verticalAlign: "center",
+  textAlign: "center" as const,
+  verticalAlign: "center" as const,
   lineHeight: 30,
   margin: 20,
   bgColor: "#fefae0",
@@ -103,7 +103,7 @@ export default function TextToImage({
     []
   );
 
-  // Generate image when text changes
+  // Generate image using HTML5 Canvas API
   const generateImage = useCallback(async () => {
     if (!text.trim()) {
       setError("No text provided");
@@ -114,16 +114,54 @@ export default function TextToImage({
     setError(null);
 
     try {
-      const wrappedText = wrapText(
-        text,
-        defaultConfig.maxWidth || 600,
-        defaultConfig.fontSize || 24
-      );
+      const maxWidth = defaultConfig.maxWidth || 600;
+      const fontSize = defaultConfig.fontSize || 20;
+      const lineHeight = defaultConfig.lineHeight || 30;
+      const margin = defaultConfig.margin || 20;
 
-      const dataUri = await generate(wrappedText, {
-        ...defaultConfig,
-        bgColor: backgroundColor,
+      const wrappedText = wrapText(text, maxWidth, fontSize);
+      const lines = wrappedText.split("\n");
+
+      // Create canvas
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      // Set canvas size
+      const textWidth = maxWidth;
+      const textHeight = lines.length * lineHeight + margin * 2;
+      canvas.width = textWidth + margin * 2;
+      canvas.height = textHeight;
+
+      // Set font properties
+      ctx.font = `${defaultConfig.fontWeight} ${fontSize}px ${defaultConfig.fontFamily}`;
+      ctx.fillStyle = defaultConfig.textColor;
+      ctx.textAlign = defaultConfig.textAlign;
+      // Map verticalAlign to valid textBaseline values
+      const textBaselineMap: Record<string, CanvasTextBaseline> = {
+        top: "top",
+        center: "middle",
+        bottom: "bottom",
+      };
+      ctx.textBaseline = textBaselineMap[defaultConfig.verticalAlign] || "top";
+
+      // Draw background
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw text
+      ctx.fillStyle = defaultConfig.textColor;
+      lines.forEach((line, index) => {
+        const x = canvas.width / 2;
+        const y = margin + index * lineHeight;
+        ctx.fillText(line, x, y);
       });
+
+      // Convert to data URL
+      const dataUri = canvas.toDataURL("image/png");
 
       setGeneratedImage(dataUri);
 
