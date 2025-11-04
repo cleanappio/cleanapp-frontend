@@ -28,6 +28,16 @@ const nextConfig = {
     defaultLocale: "en",
     localeDetection: false,
   },
+  webpack: (config, { isServer }) => {
+    // Exclude canvas native module from server-side builds
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        canvas: "canvas",
+      });
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;
