@@ -48,7 +48,7 @@ export default function AreaCreationModal({
       name: areaName || `Custom Area ${Date.now()}`,
       description: initialArea.description || "", // Ensure description is always an empty string, never null
       contact_emails: contactEmail
-        ? [{ email: contactEmail, consent_report: false }]
+        ? [{ email: contactEmail, consent_report: true }]
         : [],
     };
 
