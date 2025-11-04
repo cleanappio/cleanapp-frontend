@@ -2,9 +2,10 @@
 
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
+import type mapboxgl from "mapbox-gl";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FiMenu, FiSearch, FiX } from "react-icons/fi";
 import { useRouter } from "next/router";
 import type { MapRef } from "react-map-gl/mapbox";
@@ -35,6 +36,10 @@ import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import { PhysicalReportResponse } from "@/types/reports/api/physical";
+import { useMapboxDraw } from "@/hooks/useMapboxDraw";
+import AreaCreationModal from "./AreaCreationModal";
+import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
+import type { Feature, Polygon } from "geojson";
 
 interface CompanyData {
   name: string;
@@ -137,6 +142,11 @@ export default function GlobeView() {
   const [seq, setSeq] = useState<number | null>(null);
   const [reportWithAnalysis, setReportWithAnalysis] =
     useState<ReportWithAnalysis | null>(null);
+
+  // Drawing state
+  const [enableDrawing, setEnableDrawing] = useState(false);
+  const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
+  const [areasLoading, setAreasLoading] = useState(false);
 
   // Use the refactored report tabs hook with API calls
   const {
@@ -1444,6 +1454,274 @@ export default function GlobeView() {
     return 2;
   };
 
+  // Drawing handlers
+  const handleAreaCreated = useCallback(async (area: Area) => {
+    console.log("Area created:", area);
+    try {
+      // Ensure description is always an empty string, never null
+      const areaToCreate = {
+        ...area,
+        description: area.description || "",
+      };
+
+      const response = await areasApiClient.createArea(areaToCreate);
+      console.log("Area created successfully:", response);
+
+      // Update the area with the ID returned from the server
+      const createdArea = { ...areaToCreate, id: response.area_id };
+
+      setDrawnAreas((prev) => {
+        const newDrawnAreas = [...prev, createdArea];
+        return newDrawnAreas;
+      });
+    } catch (error: any) {
+      console.error("Error creating area:", {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      // Still add to local state even if API call fails
+      const areaToAdd = {
+        ...area,
+        description: area.description || "",
+      };
+      setDrawnAreas((prev) => {
+        const newDrawnAreas = [...prev, areaToAdd];
+        return newDrawnAreas;
+      });
+    }
+  }, []);
+
+  const handleAreaEdited = useCallback(async (area: Area, index: number) => {
+    console.log("Area edited:", area, index);
+    try {
+      // Ensure description is always an empty string, never null
+      const areaToUpdate = {
+        ...area,
+        description: area.description || "",
+      };
+
+      const response = await areasApiClient.updateArea(areaToUpdate);
+      console.log("Area updated successfully:", response);
+
+      // Update state with the potentially updated area from server
+      setDrawnAreas((prev) => {
+        const newAreas = [...prev];
+        if (newAreas[index]) {
+          newAreas[index] = { ...newAreas[index], ...areaToUpdate };
+        }
+        return newAreas;
+      });
+    } catch (error: any) {
+      console.error("Error updating area:", {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      // Still update local state even if API call fails
+      const areaToAdd = {
+        ...area,
+        description: area.description || "",
+      };
+      setDrawnAreas((prev) => {
+        const newAreas = [...prev];
+        if (newAreas[index]) {
+          newAreas[index] = areaToAdd;
+        }
+        return newAreas;
+      });
+    }
+  }, []);
+
+  const handleAreaDeleted = useCallback((index: number) => {
+    console.log("Area deleted:", index);
+    // Note: No delete API method available, so we only remove from local state
+    setDrawnAreas((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Get the map instance for drawing
+  const mapInstance = useMemo(() => {
+    if (!mapRef.current || !mapLoaded || !mapStyleLoaded) return null;
+    try {
+      return mapRef.current.getMap();
+    } catch {
+      return null;
+    }
+  }, [mapLoaded, mapStyleLoaded]);
+
+  // Use Mapbox Draw hook
+  const { pendingFeature, handleModalSubmit, handleModalClose } = useMapboxDraw(
+    {
+      map: mapInstance,
+      mapLoaded,
+      mapStyleLoaded,
+      enableDrawing,
+      onAreaCreated: handleAreaCreated,
+      onAreaEdited: handleAreaEdited,
+      onAreaDeleted: handleAreaDeleted,
+    }
+  );
+
+  // Convert pending feature to Area for modal
+  const pendingArea = useMemo(() => {
+    if (!pendingFeature || pendingFeature.geometry.type !== "Polygon") {
+      return null;
+    }
+
+    return {
+      id: undefined,
+      name: `Custom Area ${Date.now()}`,
+      description: "", // Use empty string instead of null
+      is_custom: true,
+      type: "poi" as const,
+      contact_name: "",
+      contact_emails: [],
+      coordinates: pendingFeature as Feature<Polygon>,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Area;
+  }, [pendingFeature]);
+
+  // Calculate viewport from user location with radius in kilometers
+  const calculateViewportFromLocation = useCallback(
+    (
+      latitude: number,
+      longitude: number,
+      radiusKm: number = 1
+    ): ViewPort | undefined => {
+      // Approximate conversion: 1 degree of latitude ≈ 111 km
+      // 1 degree of longitude ≈ 111 km * cos(latitude)
+      const latOffset = radiusKm / 111;
+      const lonOffset = radiusKm / (111 * Math.cos((latitude * Math.PI) / 180));
+
+      return {
+        lat_min: latitude - latOffset,
+        lat_max: latitude + latOffset,
+        lon_min: longitude - lonOffset,
+        lon_max: longitude + lonOffset,
+      };
+    },
+    []
+  );
+
+  // Fetch areas on mount to persist across page reloads
+  useEffect(() => {
+    const fetchAreas = async () => {
+      try {
+        setAreasLoading(true);
+
+        // Calculate viewport from user location with 10km radius
+        let viewport: ViewPort | undefined = undefined;
+        if (userLocation) {
+          viewport = calculateViewportFromLocation(
+            userLocation.latitude,
+            userLocation.longitude,
+            1 // 10 kilometers radius
+          );
+          console.log("Fetching areas near user location:", {
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            viewport,
+          });
+        } else {
+          console.log("No user location available, fetching all areas");
+        }
+
+        const response = await areasApiClient.getAreas(viewport, "poi");
+
+        // Filter to only custom areas (areas drawn by users)
+        const customAreas = response.areas.filter(
+          (area) => area.is_custom === true
+        );
+
+        console.log("Fetched custom areas:", customAreas.length);
+        setDrawnAreas(customAreas);
+      } catch (error: any) {
+        console.error("Error fetching areas:", {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+        });
+        // Don't update state on error - keep existing drawnAreas
+      } finally {
+        setAreasLoading(false);
+      }
+    };
+
+    fetchAreas();
+  }, [userLocation, calculateViewportFromLocation]); // Re-fetch when user location changes
+
+  // Render drawn areas on the map
+  useEffect(() => {
+    if (!mapInstance || !mapLoaded || !mapStyleLoaded) return;
+
+    const map = mapInstance;
+
+    // Convert drawnAreas to GeoJSON FeatureCollection
+    const features = drawnAreas.map((area) => area.coordinates).filter(Boolean);
+    const geoJSON: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: features,
+    };
+
+    // Add or update source
+    if (!map.getSource("drawn-areas")) {
+      map.addSource("drawn-areas", {
+        type: "geojson",
+        data: geoJSON,
+      });
+    } else {
+      const source = map.getSource("drawn-areas") as mapboxgl.GeoJSONSource;
+      source.setData(geoJSON);
+    }
+
+    // Add fill layer if it doesn't exist
+    if (!map.getLayer("drawn-areas-fill")) {
+      map.addLayer({
+        id: "drawn-areas-fill",
+        type: "fill",
+        source: "drawn-areas",
+        paint: {
+          "fill-color": "#ae11c6",
+          "fill-opacity": 0.3,
+        },
+      });
+    }
+
+    // Add outline layer if it doesn't exist
+    if (!map.getLayer("drawn-areas-outline")) {
+      map.addLayer({
+        id: "drawn-areas-outline",
+        type: "line",
+        source: "drawn-areas",
+        paint: {
+          "line-color": "#ae11c6",
+          "line-width": 3,
+        },
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      try {
+        if (map.getLayer("drawn-areas-outline")) {
+          map.removeLayer("drawn-areas-outline");
+        }
+        if (map.getLayer("drawn-areas-fill")) {
+          map.removeLayer("drawn-areas-fill");
+        }
+        if (map.getSource("drawn-areas")) {
+          map.removeSource("drawn-areas");
+        }
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+    };
+  }, [mapInstance, mapLoaded, mapStyleLoaded, drawnAreas]);
+
   return (
     <div className="flex flex-col h-svh relative">
       {/* Map Loading Indicator */}
@@ -1536,7 +1814,7 @@ export default function GlobeView() {
                 setLocationLoading(false);
               }}
               style={{
-                marginTop: "80px",
+                marginTop: "145px",
                 marginRight: "25px",
               }}
             />
@@ -1827,6 +2105,48 @@ export default function GlobeView() {
           <ReportTabs selectedTab={selectedTab} onTabChange={setSelectedTab} />
         </div>
       </div>
+
+      {/* Drawing mode toggle button */}
+      {!isEmbeddedMode && (
+        <div className="absolute top-20 right-4 z-10">
+          <button
+            onClick={() => setEnableDrawing(!enableDrawing)}
+            className={`p-3 rounded-md border transition-colors ${
+              enableDrawing
+                ? "bg-purple-600 border-purple-500 text-white"
+                : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+            }`}
+            title={
+              enableDrawing ? "Disable drawing mode" : "Enable drawing mode"
+            }
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Area Creation Modal */}
+      {pendingArea && (
+        <AreaCreationModal
+          isOpen={!!pendingArea}
+          onClose={handleModalClose}
+          onSubmit={handleModalSubmit}
+          initialArea={pendingArea}
+        />
+      )}
 
       {/* Latest Reports - only show when modal is not open and not on mobile */}
       <CollapsibleLatestReports

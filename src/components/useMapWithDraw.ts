@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useMap } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
-import { FeatureGroup } from 'react-leaflet';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import { Area } from '@/lib/areas-api-client';
-import AreaCreationModal from './AreaCreationModal';
+import React, { useEffect, useRef, useState } from "react";
+import { useMap } from "react-leaflet";
+import { EditControl } from "react-leaflet-draw";
+import { FeatureGroup } from "react-leaflet";
+import "leaflet-draw/dist/leaflet.draw.css";
+import { Area } from "@/lib/areas-api-client";
+import AreaCreationModal from "./AreaCreationModal";
 
 // CSS styles to fix z-index issues
 const drawStyles = `
@@ -57,19 +57,19 @@ let stylesInjected = false;
 
 // Function to inject styles
 const injectStyles = () => {
-  if (stylesInjected || typeof document === 'undefined') return;
-  
+  if (stylesInjected || typeof document === "undefined") return;
+
   // Remove existing style if it exists
-  const existingStyle = document.getElementById('leaflet-draw-fix');
+  const existingStyle = document.getElementById("leaflet-draw-fix");
   if (existingStyle) {
     existingStyle.remove();
   }
-  
-  const styleElement = document.createElement('style');
-  styleElement.id = 'leaflet-draw-fix';
+
+  const styleElement = document.createElement("style");
+  styleElement.id = "leaflet-draw-fix";
   styleElement.textContent = drawStyles;
   document.head.appendChild(styleElement);
-  
+
   stylesInjected = true;
 };
 
@@ -85,15 +85,15 @@ export function useMapWithDraw(
   useEffect(() => {
     if (!enableDrawing || initialized.current) return;
 
-    console.log('=== DRAW TOOLS INITIALIZATION START ===');
-    console.log('Map available:', !!map);
-    console.log('Drawing enabled:', enableDrawing);
+    console.log("=== DRAW TOOLS INITIALIZATION START ===");
+    console.log("Map available:", !!map);
+    console.log("Drawing enabled:", enableDrawing);
 
     // Inject styles when drawing is enabled
     injectStyles();
 
     initialized.current = true;
-    console.log('=== DRAW TOOLS INITIALIZATION COMPLETE ===');
+    console.log("=== DRAW TOOLS INITIALIZATION COMPLETE ===");
   }, [map, enableDrawing]);
 
   return map;
@@ -138,32 +138,32 @@ export function DrawControl({
     }
     const layer = e.layer;
     const coordinates = layer.toGeoJSON().geometry.coordinates;
-    
+
     const newArea: Area = {
       id: undefined, // Will be set by backend
       name: `Custom Area ${Date.now()}`,
-      description: 'Custom drawn area',
+      description: "", // Use empty string instead of null
       is_custom: true,
-      type: 'poi' as const,
-      contact_name: '',
+      type: "poi" as const,
+      contact_name: "",
       contact_emails: [],
       coordinates: {
-        type: 'Feature',
+        type: "Feature",
         geometry: {
-          type: 'Polygon',
-          coordinates: coordinates
+          type: "Polygon",
+          coordinates: coordinates,
         },
         properties: {
           name: `Custom Area ${Date.now()}`,
-          description: 'Custom drawn area',
-          color: '#ae11c6',
-          fillColor: '#ae11c6',
+          description: "",
+          color: "#ae11c6",
+          fillColor: "#ae11c6",
           fillOpacity: 0.3,
-          weight: 3
-        }
+          weight: 3,
+        },
       },
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // Store the area and layer, then open modal
@@ -179,36 +179,36 @@ export function DrawControl({
       const editedArea: Area = {
         id: undefined, // Will be set by backend
         name: `Edited Custom Area`,
-        description: 'Custom drawn area',
+        description: "", // Use empty string instead of null
         is_custom: true,
-        type: 'poi' as const,
-        contact_name: '',
+        type: "poi" as const,
+        contact_name: "",
         contact_emails: [],
         coordinates: {
-          type: 'Feature',
+          type: "Feature",
           geometry: {
-            type: 'Polygon',
-            coordinates: coordinates
+            type: "Polygon",
+            coordinates: coordinates,
           },
           properties: {
             name: `Edited Custom Area`,
-            description: 'Custom drawn area',
-            color: '#ae11c6',
-            fillColor: '#ae11c6',
+            description: "",
+            color: "#ae11c6",
+            fillColor: "#ae11c6",
             fillOpacity: 0.3,
-            weight: 3
-          }
+            weight: 3,
+          },
         },
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
-      
+
       onAreaEdited?.(editedArea, 0);
     });
   };
 
   const handleDeleted = (e: any) => {
-    console.log('Polygon deleted:', e);
+    console.log("Polygon deleted:", e);
     onAreaDeleted?.(0);
   };
 
@@ -225,13 +225,15 @@ export function DrawControl({
     if (pendingLayer && featureGroupRef.current) {
       featureGroupRef.current.removeLayer(pendingLayer);
     }
-    
+
     setIsModalOpen(false);
     setPendingArea(null);
     setPendingLayer(null);
   };
 
-  return React.createElement(React.Fragment, null,
+  return React.createElement(
+    React.Fragment,
+    null,
     React.createElement(EditControl, {
       position: "topright",
       onCreated: handleCreated,
@@ -246,32 +248,33 @@ export function DrawControl({
         polygon: {
           allowIntersection: false,
           drawError: {
-            color: '#e1e100',
-            message: '<strong>Oh snap!<strong> you can\'t draw that!'
+            color: "#e1e100",
+            message: "<strong>Oh snap!<strong> you can't draw that!",
           },
           shapeOptions: {
-            color: '#ae11c6',
-            fillColor: '#ae11c6',
+            color: "#ae11c6",
+            fillColor: "#ae11c6",
             fillOpacity: 0.5,
-            weight: 3
-          }
-        }
+            weight: 3,
+          },
+        },
       },
       edit: {
         remove: true,
         edit: {
           selectedPathOptions: {
             maintainColor: true,
-            dashArray: '10, 10'
-          }
-        }
-      }
+            dashArray: "10, 10",
+          },
+        },
+      },
     }),
-    pendingArea && React.createElement(AreaCreationModal, {
-      isOpen: isModalOpen,
-      onClose: handleModalClose,
-      onSubmit: handleModalSubmit,
-      initialArea: pendingArea
-    })
+    pendingArea &&
+      React.createElement(AreaCreationModal, {
+        isOpen: isModalOpen,
+        onClose: handleModalClose,
+        onSubmit: handleModalSubmit,
+        initialArea: pendingArea,
+      })
   );
-} 
+}
