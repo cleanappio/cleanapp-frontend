@@ -1320,7 +1320,7 @@ export default function GlobeView() {
   useEffect(() => {
     // Connect to the WebSocket endpoint
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/listen`
+      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`
     );
 
     ws.onopen = function () {
