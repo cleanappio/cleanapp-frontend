@@ -1810,7 +1810,7 @@ export default function GlobeView() {
           {/* Mapbox Geolocate Control - Only show in physical reports */}
           {selectedTab === "physical" && (
             <GeolocateControl
-              position="top-right"
+              position="right"
               positionOptions={{
                 enableHighAccuracy: true,
               }}
@@ -1819,10 +1819,6 @@ export default function GlobeView() {
               onError={(error) => {
                 console.error("Mapbox geolocate error:", error);
                 setLocationLoading(false);
-              }}
-              style={{
-                marginTop: "145px",
-                marginRight: "25px",
               }}
             />
           )}
