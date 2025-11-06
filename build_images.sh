@@ -31,6 +31,7 @@ case ${OPT} in
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51ReIGOFW3SknKzLcSITZxoZi8fySW11iQNY1SAe1dpzVOcHS2U05GlMZ6aQCcSdxILX0r6cm8Lx6yz4U8TR8l6HH00ihXdefVs"
       NEXT_PUBLIC_API_URL="https://devapi.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://devlive.cleanapp.io"
+      NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL="wss://devlive.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://devapimontenegro.cleanapp.io"
       NEXT_PUBLIC_DEVCONNECT2025_API_URL="https://devdevconnect2025.cleanapp.io"
       NEXT_PUBLIC_EDGE_CITY_API_URL="https://devapiedgecity.cleanapp.io"
@@ -52,6 +53,7 @@ case ${OPT} in
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51RaMSvF5CkX59Cnm7ZTuIIx0Fg1cQxqilIpOHippAYaVqFMDft3AESH5Ih8aPn4wUFL2VX3Ou9LvwCgqD5O0SDvF00a8ybMiUq"
       NEXT_PUBLIC_API_URL="https://api.cleanapp.io"
       NEXT_PUBLIC_LIVE_API_URL="https://live.cleanapp.io"
+      NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL="wss://live.cleanapp.io"
       NEXT_PUBLIC_MONTENEGRO_API_URL="https://apimontenegro.cleanapp.io"
       NEXT_PUBLIC_DEVCONNECT2025_API_URL="https://devconnect2025.cleanapp.io"
       NEXT_PUBLIC_EDGE_CITY_API_URL="https://apiedgecity.cleanapp.io"
@@ -114,6 +116,7 @@ for MODE in "full" "embedded"; do
   # Construct Dockerfile
   ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_LIVE_API_URL=$(echo ${NEXT_PUBLIC_LIVE_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL=$(echo ${NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL=$(echo ${NEXT_PUBLIC_MONTENEGRO_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_DEVCONNECT2025_API_URL=$(echo ${NEXT_PUBLIC_DEVCONNECT2025_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_EDGE_CITY_API_URL=$(echo ${NEXT_PUBLIC_EDGE_CITY_API_URL} | sed 's/\//\\\//g')
@@ -138,6 +141,7 @@ for MODE in "full" "embedded"; do
   sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
   sed "s/{{NEXT_PUBLIC_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_LIVE_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}/${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}/" | \
   sed "s/{{NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}}/${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}/" | \
   sed "s/{{NEXT_PUBLIC_EMBEDDED_MODE}}/${NEXT_PUBLIC_EMBEDDED_MODE}/" | \
