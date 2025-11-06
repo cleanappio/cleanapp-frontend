@@ -94,9 +94,6 @@ export function useMapboxDraw({
     // Initialize MapboxDraw
     const draw = new MapboxDraw({
       displayControlsDefault: false,
-      controls: {
-        trash: true,
-      },
       modes: {
         ...MapboxDraw.modes,
         draw_rectangle: DrawRectangle,
