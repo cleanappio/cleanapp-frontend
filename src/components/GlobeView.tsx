@@ -145,6 +145,9 @@ export default function GlobeView() {
 
   // Drawing state
   const [enableDrawing, setEnableDrawing] = useState(false);
+  const [drawMode, setDrawMode] = useState<"rectangle" | "freehand">(
+    "freehand"
+  );
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const [areasLoading, setAreasLoading] = useState(false);
 
@@ -1558,9 +1561,13 @@ export default function GlobeView() {
       mapLoaded,
       mapStyleLoaded,
       enableDrawing,
+      drawMode,
       onAreaCreated: handleAreaCreated,
       onAreaEdited: handleAreaEdited,
       onAreaDeleted: handleAreaDeleted,
+      onDrawingDisabled: () => {
+        setEnableDrawing(false);
+      },
     }
   );
 
@@ -2108,7 +2115,7 @@ export default function GlobeView() {
 
       {/* Drawing mode toggle button */}
       {!isEmbeddedMode && (
-        <div className="absolute top-20 right-4 z-10">
+        <div className="absolute top-20 right-4 z-10 flex flex-col gap-2">
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
             className={`p-3 rounded-md border transition-colors ${
@@ -2135,6 +2142,32 @@ export default function GlobeView() {
               />
             </svg>
           </button>
+          {enableDrawing && (
+            <div className="flex flex-col gap-1 bg-gray-800 border border-gray-700 rounded-md p-1">
+              <button
+                onClick={() => setDrawMode("rectangle")}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  drawMode === "rectangle"
+                    ? "bg-purple-600 text-white"
+                    : "text-gray-300 hover:bg-gray-700"
+                }`}
+                title="Rectangle drawing mode"
+              >
+                Rectangle
+              </button>
+              <button
+                onClick={() => setDrawMode("freehand")}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  drawMode === "freehand"
+                    ? "bg-purple-600 text-white"
+                    : "text-gray-300 hover:bg-gray-700"
+                }`}
+                title="Freehand drawing mode"
+              >
+                Freehand
+              </button>
+            </div>
+          )}
         </div>
       )}
 
