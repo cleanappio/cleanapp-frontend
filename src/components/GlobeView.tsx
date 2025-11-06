@@ -2027,7 +2027,7 @@ export default function GlobeView() {
         </div>
       )}
 
-      {selectedTab === "digital" && isMobile && (
+      {isDigital && isMobile && (
         <div className="absolute bottom-12 right-4">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
@@ -2110,7 +2110,7 @@ export default function GlobeView() {
       </div>
 
       {/* Drawing mode toggle button */}
-      {!isEmbeddedMode && (
+      {!isEmbeddedMode && !isDigital && (
         <div className="absolute top-20 right-4 z-10 flex flex-col gap-2">
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
