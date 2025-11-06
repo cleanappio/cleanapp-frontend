@@ -16,6 +16,7 @@ interface CustomAreaDashboardProps {
   areaName: string;
   areaFlag?: string;
   areaZoom?: number;
+  requiresAuth?: boolean;
 }
 
 function CustomAreaDashboard({
@@ -24,6 +25,7 @@ function CustomAreaDashboard({
   areaName,
   areaFlag,
   areaZoom = 7,
+  requiresAuth = true,
 }: CustomAreaDashboardProps) {
   const [isClient, setIsClient] = useState(false);
   const { t } = useTranslations();
@@ -35,7 +37,7 @@ function CustomAreaDashboard({
 
   const router = useRouter();
 
-  console.log("CustomAreaDashboard rendered");
+  console.log("CustomAreaDashboard rendered, requires authentication:", requiresAuth, "apiUrl:", apiUrl);
 
   const handleLogout = () => {
     logout();
@@ -109,7 +111,7 @@ function CustomAreaDashboard({
             <LanguageSwitcher />
 
             {/* Authentication Controls */}
-            {isAuthenticated ? (
+            { (!requiresAuth || isAuthenticated) ? (
               <div className="flex items-center space-x-2 lg:space-x-4">
                 <span className="hidden lg:block text-sm text-gray-700">
                   {user?.email}
@@ -151,6 +153,7 @@ function CustomAreaDashboard({
             apiUrl={apiUrl}
             areaName={areaName}
             areaZoom={areaZoom}
+            requiresAuth={requiresAuth}
           />
         </div>
       </div>

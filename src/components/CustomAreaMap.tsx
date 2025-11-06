@@ -63,6 +63,7 @@ interface CustomAreaMapProps {
   apiUrl: string;
   areaName?: string;
   areaZoom?: number;
+  requiresAuth?: boolean;
 }
 
 function CustomAreaMap({
@@ -70,6 +71,7 @@ function CustomAreaMap({
   apiUrl,
   areaName = "Custom Area",
   areaZoom = 7,
+  requiresAuth = true,
 }: CustomAreaMapProps) {
   // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -93,7 +95,8 @@ function CustomAreaMap({
   const { t } = useTranslations();
   const locale = getCurrentLocale();
 
-  console.log("CustomAreaMap rendered");
+  console.log("CustomAreaMap rendered, requires authentication:", requiresAuth);
+  console.log("isAuthenticated:", isAuthenticated);
 
   // Ref to track if data has been fetched to prevent multiple fetches
   const hasFetchedData = useRef(false);
@@ -102,23 +105,31 @@ function CustomAreaMap({
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     console.log("authenticatedFetch called with URL:", url);
 
-    // Load token from storage first
-    authApiClient.loadTokenFromStorage();
-    const token = authApiClient.getAuthToken();
-    console.log("Token available:", !!token);
+    if (requiresAuth) {
+      // Load token from storage first
+      authApiClient.loadTokenFromStorage();
+      const token = authApiClient.getAuthToken();
+      console.log("Token available:", !!token);
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      };
 
-    if (!token) {
-      throw new Error("No authentication token available");
+      options.headers = headers;
+      console.log("Authenticated fetch", url, options);
+    } else {
+      const headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
+      };
+
+      options.headers = headers;
+      console.log("Unauthenticated fetch", url, options);
     }
-
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    };
-
-    options.headers = headers;
-    console.log("Authenticated fetch", url, options);
 
     try {
       const response = await fetch(url, options);
@@ -132,7 +143,7 @@ function CustomAreaMap({
 
   // Handle report click from LatestReports
   const handleReportClick = (report: ReportWithAnalysis) => {
-    if (!isAuthenticated) {
+    if (requiresAuth && !isAuthenticated) {
       setAuthError(t("authenticationRequired"));
       return;
     }
@@ -276,12 +287,14 @@ function CustomAreaMap({
   useEffect(() => {
     console.log("useEffect triggered with:", {
       isClient,
+      requiresAuth,
       isAuthenticated,
       apiUrl,
     });
 
-    if (isClient && isAuthenticated && apiUrl && !hasFetchedData.current) {
+    if (isClient && (!requiresAuth || isAuthenticated) && apiUrl && !hasFetchedData.current) {
       hasFetchedData.current = true;
+      console.log("Fetching polygons data");
 
       // Fetch country polygons
       const fetchCountryPolygons = async () => {
@@ -334,7 +347,7 @@ function CustomAreaMap({
       fetchAreaAggrData();
       fetchReportsForCountry();
     }
-  }, [isClient, isAuthenticated, apiUrl]);
+  }, [isClient, requiresAuth, isAuthenticated, apiUrl]);
 
   if (!isClient) {
     return (
@@ -526,7 +539,7 @@ function CustomAreaMap({
                 }}
                 eventHandlers={{
                   click: () => {
-                    if (!isAuthenticated) {
+                    if (requiresAuth && !isAuthenticated) {
                       setAuthError(t("authenticationRequired"));
                       return;
                     }
