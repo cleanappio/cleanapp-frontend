@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+// @ts-ignore - mapbox-gl-draw-rectangle-mode doesn't have type definitions
+import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
 import type { Map } from "mapbox-gl";
 import { Area } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
@@ -33,8 +35,8 @@ export function useMapboxDraw({
     if (!drawRef.current || !map) return;
 
     if (enableDrawing && initializedRef.current) {
-      // Switch to polygon drawing mode
-      drawRef.current.changeMode("draw_polygon");
+      // Switch to rectangle drawing mode
+      drawRef.current.changeMode("draw_rectangle");
     } else if (!enableDrawing && initializedRef.current) {
       // Switch back to simple select mode
       drawRef.current.changeMode("simple_select");
@@ -60,8 +62,11 @@ export function useMapboxDraw({
     const draw = new MapboxDraw({
       displayControlsDefault: false,
       controls: {
-        polygon: true,
         trash: true,
+      },
+      modes: {
+        ...MapboxDraw.modes,
+        draw_rectangle: DrawRectangle,
       },
       defaultMode: "simple_select",
       styles: [
@@ -182,9 +187,9 @@ export function useMapboxDraw({
     map.on("draw.update", handleDrawUpdate);
     map.on("draw.delete", handleDrawDelete);
 
-    // Switch to polygon drawing mode when drawing is enabled
+    // Switch to rectangle drawing mode when drawing is enabled
     if (enableDrawing) {
-      draw.changeMode("draw_polygon");
+      draw.changeMode("draw_rectangle");
     }
 
     return () => {
