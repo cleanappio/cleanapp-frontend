@@ -2,7 +2,6 @@
 
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import type mapboxgl from "mapbox-gl";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
@@ -26,12 +25,8 @@ import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 // Define interface for company object
 import ReportCounter from "./ReportCounter";
 import { useReportTabs } from "@/hooks/useReportTabs";
-import { useLiteReportsByTab } from "@/hooks/useLiteReports";
 import { ReportTabs } from "@/components/ui/ReportTabs";
-import {
-  UseLiteReportsByTabReturn,
-  useLiteReportsByTabV2,
-} from "@/hooks/v2/useLiteReports";
+import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
