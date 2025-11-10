@@ -1018,7 +1018,8 @@ export default function GlobeView() {
   // Gray overlay logic
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
-    if (!map) return;
+    // Wait for map to be fully loaded before applying overlay
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
     if (isDigital) {
       if (!map.getSource("gray-overlay")) {
         map.addSource("gray-overlay", {
@@ -1056,7 +1057,7 @@ export default function GlobeView() {
         map.setLayoutProperty("gray-overlay", "visibility", "none");
       }
     }
-  }, [selectedTab, isDigital]);
+  }, [selectedTab, isDigital, mapLoaded, mapStyleLoaded]);
 
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();

@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/router";
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import { ReportFilteringService } from "@/services/reportFilteringService";
 import { getCurrentLocale } from "@/lib/i18n";
@@ -49,9 +50,50 @@ export interface UseReportTabsReturn {
  * Custom hook to manage Physical vs Digital report tab logic
  * Handles API calls, state management, and loading states
  * Maintains separate state for physical and digital reports
+ * Syncs tab state with URL query parameter (?tab=physical or ?tab=digital)
  */
 export function useReportTabs(): UseReportTabsReturn {
-  const [selectedTab, setSelectedTab] = useState<ReportTab>("physical");
+  const router = useRouter();
+
+  // Initialize selectedTab from router query parameter
+  const getTabFromQuery = useCallback((): ReportTab => {
+    // Only read from query when router is ready, otherwise default to physical
+    if (!router.isReady) {
+      return "physical";
+    }
+    const tab = router.query.tab;
+    if (tab === "digital") {
+      return "digital";
+    }
+    // Default to "physical" if query param is missing or invalid
+    return "physical";
+  }, [router.query.tab, router.isReady]);
+
+  const [selectedTab, setSelectedTabState] = useState<ReportTab>("physical");
+
+  // Sync state with URL when query parameter changes (e.g., browser back/forward, direct navigation)
+  useEffect(() => {
+    if (router.isReady) {
+      const tabFromQuery = getTabFromQuery();
+      if (selectedTab !== tabFromQuery) {
+        setSelectedTabState(tabFromQuery);
+      }
+    }
+    // Only depend on router.query.tab and router.isReady to avoid unnecessary re-runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.tab, router.isReady]);
+
+  // Wrapper for setSelectedTab that updates URL with shallow routing
+  const setSelectedTab = useCallback(
+    (tab: ReportTab) => {
+      setSelectedTabState(tab);
+      // Use shallow routing to update query parameter without page reload
+      router.push({ pathname: "/", query: { tab } }, undefined, {
+        shallow: true,
+      });
+    },
+    [router]
+  );
 
   // Separate state for physical and digital reports
   const [physicalReports, setPhysicalReports] = useState<ReportWithAnalysis[]>(
