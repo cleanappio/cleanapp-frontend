@@ -41,14 +41,6 @@ import AreaCreationModal from "./AreaCreationModal";
 import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
 
-interface CompanyData {
-  name: string;
-  position: number[];
-  color: string;
-  size: number;
-  subsidiaries: any[];
-}
-
 // Type for report data
 export interface Report {
   seq: number;
