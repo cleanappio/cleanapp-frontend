@@ -2110,8 +2110,12 @@ export default function GlobeView() {
       </div>
 
       {/* Drawing mode toggle button */}
-      {!isEmbeddedMode && !isDigital && (
-        <div className="absolute top-20 right-4 z-10 flex flex-col gap-2">
+      {!isDigital && (
+        <div
+          className={`absolute ${
+            isEmbeddedMode ? "top-4" : "top-20"
+          } right-4 z-10 flex flex-col gap-2`}
+        >
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
             className={`p-3 rounded-md border transition-colors ${
