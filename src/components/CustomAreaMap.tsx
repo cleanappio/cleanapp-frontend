@@ -15,6 +15,7 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
 import L from "leaflet";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { getColorByValue } from "@/lib/util";
 import { authApiClient } from "@/lib/auth-api-client";
 import { useAuthStore } from "@/lib/auth-store";
@@ -73,6 +74,7 @@ function CustomAreaMap({
   areaZoom = 7,
   requiresAuth = true,
 }: CustomAreaMapProps) {
+  const router = useRouter();
   // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -149,6 +151,18 @@ function CustomAreaMap({
     }
     setSelectedReport(report);
     setIsCleanAppProOpen(true);
+    // Update URL with seq parameter if on home page and report has seq
+    if (router.pathname === "/" && report.report.seq) {
+      const currentTab = (router.query.tab as string) || "physical";
+      router.push(
+        {
+          pathname: "/",
+          query: { ...router.query, tab: currentTab, seq: report.report.seq },
+        },
+        undefined,
+        { shallow: true }
+      );
+    }
   };
 
   const handleReportFixed = (reportSeq: number) => {
@@ -585,7 +599,15 @@ function CustomAreaMap({
       {isCleanAppProOpen && selectedReport && (
         <CustomDashboardReport
           reportItem={selectedReport}
-          onClose={() => setIsCleanAppProOpen(false)}
+          onClose={() => {
+            setIsCleanAppProOpen(false);
+            // Remove seq from URL when modal closes if on home page
+            if (router.pathname === "/") {
+              const query = { ...router.query };
+              delete query.seq;
+              router.push({ pathname: "/", query }, undefined, { shallow: true });
+            }
+          }}
           onReportFixed={handleReportFixed}
         />
       )}

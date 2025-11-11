@@ -129,6 +129,9 @@ export default function GlobeView() {
   const [seq, setSeq] = useState<number | null>(null);
   const [reportWithAnalysis, setReportWithAnalysis] =
     useState<ReportWithAnalysis | null>(null);
+  const [isLoadingReportFromUrl, setIsLoadingReportFromUrl] = useState(false);
+  const lastFetchedSeqRef = useRef<number | null>(null);
+  const openingFromClickRef = useRef(false);
 
   // Drawing state
   const [enableDrawing, setEnableDrawing] = useState(false);
@@ -267,6 +270,124 @@ export default function GlobeView() {
     },
     [getSafeMap, retryMapOperation]
   );
+
+  // Handle query parameter for report sharing
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const seqParam = router.query.seq;
+    const tabParam = router.query.tab as string | undefined;
+
+    // If seq is in URL, fetch and open the report
+    if (seqParam) {
+      const seqNumber =
+        typeof seqParam === "string" ? parseInt(seqParam, 10) : null;
+      if (seqNumber && !isNaN(seqNumber)) {
+        // Set tab if specified in URL
+        if (tabParam && (tabParam === "physical" || tabParam === "digital")) {
+          if (selectedTab !== tabParam) {
+            setSelectedTab(tabParam);
+          }
+        }
+
+        // Fetch report if not already loaded or if seq changed
+        if (
+          lastFetchedSeqRef.current !== seqNumber &&
+          !isLoadingReportFromUrl
+        ) {
+          setIsLoadingReportFromUrl(true);
+          lastFetchedSeqRef.current = seqNumber;
+          const locale = getCurrentLocale();
+          fetch(
+            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${seqNumber}&lang=${locale}`
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to fetch report: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then((data: ReportWithAnalysis) => {
+              // Filter analyses by language
+              const filteredData = filterAnalysesByLanguage([data], locale);
+              const reportData = filteredData[0] || data;
+
+              setReportWithAnalysis(reportData);
+              setSeq(seqNumber);
+
+              // Determine classification and set appropriate report
+              const classification =
+                reportData.analysis[0]?.classification || "physical";
+
+              if (classification === "physical") {
+                const physicalReport = {
+                  ...reportData.report,
+                  classification: "physical",
+                  severity_level: reportData.analysis[0]?.severity_level || 0,
+                } as PhysicalReportResponse;
+                setSelectedReport(physicalReport);
+                flyToReport({
+                  lon: reportData.report.longitude,
+                  lat: reportData.report.latitude,
+                });
+              } else if (classification === "digital") {
+                const brandName = reportData.analysis[0]?.brand_name || "other";
+                const brandDisplayName =
+                  reportData.analysis[0]?.brand_display_name || "Other";
+                const digitalReport = {
+                  ...reportData.report,
+                  classification: "digital",
+                  brand_name: brandName,
+                  brand_display_name: brandDisplayName,
+                  total: 1,
+                } as DigitalReportResponse;
+                setSelectedReport(digitalReport);
+                const { lat, lon } = stringToLatLonColor(brandName);
+                flyToReport({ lon: lon, lat: lat });
+              }
+
+              setIsCleanAppProOpen(true);
+              setIsLoadingReportFromUrl(false);
+            })
+            .catch((error) => {
+              console.error("Error fetching report from URL:", error);
+              setIsLoadingReportFromUrl(false);
+              lastFetchedSeqRef.current = null;
+              // Remove seq from URL on error
+              const query = { ...router.query };
+              delete query.seq;
+              router.push({ pathname: "/", query }, undefined, {
+                shallow: true,
+              });
+            });
+        }
+      }
+    } else {
+      // If seq is removed from URL, close modal
+      // But don't close if we just opened from a click (URL update is async)
+      if (isCleanAppProOpen && seq !== null && !openingFromClickRef.current) {
+        setIsCleanAppProOpen(false);
+        setSeq(null);
+        setReportWithAnalysis(null);
+        lastFetchedSeqRef.current = null;
+      }
+      // Reset the flag after a short delay to allow URL to update
+      if (openingFromClickRef.current) {
+        setTimeout(() => {
+          openingFromClickRef.current = false;
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    router.isReady,
+    router.query.seq,
+    router.query.tab,
+    selectedTab,
+    isCleanAppProOpen,
+    isLoadingReportFromUrl,
+    flyToReport,
+  ]);
 
   // Safe map source and layer management
   const safeAddSource = (id: string, source: any) => {
@@ -727,15 +848,32 @@ export default function GlobeView() {
               const report = latestReports[reportIndex];
               setSelectedReport(report);
 
+              // Set flag to indicate we're opening from a click
+              openingFromClickRef.current = true;
+
               // Set seq for physical reports, clear for digital
               if (report.classification === "physical") {
                 setSeq(report.seq);
                 flyToReport({ lon: report.longitude, lat: report.latitude });
+                // Update URL with seq parameter
+                router.push(
+                  {
+                    pathname: "/",
+                    query: {
+                      ...router.query,
+                      tab: selectedTab,
+                      seq: report.seq,
+                    },
+                  },
+                  undefined,
+                  { shallow: true }
+                );
               } else {
                 if (!report.brand_name) return;
                 setSeq(null); // Digital reports don't have seq
                 const { lat, lon } = stringToLatLonColor(report.brand_name);
                 flyToReport({ lon: lon, lat: lat });
+                // Digital reports don't have seq, so we don't update URL
               }
 
               // Clear reportWithAnalysis since we're using report prop
@@ -2190,6 +2328,19 @@ export default function GlobeView() {
               lon: physicalReport?.longitude,
               lat: physicalReport?.latitude,
             });
+            // Update URL with seq parameter
+            router.push(
+              {
+                pathname: "/",
+                query: {
+                  ...router.query,
+                  tab: selectedTab,
+                  seq: report.report.seq,
+                },
+              },
+              undefined,
+              { shallow: true }
+            );
           } else if (
             isDigital &&
             report.analysis[0].classification === "digital"
@@ -2211,11 +2362,24 @@ export default function GlobeView() {
                   total: 1,
                 } as ReportResponse)
             );
-            setSeq(null); // Digital reports don't have seq
+            // Digital reports may have seq, check if available
+            const reportSeq = report.report.seq;
+            setSeq(reportSeq || null);
             const { lat, lon } = stringToLatLonColor(
               (digitalReport as DigitalReportResponse)?.brand_name || "other"
             );
             flyToReport({ lon: lon, lat: lat });
+            // Update URL with seq parameter if available
+            if (reportSeq) {
+              router.push(
+                {
+                  pathname: "/",
+                  query: { ...router.query, tab: selectedTab, seq: reportSeq },
+                },
+                undefined,
+                { shallow: true }
+              );
+            }
           }
           setIsCleanAppProOpen(true);
         }}
@@ -2270,6 +2434,10 @@ export default function GlobeView() {
           // Clear state when modal closes
           setSeq(null);
           setReportWithAnalysis(null);
+          // Remove seq from URL when modal closes
+          const query = { ...router.query };
+          delete query.seq;
+          router.push({ pathname: "/", query }, undefined, { shallow: true });
         }}
         report={selectedReport}
         seq={seq}

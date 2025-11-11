@@ -3,10 +3,11 @@ import RecentReports from "@/components/RecentReports";
 import LatestReports from "@/components/LatestReports";
 import React, { useState, useEffect, useMemo } from "react";
 import { ReportWithAnalysis } from "@/components/GlobeView";
-import { X } from "lucide-react";
+import { X, Copy, Check } from "lucide-react";
 import { useTranslations } from "@/lib/i18n";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 import { ReportResponse } from "@/types/reports/api";
+import { useRouter } from "next/router";
 
 interface CleanAppProModalV2Props {
   isOpen: boolean;
@@ -26,8 +27,10 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
   seq,
   reportWithAnalysis: propReportWithAnalysis,
 }) => {
+  const router = useRouter();
   const [isClosing, setIsClosing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const { t } = useTranslations();
 
   // Mobile detection
@@ -48,6 +51,36 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
       onClose();
       setIsClosing(false);
     }, 150);
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      setUrlCopied(true);
+      setTimeout(() => {
+        setUrlCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = window.location.href;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setUrlCopied(true);
+        setTimeout(() => {
+          setUrlCopied(false);
+        }, 2000);
+      } catch (err) {
+        console.error("Fallback copy failed:", err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   // Prevent closing when clicking on the modal content itself
@@ -79,14 +112,27 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="fixed inset-0 overflow-y-auto scrollbar-hide">
-            {/* Close button for mobile */}
-            <button
-              onClick={handleCloseModal}
-              className="fixed top-4 right-4 z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
-              aria-label={t("close")}
-            >
-              <X className="w-6 h-6" />
-            </button>
+            {/* Close and Copy URL buttons for mobile */}
+            <div className="fixed top-4 right-4 z-[9999] flex gap-2">
+              <button
+                onClick={handleCopyUrl}
+                className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
+                aria-label={urlCopied ? t("urlCopied") || "URL Copied" : t("copyUrl") || "Copy URL"}
+              >
+                {urlCopied ? (
+                  <Check className="w-6 h-6" />
+                ) : (
+                  <Copy className="w-6 h-6" />
+                )}
+              </button>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
+                aria-label={t("close")}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
 
             {/* Mobile content container with transparency */}
             <div className="min-h-screen">
@@ -104,14 +150,28 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
         ) : (
           /* Desktop Layout */
           <>
-            {/* Close button */}
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-[20px] right-[20px] z-[9999] p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-              aria-label={t("close")}
-            >
-              <X className="w-6 h-6" />
-            </button>
+            {/* Close and Copy URL buttons */}
+            <div className="absolute top-[20px] right-[20px] z-[9999] flex gap-2">
+              <button
+                onClick={handleCopyUrl}
+                className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+                aria-label={urlCopied ? t("urlCopied") || "URL Copied" : t("copyUrl") || "Copy URL"}
+                title={urlCopied ? t("urlCopied") || "URL Copied!" : t("copyUrl") || "Copy URL"}
+              >
+                {urlCopied ? (
+                  <Check className="w-6 h-6" />
+                ) : (
+                  <Copy className="w-6 h-6" />
+                )}
+              </button>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+                aria-label={t("close")}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
             <div className="fixed top-[0px] left-[50px] right-[50px] bottom-[0px] overflow-y-auto scrollbar-hide">
               {/* Content */}
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 sm:mt-4 lg:mt-8">
