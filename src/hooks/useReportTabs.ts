@@ -88,9 +88,21 @@ export function useReportTabs(): UseReportTabsReturn {
     (tab: ReportTab) => {
       setSelectedTabState(tab);
       // Use shallow routing to update query parameter without page reload
-      router.push({ pathname: "/", query: { tab } }, undefined, {
-        shallow: true,
-      });
+      // Preserve other query parameters (like seq, brand_name) when changing tab
+      const currentQuery = router.query;
+      router.push(
+        {
+          pathname: "/",
+          query: {
+            ...currentQuery,
+            tab,
+          },
+        },
+        undefined,
+        {
+          shallow: true,
+        }
+      );
     },
     [router]
   );
@@ -141,9 +153,7 @@ export function useReportTabs(): UseReportTabsReturn {
       const apiUrl =
         process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
 
-      // For digital we need full_data to be true (brand projection etc.),
-      // for physical we can use lite data to reduce payload size
-      const fullData = classification === "digital" ? "true" : "false";
+      const fullData = "true";
 
       const response = await fetch(
         `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${classification}`
