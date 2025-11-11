@@ -468,7 +468,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             </div>
 
             {/* Description */}
-            {analysis?.description && (
+            {analysis?.description && analysis.description !== "" && (
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-semibold text-sm mb-2 text-gray-800">
                   {t("description")}
@@ -480,7 +480,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             )}
 
             {/* Summary */}
-            {analysis?.summary && (
+            {analysis?.summary && analysis.summary !== "" && (
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-semibold text-sm mb-2 text-gray-800">
                   {t("summary")}
@@ -617,10 +617,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             )}
           </div>
 
-          <div>
-            <p className="font-semibold text-sm mt-8">Description</p>
-            <p>{analysis?.description}</p>
-          </div>
+          {analysis?.description && analysis.description !== "" && (
+            <div>
+              <p className="font-semibold text-sm mt-8">Description</p>
+              <p>{analysis?.description}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
