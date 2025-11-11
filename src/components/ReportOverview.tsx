@@ -468,156 +468,161 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             </div>
 
             {/* Description */}
-            {analysis?.description && (
+            {analysis?.description && analysis.description !== "" && (
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-semibold text-sm mb-2 text-gray-800">
                   {t("description")}
                 </h3>
-                <p className="text-sm text-gray-700 leading-relaxed">
+                <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
                   {analysis.description}
                 </p>
               </div>
             )}
 
             {/* Summary */}
-            {analysis?.summary && (
+            {analysis?.summary && analysis.summary !== "" && (
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-semibold text-sm mb-2 text-gray-800">
                   {t("summary")}
                 </h3>
-                <p className="text-sm text-gray-700 leading-relaxed">
+                <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
                   {analysis.summary}
                 </p>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Desktop Layout - Content overlay on image */}
-        <div className="hidden sm:block">
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-white">
-              {/* Location */}
-              {!isDigital && (
-                <div>
-                  <h3 className="font-semibold text-sm mb-1">
-                    {t("location")}
-                  </h3>
-                  {location && location.latitude && location.longitude && (
-                    <a
-                      href={getGoogleMapsUrl(
-                        location.latitude,
-                        location.longitude
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-300 hover:text-blue-200 text-sm underline"
-                    >
-                      <ReverseGeocodingDisplay
-                        address={address}
-                        loading={addressLoading}
-                        error={addressError}
-                        onRetry={refetchAddress}
-                      />
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {/* Time */}
-              {fullReport?.report?.timestamp && (
-                <div>
-                  <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
-                  <p
-                    className="text-sm relative group"
-                    aria-describedby="tooltip"
-                  >
-                    {formatTime(fullReport.report.timestamp)}
-                    <span
-                      id="tooltip"
-                      className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
-                    >
-                      {new Date(fullReport.report.timestamp).toLocaleString()}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {isDigital && (
-                <>
-                  <Link
-                    href={`/digital/${getBrandNameDisplay(analysis).brandName}`}
-                    className="text-blue-300 hover:text-blue-400 text-sm underline"
+      {/* Desktop Layout - Content overlay on image */}
+      <div className="hidden sm:block">
+        <div className="p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Location */}
+            {!isDigital && (
+              <div>
+                <h3 className="font-semibold text-sm mb-1">{t("location")}</h3>
+                {location && location.latitude && location.longitude && (
+                  <a
+                    href={getGoogleMapsUrl(
+                      location.latitude,
+                      location.longitude
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 text-sm underline"
                   >
-                    <div>
-                      <h3 className="font-semibold text-sm mb-1">
-                        {t("brandDashboard")}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {getBrandNameDisplay(analysis).brandDisplayName}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </>
-              )}
+                    <ReverseGeocodingDisplay
+                      address={address}
+                      loading={addressLoading}
+                      error={addressError}
+                      onRetry={refetchAddress}
+                    />
+                  </a>
+                )}
+              </div>
+            )}
 
-              {!isDigital && (
-                <>
-                  {/* Litter Probability */}
-                  {analysis?.litter_probability !== undefined && (
-                    <div>
-                      <h3 className="font-semibold text-sm mb-1">
-                        {t("litter")}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white/20 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
-                              analysis.litter_probability
-                            )}`}
-                            style={{
-                              width: `${analysis.litter_probability * 100}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium">
-                          {(analysis.litter_probability * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
+            {/* Time */}
+            {fullReport?.report?.timestamp && (
+              <div>
+                <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
+                <p
+                  className="text-sm relative group"
+                  aria-describedby="tooltip"
+                >
+                  {formatTime(fullReport.report.timestamp)}
+                  <span
+                    id="tooltip"
+                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                  >
+                    {new Date(fullReport.report.timestamp).toLocaleString()}
+                  </span>
+                </p>
+              </div>
+            )}
 
-                  {/* Hazard Probability */}
-                  {analysis?.hazard_probability !== undefined && (
-                    <div>
-                      <h3 className="font-semibold text-sm mb-1">
-                        {t("hazard")}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white/20 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
-                              analysis.hazard_probability
-                            )}`}
-                            style={{
-                              width: `${analysis.hazard_probability * 100}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium">
-                          {(analysis.hazard_probability * 100).toFixed(0)}%
-                        </span>
-                      </div>
+            {isDigital && (
+              <>
+                <Link
+                  href={`/digital/${getBrandNameDisplay(analysis).brandName}`}
+                  className="text-blue-600 hover:text-blue-800 text-sm underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">
+                      {t("brandDashboard")}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {getBrandNameDisplay(analysis).brandDisplayName}
+                      </span>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
+                  </div>
+                </Link>
+              </>
+            )}
+
+            {!isDigital && (
+              <>
+                {/* Litter Probability */}
+                {analysis?.litter_probability !== undefined && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">
+                      {t("litter")}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-black/10 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                            analysis.litter_probability
+                          )}`}
+                          style={{
+                            width: `${analysis.litter_probability * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {(analysis.litter_probability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hazard Probability */}
+                {analysis?.hazard_probability !== undefined && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">
+                      {t("hazard")}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-black/10 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
+                            analysis.hazard_probability
+                          )}`}
+                          style={{
+                            width: `${analysis.hazard_probability * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {(analysis.hazard_probability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
+
+          {analysis?.description && analysis.description !== "" && (
+            <div>
+              <p className="font-semibold text-sm mt-8">Description</p>
+              <p>{analysis?.description}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
