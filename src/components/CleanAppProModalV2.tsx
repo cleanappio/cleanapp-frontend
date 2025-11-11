@@ -117,7 +117,11 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
               <button
                 onClick={handleCopyUrl}
                 className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
-                aria-label={urlCopied ? t("urlCopied") || "URL Copied" : t("copyUrl") || "Copy URL"}
+                aria-label={
+                  urlCopied
+                    ? t("urlCopied") || "URL Copied"
+                    : t("copyUrl") || "Copy URL"
+                }
               >
                 {urlCopied ? (
                   <Check className="w-6 h-6" />
@@ -155,8 +159,16 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
               <button
                 onClick={handleCopyUrl}
                 className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
-                aria-label={urlCopied ? t("urlCopied") || "URL Copied" : t("copyUrl") || "Copy URL"}
-                title={urlCopied ? t("urlCopied") || "URL Copied!" : t("copyUrl") || "Copy URL"}
+                aria-label={
+                  urlCopied
+                    ? t("urlCopied") || "URL Copied"
+                    : t("copyUrl") || "Copy URL"
+                }
+                title={
+                  urlCopied
+                    ? t("urlCopied") || "URL Copied!"
+                    : t("copyUrl") || "Copy URL"
+                }
               >
                 {urlCopied ? (
                   <Check className="w-6 h-6" />

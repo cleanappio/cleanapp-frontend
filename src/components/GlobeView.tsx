@@ -148,7 +148,7 @@ export default function GlobeView() {
   // Use the refactored report tabs hook with API calls
   const {
     selectedTab,
-    setSelectedTab,
+    setSelectedTab: setSelectedTabOriginal,
     isPhysical,
     isDigital,
     filteredReports: filteredLatestReports,
@@ -162,6 +162,36 @@ export default function GlobeView() {
     appendPhysicalFull,
     appendDigitalFull,
   } = useReportTabs();
+
+  // Wrapper for setSelectedTab that preserves seq and brand_name="other" in URL
+  const setSelectedTab = useCallback(
+    (tab: "physical" | "digital") => {
+      // If we have both seq and brand_name="other" in URL, preserve them
+      const currentSeq = router.query.seq;
+      const currentBrandName = router.query.brand_name;
+      if (currentSeq && currentBrandName === "other" && router.isReady) {
+        // Preserve both parameters when changing tab
+        router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab,
+              seq: currentSeq,
+              brand_name: "other",
+            },
+          },
+          undefined,
+          { shallow: true }
+        );
+        // Update state directly - useReportTabs will sync from URL
+      } else {
+        // Normal case: use the original setSelectedTab
+        setSelectedTabOriginal(tab);
+      }
+    },
+    [router, setSelectedTabOriginal]
+  );
 
   const {
     physicalReports: latestPhysicalReportsV2,
@@ -275,6 +305,16 @@ export default function GlobeView() {
     [getSafeMap, retryMapOperation]
   );
 
+  // Helper function to check if we should use seq instead of brand_name for digital reports
+  const shouldUseSeqForDigital = useCallback(
+    (brandName: string | null | undefined): boolean => {
+      return (
+        brandName === "other" || brandName === null || brandName === undefined
+      );
+    },
+    []
+  );
+
   // Handle query parameter for report sharing
   useEffect(() => {
     if (!router.isReady) return;
@@ -289,22 +329,66 @@ export default function GlobeView() {
       const seqNumber =
         typeof seqParam === "string" ? parseInt(seqParam, 10) : null;
       if (seqNumber && !isNaN(seqNumber)) {
-        // Clear brand_name when using seq
-        setSelectedBrandName(null);
-        lastFetchedBrandRef.current = null;
+        // If brand_name="other" is in URL along with seq, keep it for sharing
+        // Otherwise, clear brand_name when using seq
+        if (brandNameParam === "other") {
+          // Keep brand_name="other" in state and URL when both are present for sharing
+          setSelectedBrandName("other");
+          lastFetchedBrandRef.current = "other";
+        } else if (!openingFromClickRef.current) {
+          // Clear brand_name when using seq (but not if we're redirecting)
+          setSelectedBrandName(null);
+          lastFetchedBrandRef.current = null;
+        }
 
-        // Set tab if specified in URL
+        // Set tab if specified in URL (but don't update if we're redirecting)
+        // If we have both seq and brand_name="other", preserve both in URL
         if (tabParam && (tabParam === "physical" || tabParam === "digital")) {
-          if (selectedTab !== tabParam) {
-            setSelectedTab(tabParam);
+          if (selectedTab !== tabParam && !openingFromClickRef.current) {
+            // If we have both seq and brand_name="other", update URL manually to preserve both
+            if (seqParam && brandNameParam === "other") {
+              router.push(
+                {
+                  pathname: "/",
+                  query: {
+                    ...router.query,
+                    tab: tabParam,
+                    seq: seqParam,
+                    brand_name: "other",
+                  },
+                },
+                undefined,
+                { shallow: true }
+              );
+              // Update state directly without calling setSelectedTab to avoid overwriting URL
+              // The useEffect in useReportTabs will sync the state from the URL
+            } else {
+              // Normal case: just update tab
+              setSelectedTab(tabParam);
+            }
           }
         }
 
         // Fetch report if not already loaded or if seq changed
+        // But skip if we just set it from brand_name="other" redirect
         if (
           lastFetchedSeqRef.current !== seqNumber &&
           !isLoadingReportFromUrl
         ) {
+          // If we already have the report data and seq matches (from brand_name="other" redirect), skip fetching
+          if (
+            openingFromClickRef.current &&
+            reportWithAnalysis &&
+            reportWithAnalysis.report.seq === seqNumber
+          ) {
+            // Data is already set, just ensure modal is open and state is correct
+            if (!isCleanAppProOpen) {
+              setIsCleanAppProOpen(true);
+            }
+            // Update lastFetchedSeqRef to prevent re-fetching
+            lastFetchedSeqRef.current = seqNumber;
+            return; // Don't fetch again, we already have the data
+          }
           setIsLoadingReportFromUrl(true);
           lastFetchedSeqRef.current = seqNumber;
           const locale = getCurrentLocale();
@@ -358,14 +442,36 @@ export default function GlobeView() {
 
               setIsCleanAppProOpen(true);
               setIsLoadingReportFromUrl(false);
+
+              // If we have both seq and brand_name="other" in URL, ensure both stay in URL
+              // This is important for sharing the URL
+              if (brandNameParam === "other" && seqParam) {
+                // Ensure both parameters are in the URL
+                const query = { ...router.query };
+                query.seq = seqNumber.toString();
+                query.brand_name = "other";
+                if (tabParam) {
+                  query.tab = tabParam;
+                } else {
+                  query.tab = "digital";
+                }
+                // Update URL to ensure both parameters are present
+                router.push({ pathname: "/", query }, undefined, {
+                  shallow: true,
+                });
+              }
             })
             .catch((error) => {
               console.error("Error fetching report from URL:", error);
               setIsLoadingReportFromUrl(false);
               lastFetchedSeqRef.current = null;
-              // Remove seq from URL on error
+              // Remove seq from URL on error (but preserve brand_name="other" if it was there)
               const query = { ...router.query };
               delete query.seq;
+              // Only remove brand_name if it's not "other" (for sharing)
+              if (query.brand_name !== "other") {
+                delete query.brand_name;
+              }
               router.push({ pathname: "/", query }, undefined, {
                 shallow: true,
               });
@@ -373,116 +479,259 @@ export default function GlobeView() {
         }
       }
     } else if (brandNameParam) {
-      // If brand_name is in URL, fetch and open the digital report
+      // If brand_name is in URL, check if it's "other" - if so, we should use seq instead
+      // But if brand_name="other" is in URL, we need to fetch first to get the seq
       if (
         brandNameParam &&
         brandNameParam !== lastFetchedBrandRef.current &&
         !isLoadingReportFromUrl
       ) {
-        // Clear seq when using brand_name
-        setSeq(null);
-        lastFetchedSeqRef.current = null;
+        // If brand_name is "other", we should redirect to use seq instead
+        // But we need to fetch first to get the seq, then redirect
+        if (shouldUseSeqForDigital(brandNameParam)) {
+          // Fetch by brand to get the report and its seq
+          setIsLoadingReportFromUrl(true);
+          lastFetchedBrandRef.current = brandNameParam;
+          // Set flag to prevent modal from closing during redirect
+          openingFromClickRef.current = true;
 
-        setIsLoadingReportFromUrl(true);
-        lastFetchedBrandRef.current = brandNameParam;
-        // Set selectedBrandName immediately to prevent modal from closing
-        setSelectedBrandName(brandNameParam);
-        // Set tab to digital if needed, but preserve brand_name in URL
-        // We update the URL manually to preserve brand_name, then update state
-        if (selectedTab !== "digital") {
-          // Update URL with tab while preserving brand_name
-          router.push(
-            {
-              pathname: "/",
-              query: {
-                ...router.query,
-                tab: "digital",
-                brand_name: brandNameParam,
-              },
-            },
-            undefined,
-            { shallow: true }
+          const locale = getCurrentLocale();
+          const encodedBrandName = encodeURIComponent(brandNameParam);
+          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
+          console.log(
+            "Fetching digital report with 'other' brand_name from URL:",
+            apiUrl
           );
-          // Update state directly without calling setSelectedTab to avoid overwriting URL
-          // The useEffect in useReportTabs will sync the state from the URL
-        }
 
-        const locale = getCurrentLocale();
-        // URL encode the brand_name to handle special characters
-        const encodedBrandName = encodeURIComponent(brandNameParam);
-        const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
-        console.log("Fetching digital report from URL:", apiUrl);
-        fetch(apiUrl)
-          .then((response) => {
-            console.log(
-              "Digital report fetch response status:",
-              response.status
-            );
-            if (!response.ok) {
-              throw new Error(
-                `Failed to fetch digital report: ${response.status}`
-              );
-            }
-            return response.json();
-          })
-          .then((data: { reports: ReportWithAnalysis[] }) => {
-            console.log("Digital report fetch response data:", data);
-            if (data.reports && data.reports.length > 0) {
-              const filteredData = filterAnalysesByLanguage(
-                data.reports,
-                locale
-              );
-              const reportData = filteredData[0] || data.reports[0];
-              console.log("Setting digital report data:", reportData);
+          fetch(apiUrl)
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to fetch digital report: ${response.status}`
+                );
+              }
+              return response.json();
+            })
+            .then((data: { reports: ReportWithAnalysis[] }) => {
+              if (data.reports && data.reports.length > 0) {
+                const filteredData = filterAnalysesByLanguage(
+                  data.reports,
+                  locale
+                );
+                const reportData = filteredData[0] || data.reports[0];
+                const reportSeq = reportData.report.seq;
 
-              setReportWithAnalysis(reportData);
-              // selectedBrandName is already set above, just ensure seq is cleared
-              setSeq(null); // Clear seq for digital reports
+                // Set state before redirecting so seq handler can use it
+                setSeq(reportSeq);
+                setSelectedBrandName(null);
+                lastFetchedSeqRef.current = reportSeq;
+                lastFetchedBrandRef.current = null;
 
-              const brandName =
-                reportData.analysis[0]?.brand_name || brandNameParam;
-              const brandDisplayName =
-                reportData.analysis[0]?.brand_display_name || "Other";
-              const digitalReport = {
-                ...reportData.report,
-                classification: "digital",
-                brand_name: brandName,
-                brand_display_name: brandDisplayName,
-                total: 1,
-              } as DigitalReportResponse;
-              setSelectedReport(digitalReport);
-              const { lat, lon } = stringToLatLonColor(brandName);
-              flyToReport({ lon: lon, lat: lat });
+                // Set report data immediately to prevent modal from closing
+                setReportWithAnalysis(reportData);
+                const brandName =
+                  reportData.analysis[0]?.brand_name || brandNameParam;
+                const brandDisplayName =
+                  reportData.analysis[0]?.brand_display_name || "Other";
+                const digitalReport = {
+                  ...reportData.report,
+                  classification: "digital",
+                  brand_name: brandName,
+                  brand_display_name: brandDisplayName,
+                  total: 1,
+                } as DigitalReportResponse;
+                setSelectedReport(digitalReport);
+                const { lat, lon } = stringToLatLonColor(brandName);
+                flyToReport({ lon: lon, lat: lat });
 
-              console.log("Opening modal for digital report");
-              setIsCleanAppProOpen(true);
+                // Open modal before redirecting
+                setIsCleanAppProOpen(true);
+
+                // Redirect URL to include both brand_name="other" AND seq
+                // This allows the URL to be shared with both parameters
+                // Preserve ALL existing query parameters
+                const query: Record<string, string | string[] | undefined> = {
+                  ...router.query,
+                };
+                // Keep brand_name="other" in URL along with seq for sharing
+                query.brand_name = "other";
+                query.seq = reportSeq.toString();
+                // Always set tab to digital
+                query.tab = "digital";
+
+                // Update loading state before redirect
+                setIsLoadingReportFromUrl(false);
+
+                // Update URL with all parameters (tab, seq, brand_name)
+                // Update immediately - state is already set
+                router.push({ pathname: "/", query }, undefined, {
+                  shallow: true,
+                });
+
+                // Double-check URL after a brief delay to ensure parameters are preserved
+                // This handles cases where setSelectedTab or something else might overwrite the URL
+                setTimeout(() => {
+                  const currentQuery = router.query;
+                  const currentSeq =
+                    typeof currentQuery.seq === "string"
+                      ? currentQuery.seq
+                      : String(currentQuery.seq);
+                  const currentBrandName = currentQuery.brand_name;
+                  const currentTab = currentQuery.tab;
+
+                  if (
+                    currentSeq !== reportSeq.toString() ||
+                    currentBrandName !== "other" ||
+                    currentTab !== "digital"
+                  ) {
+                    // URL was overwritten, restore it with all parameters
+                    console.log(
+                      "URL was overwritten, restoring with seq and brand_name"
+                    );
+                    router.push(
+                      {
+                        pathname: "/",
+                        query: {
+                          tab: "digital",
+                          seq: reportSeq.toString(),
+                          brand_name: "other",
+                        },
+                      },
+                      undefined,
+                      { shallow: true }
+                    );
+                  }
+                }, 150);
+
+                // Reset the flag after a delay to allow URL to update
+                setTimeout(() => {
+                  openingFromClickRef.current = false;
+                }, 300);
+              } else {
+                throw new Error("No reports found for brand");
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching digital report from URL:", error);
               setIsLoadingReportFromUrl(false);
-            } else {
-              console.error("No reports found in response:", data);
-              // throw new Error("No reports found for brand");
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching digital report from URL:", error);
-            setIsLoadingReportFromUrl(false);
-            lastFetchedBrandRef.current = null;
-            // Remove brand_name from URL on error
-            const query = { ...router.query };
-            delete query.brand_name;
-            router.push({ pathname: "/", query }, undefined, {
-              shallow: true,
+              lastFetchedBrandRef.current = null;
+              openingFromClickRef.current = false;
+              // Remove brand_name from URL on error
+              const query = { ...router.query };
+              delete query.brand_name;
+              router.push({ pathname: "/", query }, undefined, {
+                shallow: true,
+              });
             });
-          });
+        } else {
+          // Normal brand_name handling (not "other")
+          // Clear seq when using brand_name
+          setSeq(null);
+          lastFetchedSeqRef.current = null;
+
+          setIsLoadingReportFromUrl(true);
+          lastFetchedBrandRef.current = brandNameParam;
+          // Set selectedBrandName immediately to prevent modal from closing
+          setSelectedBrandName(brandNameParam);
+          // Set tab to digital if needed, but preserve brand_name in URL
+          // We update the URL manually to preserve brand_name, then update state
+          if (selectedTab !== "digital") {
+            // Update URL with tab while preserving brand_name
+            router.push(
+              {
+                pathname: "/",
+                query: {
+                  ...router.query,
+                  tab: "digital",
+                  brand_name: brandNameParam,
+                },
+              },
+              undefined,
+              { shallow: true }
+            );
+            // Update state directly without calling setSelectedTab to avoid overwriting URL
+            // The useEffect in useReportTabs will sync the state from the URL
+          }
+
+          const locale = getCurrentLocale();
+          // URL encode the brand_name to handle special characters
+          const encodedBrandName = encodeURIComponent(brandNameParam);
+          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
+          console.log("Fetching digital report from URL:", apiUrl);
+          fetch(apiUrl)
+            .then((response) => {
+              console.log(
+                "Digital report fetch response status:",
+                response.status
+              );
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to fetch digital report: ${response.status}`
+                );
+              }
+              return response.json();
+            })
+            .then((data: { reports: ReportWithAnalysis[] }) => {
+              console.log("Digital report fetch response data:", data);
+              if (data.reports && data.reports.length > 0) {
+                const filteredData = filterAnalysesByLanguage(
+                  data.reports,
+                  locale
+                );
+                const reportData = filteredData[0] || data.reports[0];
+                console.log("Setting digital report data:", reportData);
+
+                setReportWithAnalysis(reportData);
+                // selectedBrandName is already set above, just ensure seq is cleared
+                setSeq(null); // Clear seq for digital reports
+
+                const brandName =
+                  reportData.analysis[0]?.brand_name || brandNameParam;
+                const brandDisplayName =
+                  reportData.analysis[0]?.brand_display_name || "Other";
+                const digitalReport = {
+                  ...reportData.report,
+                  classification: "digital",
+                  brand_name: brandName,
+                  brand_display_name: brandDisplayName,
+                  total: 1,
+                } as DigitalReportResponse;
+                setSelectedReport(digitalReport);
+                const { lat, lon } = stringToLatLonColor(brandName);
+                flyToReport({ lon: lon, lat: lat });
+
+                console.log("Opening modal for digital report");
+                setIsCleanAppProOpen(true);
+                setIsLoadingReportFromUrl(false);
+              } else {
+                console.error("No reports found in response:", data);
+                // throw new Error("No reports found for brand");
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching digital report from URL:", error);
+              setIsLoadingReportFromUrl(false);
+              lastFetchedBrandRef.current = null;
+              // Remove brand_name from URL on error
+              const query = { ...router.query };
+              delete query.brand_name;
+              router.push({ pathname: "/", query }, undefined, {
+                shallow: true,
+              });
+            });
+        }
       }
     } else {
       // If both seq and brand_name are removed from URL, close modal
       // But don't close if we just opened from a click (URL update is async)
       // Also don't close if we're currently loading a report from URL
+      // Also don't close if we have report data loaded (might be in transition from brand_name="other" to seq)
       if (
         isCleanAppProOpen &&
         (seq !== null || selectedBrandName !== null) &&
         !openingFromClickRef.current &&
-        !isLoadingReportFromUrl
+        !isLoadingReportFromUrl &&
+        !reportWithAnalysis // Don't close if we have report data (might be transitioning)
       ) {
         setIsCleanAppProOpen(false);
         setSeq(null);
@@ -491,11 +740,11 @@ export default function GlobeView() {
         lastFetchedSeqRef.current = null;
         lastFetchedBrandRef.current = null;
       }
-      // Reset the flag after a short delay to allow URL to update
+      // Reset the flag after a delay to allow URL to update
       if (openingFromClickRef.current) {
         setTimeout(() => {
           openingFromClickRef.current = false;
-        }, 100);
+        }, 300); // Increased delay to allow redirect to complete
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -991,23 +1240,59 @@ export default function GlobeView() {
               } else {
                 if (!report.brand_name) return;
                 const brandName = report.brand_name;
-                setSeq(null); // Digital reports don't have seq
-                setSelectedBrandName(brandName);
-                const { lat, lon } = stringToLatLonColor(brandName);
-                flyToReport({ lon: lon, lat: lat });
-                // Update URL with brand_name parameter for digital reports
-                router.push(
-                  {
-                    pathname: "/",
-                    query: {
-                      ...router.query,
-                      tab: selectedTab,
-                      brand_name: brandName,
+
+                // If brand_name is "other", use seq instead of brand_name
+                if (shouldUseSeqForDigital(brandName)) {
+                  // DigitalReportResponse doesn't have seq in type, but report data does
+                  const reportSeq = (report as any).seq;
+                  if (!reportSeq) {
+                    console.error(
+                      "Digital report with 'other' brand_name missing seq"
+                    );
+                    return;
+                  }
+                  setSeq(reportSeq);
+                  setSelectedBrandName(null);
+                  // Set ref to prevent useEffect from fetching again
+                  lastFetchedSeqRef.current = reportSeq;
+                  lastFetchedBrandRef.current = null;
+                  const { lat, lon } = stringToLatLonColor(brandName);
+                  flyToReport({ lon: lon, lat: lat });
+                  // Update URL with seq parameter for "other" digital reports
+                  router.push(
+                    {
+                      pathname: "/",
+                      query: {
+                        ...router.query,
+                        tab: selectedTab,
+                        seq: reportSeq,
+                      },
                     },
-                  },
-                  undefined,
-                  { shallow: true }
-                );
+                    undefined,
+                    { shallow: true }
+                  );
+                } else {
+                  setSeq(null); // Digital reports don't have seq (unless brand_name is "other")
+                  setSelectedBrandName(brandName);
+                  // Set ref to prevent useEffect from fetching again
+                  lastFetchedBrandRef.current = brandName;
+                  lastFetchedSeqRef.current = null;
+                  const { lat, lon } = stringToLatLonColor(brandName);
+                  flyToReport({ lon: lon, lat: lat });
+                  // Update URL with brand_name parameter for digital reports
+                  router.push(
+                    {
+                      pathname: "/",
+                      query: {
+                        ...router.query,
+                        tab: selectedTab,
+                        brand_name: brandName,
+                      },
+                    },
+                    undefined,
+                    { shallow: true }
+                  );
+                }
               }
 
               // Clear reportWithAnalysis since we're using report prop
@@ -1527,14 +1812,71 @@ export default function GlobeView() {
 
       if (!report) return;
 
-      setSelectedReport(report as unknown as ReportResponse);
-      setSeq(null); // Digital reports don't have seq
-      setReportWithAnalysis(null); // Clear since we're using report prop
-      const { lat, lon } = stringToLatLonColor(
-        (report as DigitalReportResponse).brand_name
-      );
-      flyToReport({ lon: lon, lat: lat });
+      // Set flag to indicate we're opening from a click
+      openingFromClickRef.current = true;
+
+      // If brand_name is "other", use seq instead of brand_name
+      if (shouldUseSeqForDigital(brandName)) {
+        // DigitalReportResponse doesn't have seq in type, but report data does
+        const reportSeq = (report as any).seq;
+        if (!reportSeq) {
+          console.error("Digital report with 'other' brand_name missing seq");
+          return;
+        }
+        setSelectedReport(report as unknown as ReportResponse);
+        setSeq(reportSeq);
+        setSelectedBrandName(null);
+        // Set ref to prevent useEffect from fetching again
+        lastFetchedSeqRef.current = reportSeq;
+        lastFetchedBrandRef.current = null;
+        setReportWithAnalysis(null); // Clear since we're using report prop
+        const { lat, lon } = stringToLatLonColor(brandName);
+        flyToReport({ lon: lon, lat: lat });
+        // Update URL with seq parameter for "other" digital reports
+        router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: selectedTab,
+              seq: reportSeq,
+            },
+          },
+          undefined,
+          { shallow: true }
+        );
+      } else {
+        setSelectedReport(report as unknown as ReportResponse);
+        setSeq(null); // Digital reports don't have seq (unless brand_name is "other")
+        setSelectedBrandName(brandName);
+        // Set ref to prevent useEffect from fetching again
+        lastFetchedBrandRef.current = brandName;
+        lastFetchedSeqRef.current = null;
+        setReportWithAnalysis(null); // Clear since we're using report prop
+        const { lat, lon } = stringToLatLonColor(
+          (report as DigitalReportResponse).brand_name
+        );
+        flyToReport({ lon: lon, lat: lat });
+        // Update URL with brand_name parameter for digital reports
+        router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: selectedTab,
+              brand_name: brandName,
+            },
+          },
+          undefined,
+          { shallow: true }
+        );
+      }
       setIsCleanAppProOpen(true);
+
+      // Reset the flag after a short delay to allow URL to update
+      setTimeout(() => {
+        openingFromClickRef.current = false;
+      }, 200);
     }
     function setPointer() {
       if (map) map.getCanvas().style.cursor = "pointer";
@@ -2486,43 +2828,87 @@ export default function GlobeView() {
             report.analysis[0].classification === "digital"
           ) {
             const brandName = report.analysis[0].brand_name || "other";
-            const digitalReport = latestReports.find(
-              (r) =>
-                r.classification === "digital" && r.brand_name === brandName
-            ) as ReportResponse | null;
-            setSelectedReport(
-              (prev) =>
-                digitalReport ??
-                ({
-                  ...report,
-                  classification: "digital",
-                  brand_name: brandName,
-                  brand_display_name:
-                    report.analysis[0].brand_display_name || "Other",
-                  total: 1,
-                } as ReportResponse)
-            );
-            setSeq(null); // Digital reports don't use seq
-            setSelectedBrandName(brandName);
-            // Set ref to prevent useEffect from fetching again
-            lastFetchedBrandRef.current = brandName;
-            const { lat, lon } = stringToLatLonColor(
-              (digitalReport as DigitalReportResponse)?.brand_name || brandName
-            );
-            flyToReport({ lon: lon, lat: lat });
-            // Update URL with brand_name parameter for digital reports
-            router.push(
-              {
-                pathname: "/",
-                query: {
-                  ...router.query,
-                  tab: selectedTab,
-                  brand_name: brandName,
+            const reportSeq = report.report.seq;
+
+            // If brand_name is "other", use seq instead of brand_name
+            if (shouldUseSeqForDigital(brandName)) {
+              const digitalReport = latestReports.find(
+                (r) =>
+                  r.classification === "digital" && (r as any).seq === reportSeq
+              ) as ReportResponse | null;
+              setSelectedReport(
+                (prev) =>
+                  digitalReport ??
+                  ({
+                    ...report.report,
+                    classification: "digital",
+                    brand_name: brandName,
+                    brand_display_name:
+                      report.analysis[0].brand_display_name || "Other",
+                    total: 1,
+                  } as ReportResponse)
+              );
+              setSeq(reportSeq);
+              setSelectedBrandName(null);
+              // Set ref to prevent useEffect from fetching again
+              lastFetchedSeqRef.current = reportSeq;
+              lastFetchedBrandRef.current = null;
+              const { lat, lon } = stringToLatLonColor(brandName);
+              flyToReport({ lon: lon, lat: lat });
+              // Update URL with seq parameter for "other" digital reports
+              router.push(
+                {
+                  pathname: "/",
+                  query: {
+                    ...router.query,
+                    tab: selectedTab,
+                    seq: reportSeq,
+                  },
                 },
-              },
-              undefined,
-              { shallow: true }
-            );
+                undefined,
+                { shallow: true }
+              );
+            } else {
+              const digitalReport = latestReports.find(
+                (r) =>
+                  r.classification === "digital" && r.brand_name === brandName
+              ) as ReportResponse | null;
+              setSelectedReport(
+                (prev) =>
+                  digitalReport ??
+                  ({
+                    ...report.report,
+                    classification: "digital",
+                    brand_name: brandName,
+                    brand_display_name:
+                      report.analysis[0].brand_display_name || "Other",
+                    total: 1,
+                  } as ReportResponse)
+              );
+              setSeq(null); // Digital reports don't use seq (unless brand_name is "other")
+              setSelectedBrandName(brandName);
+              // Set ref to prevent useEffect from fetching again
+              lastFetchedBrandRef.current = brandName;
+              lastFetchedSeqRef.current = null;
+              const { lat, lon } = stringToLatLonColor(
+                (digitalReport as DigitalReportResponse)?.brand_name ||
+                  brandName
+              );
+              flyToReport({ lon: lon, lat: lat });
+              // Update URL with brand_name parameter for digital reports
+              router.push(
+                {
+                  pathname: "/",
+                  query: {
+                    ...router.query,
+                    tab: selectedTab,
+                    brand_name: brandName,
+                  },
+                },
+                undefined,
+                { shallow: true }
+              );
+            }
           }
           setIsCleanAppProOpen(true);
 
