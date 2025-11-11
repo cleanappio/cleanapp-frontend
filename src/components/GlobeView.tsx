@@ -2448,6 +2448,9 @@ export default function GlobeView() {
           reportTabsLoading.current && latestReportsWithAnalysis.length === 0
         }
         onReportClick={(report) => {
+          // Set flag to indicate we're opening from a click
+          openingFromClickRef.current = true;
+
           // Set reportWithAnalysis directly when clicking from LatestReports
           setReportWithAnalysis(report);
 
@@ -2457,7 +2460,10 @@ export default function GlobeView() {
                 r.classification === "physical" && r.seq === report.report.seq
             ) as PhysicalReportResponse | null;
             setSelectedReport(physicalReport);
-            setSeq(report.report.seq);
+            const reportSeq = report.report.seq;
+            setSeq(reportSeq);
+            // Set ref to prevent useEffect from fetching again
+            lastFetchedSeqRef.current = reportSeq;
             flyToReport({
               lon: physicalReport?.longitude,
               lat: physicalReport?.latitude,
@@ -2469,7 +2475,7 @@ export default function GlobeView() {
                 query: {
                   ...router.query,
                   tab: selectedTab,
-                  seq: report.report.seq,
+                  seq: reportSeq,
                 },
               },
               undefined,
@@ -2498,6 +2504,8 @@ export default function GlobeView() {
             );
             setSeq(null); // Digital reports don't use seq
             setSelectedBrandName(brandName);
+            // Set ref to prevent useEffect from fetching again
+            lastFetchedBrandRef.current = brandName;
             const { lat, lon } = stringToLatLonColor(
               (digitalReport as DigitalReportResponse)?.brand_name || brandName
             );
@@ -2517,6 +2525,11 @@ export default function GlobeView() {
             );
           }
           setIsCleanAppProOpen(true);
+
+          // Reset the flag after a short delay to allow URL to update
+          setTimeout(() => {
+            openingFromClickRef.current = false;
+          }, 200);
         }}
         isModalActive={true}
         isMenuOpen={isMenuOpen}
