@@ -9,6 +9,7 @@ import {
 } from "@/lib/i18n";
 import { reportProcessingApiClient } from "@/lib/report-processing-api-client";
 import Link from "next/link";
+import { Copy, Check } from "lucide-react";
 import {
   MapContainer,
   TileLayer,
@@ -50,6 +51,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [markingAsFixed, setMarkingAsFixed] = useState(false);
   const [markFixedSuccess, setMarkFixedSuccess] = useState<string | null>(null);
+  const [urlCopied, setUrlCopied] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslations();
 
@@ -112,6 +114,36 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
 
   const getGoogleMapsUrl = (lat: number, lng: number) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      setUrlCopied(true);
+      setTimeout(() => {
+        setUrlCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = window.location.href;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setUrlCopied(true);
+        setTimeout(() => {
+          setUrlCopied(false);
+        }, 2000);
+      } catch (err) {
+        console.error("Fallback copy failed:", err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const markAsFixed = async () => {
@@ -734,6 +766,23 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           </div>
         )}
         <div className="flex items-center space-x-2 lg:space-x-2 mt-2 lg:mt-0 w-full lg:w-auto justify-end">
+          <button
+            onClick={handleCopyUrl}
+            className="px-4 lg:px-3 py-2 lg:py-1 bg-purple-600 text-white text-sm lg:text-sm rounded hover:bg-purple-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            title={urlCopied ? t("urlCopied") || "URL Copied!" : t("copyUrl") || "Copy URL"}
+          >
+            {urlCopied ? (
+              <>
+                <Check className="w-4 h-4" />
+                {t("urlCopied") || "Copied!"}
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                {t("copyUrl") || "Copy URL"}
+              </>
+            )}
+          </button>
           <button
             onClick={markAsFixed}
             disabled={markingAsFixed}
