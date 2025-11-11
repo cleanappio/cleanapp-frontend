@@ -459,7 +459,7 @@ export default function GlobeView() {
               setIsLoadingReportFromUrl(false);
             } else {
               console.error("No reports found in response:", data);
-              throw new Error("No reports found for brand");
+              // throw new Error("No reports found for brand");
             }
           })
           .catch((error) => {
