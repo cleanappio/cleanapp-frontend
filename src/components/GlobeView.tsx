@@ -163,14 +163,23 @@ export default function GlobeView() {
     appendDigitalFull,
   } = useReportTabs();
 
-  // Wrapper for setSelectedTab that preserves seq and brand_name="other" in URL
+  // Wrapper for setSelectedTab that ensures seq and brand_name="other" are preserved
+  // The useReportTabs hook now preserves all query parameters, but we still need to ensure
+  // both parameters are present when we have them in state
   const setSelectedTab = useCallback(
     (tab: "physical" | "digital") => {
-      // If we have both seq and brand_name="other" in URL, preserve them
-      const currentSeq = router.query.seq;
-      const currentBrandName = router.query.brand_name;
+      // If we have both seq and brand_name="other" in state, ensure they're in the URL
+      const currentSeq =
+        router.query.seq || (seq !== null ? seq.toString() : null);
+      const currentBrandName =
+        router.query.brand_name ||
+        (selectedBrandName === "other" ? "other" : null);
+
       if (currentSeq && currentBrandName === "other" && router.isReady) {
-        // Preserve both parameters when changing tab
+        // Ensure both parameters are in URL when changing tab
+        console.log(
+          "setSelectedTab wrapper: ensuring seq and brand_name='other' are in URL"
+        );
         router.push(
           {
             pathname: "/",
@@ -184,13 +193,12 @@ export default function GlobeView() {
           undefined,
           { shallow: true }
         );
-        // Update state directly - useReportTabs will sync from URL
       } else {
-        // Normal case: use the original setSelectedTab
+        // Normal case: use the original setSelectedTab (which now preserves all params)
         setSelectedTabOriginal(tab);
       }
     },
-    [router, setSelectedTabOriginal]
+    [router, setSelectedTabOriginal, seq, selectedBrandName]
   );
 
   const {
@@ -523,9 +531,10 @@ export default function GlobeView() {
 
                 // Set state before redirecting so seq handler can use it
                 setSeq(reportSeq);
-                setSelectedBrandName(null);
+                // Keep brand_name="other" in state for URL sharing
+                setSelectedBrandName("other");
                 lastFetchedSeqRef.current = reportSeq;
-                lastFetchedBrandRef.current = null;
+                lastFetchedBrandRef.current = "other";
 
                 // Set report data immediately to prevent modal from closing
                 setReportWithAnalysis(reportData);
@@ -756,6 +765,72 @@ export default function GlobeView() {
     isCleanAppProOpen,
     isLoadingReportFromUrl,
     flyToReport,
+  ]);
+
+  // Ref to track if we're currently updating the URL to prevent infinite loops
+  const isUpdatingUrlRef = useRef(false);
+
+  // Monitor and preserve URL parameters when we have both seq and brand_name="other"
+  // This ensures the URL always has both parameters for sharing
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (isUpdatingUrlRef.current) return; // Skip if we're already updating the URL
+
+    const currentSeq = router.query.seq;
+    const currentBrandName = router.query.brand_name;
+    const currentTab = router.query.tab;
+
+    // If we have both seq and brand_name="other" in state, ensure they're in the URL
+    if (seq !== null && selectedBrandName === "other" && isCleanAppProOpen) {
+      const seqStr = seq.toString();
+      const seqMatches =
+        currentSeq === seqStr ||
+        (typeof currentSeq === "string" && currentSeq === seqStr) ||
+        (Array.isArray(currentSeq) && currentSeq[0] === seqStr);
+
+      if (
+        !seqMatches ||
+        currentBrandName !== "other" ||
+        (currentTab !== "digital" && isDigital)
+      ) {
+        // URL is missing parameters, restore them immediately
+        console.log("Restoring URL parameters: seq and brand_name='other'", {
+          currentSeq,
+          currentBrandName,
+          currentTab,
+          expectedSeq: seqStr,
+        });
+        isUpdatingUrlRef.current = true;
+        const query: Record<string, string | string[] | undefined> = {
+          tab: "digital",
+          seq: seqStr,
+          brand_name: "other",
+        };
+        // Preserve any other query parameters
+        Object.keys(router.query).forEach((key) => {
+          if (key !== "tab" && key !== "seq" && key !== "brand_name") {
+            query[key] = router.query[key];
+          }
+        });
+        router.push({ pathname: "/", query }, undefined, {
+          shallow: true,
+        });
+        // Reset the flag after a short delay to allow URL update to complete
+        setTimeout(() => {
+          isUpdatingUrlRef.current = false;
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    router.isReady,
+    router.query.seq,
+    router.query.brand_name,
+    router.query.tab,
+    seq,
+    selectedBrandName,
+    isCleanAppProOpen,
+    isDigital,
   ]);
 
   // Safe map source and layer management

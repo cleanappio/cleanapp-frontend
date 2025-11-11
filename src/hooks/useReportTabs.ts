@@ -88,9 +88,21 @@ export function useReportTabs(): UseReportTabsReturn {
     (tab: ReportTab) => {
       setSelectedTabState(tab);
       // Use shallow routing to update query parameter without page reload
-      router.push({ pathname: "/", query: { tab } }, undefined, {
-        shallow: true,
-      });
+      // Preserve other query parameters (like seq, brand_name) when changing tab
+      const currentQuery = router.query;
+      router.push(
+        {
+          pathname: "/",
+          query: {
+            ...currentQuery,
+            tab,
+          },
+        },
+        undefined,
+        {
+          shallow: true,
+        }
+      );
     },
     [router]
   );
