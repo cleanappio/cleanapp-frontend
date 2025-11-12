@@ -151,31 +151,6 @@ function CustomAreaMap({
     }
     setSelectedReport(report);
     setIsCleanAppProOpen(true);
-    // Update URL with seq or brand_name parameter if on home page
-    if (router.pathname === "/") {
-      const currentTab = (router.query.tab as string) || "physical";
-      const query: any = { ...router.query, tab: currentTab };
-      
-      // Check if it's a physical report with seq
-      if (report.report.seq) {
-        query.seq = report.report.seq;
-        delete query.brand_name; // Remove brand_name if switching to physical
-      } 
-      // Check if it's a digital report with brand_name
-      else if (report.analysis && report.analysis[0]?.brand_name) {
-        query.brand_name = report.analysis[0].brand_name;
-        delete query.seq; // Remove seq if switching to digital
-      }
-      
-      router.push(
-        {
-          pathname: "/",
-          query,
-        },
-        undefined,
-        { shallow: true }
-      );
-    }
   };
 
   const handleReportFixed = (reportSeq: number) => {
@@ -319,7 +294,12 @@ function CustomAreaMap({
       apiUrl,
     });
 
-    if (isClient && (!requiresAuth || isAuthenticated) && apiUrl && !hasFetchedData.current) {
+    if (
+      isClient &&
+      (!requiresAuth || isAuthenticated) &&
+      apiUrl &&
+      !hasFetchedData.current
+    ) {
       hasFetchedData.current = true;
       console.log("Fetching polygons data");
 
@@ -614,13 +594,6 @@ function CustomAreaMap({
           reportItem={selectedReport}
           onClose={() => {
             setIsCleanAppProOpen(false);
-            // Remove seq and brand_name from URL when modal closes if on home page
-            if (router.pathname === "/") {
-              const query = { ...router.query };
-              delete query.seq;
-              delete query.brand_name;
-              router.push({ pathname: "/", query }, undefined, { shallow: true });
-            }
           }}
           onReportFixed={handleReportFixed}
         />
