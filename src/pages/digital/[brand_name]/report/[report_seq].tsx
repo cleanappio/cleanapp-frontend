@@ -29,9 +29,7 @@ export default function ReportDetailPage() {
   const fetchReportDetails = async (reportSeq: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-seq?seq=${reportSeq}`
-      );
+      const response = await fetch(`/api/reports/by-seq?seq=${reportSeq}`);
       const data = await response.json();
       setReport(data);
     } catch (error) {
