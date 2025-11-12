@@ -30,7 +30,7 @@ export default function ReportDetailPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportSeq}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-seq?seq=${reportSeq}`
       );
       const data = await response.json();
       setReport(data);

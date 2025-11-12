@@ -401,7 +401,7 @@ export default function GlobeView() {
           lastFetchedSeqRef.current = seqNumber;
           const locale = getCurrentLocale();
           fetch(
-            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${seqNumber}&lang=${locale}`
+            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-seq?seq=${seqNumber}`
           )
             .then((response) => {
               if (!response.ok) {
