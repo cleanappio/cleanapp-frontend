@@ -400,9 +400,7 @@ export default function GlobeView() {
           setIsLoadingReportFromUrl(true);
           lastFetchedSeqRef.current = seqNumber;
           const locale = getCurrentLocale();
-          fetch(
-            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-seq?seq=${seqNumber}`
-          )
+          fetch(`/api/reports/by-seq?seq=${seqNumber}`)
             .then((response) => {
               if (!response.ok) {
                 throw new Error(`Failed to fetch report: ${response.status}`);

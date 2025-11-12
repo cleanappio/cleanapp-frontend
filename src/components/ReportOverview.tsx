@@ -88,9 +88,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   const fetchPhysicalReport = useCallback(async (seq: number) => {
     setLoading(true);
     setError(null);
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-seq?seq=${seq}`
-    );
+    const response = await fetch(`/api/reports/by-seq?seq=${seq}`);
 
     try {
       if (response.ok) {
