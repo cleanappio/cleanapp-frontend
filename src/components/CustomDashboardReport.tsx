@@ -22,6 +22,7 @@ import L from "leaflet";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { ReportWithAnalysis } from "./GlobeView";
+import Image from "next/image";
 
 // Map controller component to set center and zoom
 function MapController({ center }: { center: [number, number] }) {
@@ -54,6 +55,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   const [urlCopied, setUrlCopied] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslations();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -62,37 +64,14 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       return;
     }
     if (reportItem?.report?.seq) {
-      fetchFullReport();
+      setImageUrl(
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.report.seq}`
+      );
     } else {
       setFullReport(null);
       setError(null);
     }
   }, [reportItem, isAuthenticated]);
-
-  const fetchFullReport = async () => {
-    if (!reportItem?.report?.seq) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const locale = getCurrentLocale();
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-seq?seq=${reportItem.report.seq}&lang=${locale}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // Filter analyses by language and convert to single analysis format
-        const filteredData = filterAnalysesByLanguage([data], locale);
-        setFullReport(filteredData[0] || data);
-      } else {
-        setError(`${t("failedToFetchReport")}: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error fetching full report:", error);
-      setError(t("failedToFetchReport"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getGradientColor = (value: number, maxValue: number = 1) => {
     const percentage = (value / maxValue) * 100;
@@ -713,9 +692,6 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   const analysis = reportItem.analysis.find(
     (analysis) => analysis.language === locale
   );
-  const imageUrl = getDisplayableImage(
-    fullReport?.report?.image || report?.image
-  );
 
   return (
     <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto lg:overflow-hidden">
@@ -734,10 +710,12 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       <div className="absolute top-0 left-0 right-0 min-h-16 lg:h-16 bg-gray-50 border-b border-gray-200 flex flex-col lg:flex-row items-start lg:items-center justify-between px-4 lg:px-6 py-2 lg:py-0 z-10">
         <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-1 lg:space-y-0 lg:space-x-4 w-full lg:w-auto">
           <div className="flex items-center space-x-2 lg:space-x-4 w-full lg:w-auto">
-            <img
+            <Image
               src="/cleanapp-logo.png"
               alt={t("cleanAppLogo")}
               className="h-6 lg:h-8 w-auto flex-shrink-0"
+              width={32}
+              height={32}
             />
             <h1 className="text-sm lg:text-xl font-semibold text-gray-900 break-words leading-tight lg:leading-normal">
               {analysis?.title || `${t("report")} #${report.seq}`}
@@ -769,7 +747,11 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           <button
             onClick={handleCopyUrl}
             className="px-4 lg:px-3 py-2 lg:py-1 bg-purple-600 text-white text-sm lg:text-sm rounded hover:bg-purple-700 transition-colors whitespace-nowrap flex items-center gap-2"
-            title={urlCopied ? t("urlCopied") || "URL Copied!" : t("copyUrl") || "Copy URL"}
+            title={
+              urlCopied
+                ? t("urlCopied") || "URL Copied!"
+                : t("copyUrl") || "Copy URL"
+            }
           >
             {urlCopied ? (
               <>
@@ -820,7 +802,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6">
           <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center min-h-64 lg:h-full">
             {imageUrl ? (
-              <img
+              <Image
                 src={imageUrl}
                 alt={t("report")}
                 className="w-full h-auto max-h-full object-contain"
@@ -831,6 +813,8 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                     "hidden"
                   );
                 }}
+                width={400}
+                height={160}
               />
             ) : (
               <div className="text-gray-400 text-center">
