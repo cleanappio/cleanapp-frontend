@@ -2551,15 +2551,7 @@ export default function GlobeView() {
               placeholder="Search"
               className="bg-gray-800 border-none focus:outline-none focus:border-b-2 text-white flex-1"
               value={searchTerm}
-              onChange={(e) => {
-                // setSearchQuery(e.target.value);
-                setSearchTerm(e.target.value);
-
-                // if (e.target.value.length > 2) {
-                //   search(e.target.value, isDigital ? "digital" : "physical");
-                // } else {
-                // }
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
 
             {searchTerm && (
@@ -2625,66 +2617,6 @@ export default function GlobeView() {
               })}
             </div>
           )}
-
-          {/* {searchQuery && (
-            <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
-              {digitalReportsByBrand
-                .filter((company: GeoJSON.Feature) =>
-                  company.properties?.name
-                    ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase())
-                )
-                .map((company: GeoJSON.Feature) => (
-                  <button
-                    key={company.properties?.name}
-                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
-                    onClick={() => {
-                      setSearchQuery("");
-
-                      const lonLat: [number, number] = [
-                        company.geometry.type === "Point"
-                          ? company.geometry.coordinates[0]
-                          : 0,
-                        company.geometry.type === "Point"
-                          ? company.geometry.coordinates[1]
-                          : 0,
-                      ];
-
-                      retryMapOperation(
-                        () => {
-                          const map = getSafeMap();
-                          if (map) {
-                            map.flyTo({
-                              center: lonLat,
-                              zoom: 5.5,
-                              duration: 2000,
-                              essential: true,
-                            });
-                            return true;
-                          }
-                          return false;
-                        },
-                        3,
-                        200
-                      );
-                    }}
-                  >
-                    <p className="line-clamp-1">{company.properties?.name}</p>
-                  </button>
-                ))}
-            </div>
-          )} */}
-
-          {/* {searchQuery &&
-            digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
-              company.properties?.name
-                ?.toLowerCase()
-                .includes(searchQuery.toLowerCase())
-            ).length === 0 && (
-              <div className="bg-gray-800 -mt-4">
-                <p className="p-3 text-gray-400">No results found</p>
-              </div>
-            )} */}
         </div>
       )}
 
@@ -2772,17 +2704,6 @@ export default function GlobeView() {
               </div>
             </div>
           )}
-
-          {/* {searchQuery &&
-            digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
-              company.properties?.name
-                ?.toLowerCase()
-                .includes(searchQuery.toLowerCase())
-            ).length === 0 && (
-              <div className="bg-gray-800 -mt-4">
-                <p className="p-3 text-gray-400">No results found</p>
-              </div>
-            )} */}
         </div>
       )}
 
