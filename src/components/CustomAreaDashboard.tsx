@@ -17,6 +17,7 @@ interface CustomAreaDashboardProps {
   areaFlag?: string;
   areaZoom?: number;
   requiresAuth?: boolean;
+  showDigitalReports?: boolean;
 }
 
 function CustomAreaDashboard({
@@ -26,6 +27,7 @@ function CustomAreaDashboard({
   areaFlag,
   areaZoom = 7,
   requiresAuth = true,
+  showDigitalReports = false,
 }: CustomAreaDashboardProps) {
   const [isClient, setIsClient] = useState(false);
   const { t } = useTranslations();
@@ -154,6 +156,7 @@ function CustomAreaDashboard({
             areaName={areaName}
             areaZoom={areaZoom}
             requiresAuth={requiresAuth}
+            showDigitalReports={showDigitalReports}
           />
         </div>
       </div>
