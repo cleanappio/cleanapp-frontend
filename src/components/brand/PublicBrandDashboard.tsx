@@ -7,6 +7,8 @@ import { FaLock } from "react-icons/fa";
 import { ReportWithAnalysis } from "../../components/GlobeView";
 import ImageDisplay from "../ImageDisplay";
 import TextToImage from "../TextToImage";
+import { Copy, Check } from "lucide-react";
+import { useState } from "react";
 
 // Check if embedded mode is enabled
 const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
@@ -19,6 +21,44 @@ export default function PublicBrandDashboard({
   const locale = getCurrentLocale();
   const { t } = useTranslations();
   const router = useRouter();
+
+  const [urlCopied, setUrlCopied] = useState(false);
+  const [currentSeq, setCurrentSeq] = useState<number | null>(null);
+
+  const handleCopyUrl = async (seq?: number) => {
+    if (!seq) {
+      console.error("No seq provided");
+      return;
+    }
+
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(`${currentUrl}/report/${seq}`);
+      setUrlCopied(true);
+      setTimeout(() => {
+        setUrlCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = `${window.location.href}/report/${seq}`;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setUrlCopied(true);
+        setTimeout(() => {
+          setUrlCopied(false);
+        }, 2000);
+      } catch (err) {
+        console.error("Fallback copy failed:", err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
 
   // Only show up to 6 reports (3 clear, 3 blurred)
   const visibleReports = brandReports.slice(0, 6);
@@ -55,6 +95,26 @@ export default function PublicBrandDashboard({
                     )}
                   </div>
                 )}
+                <div className="absolute top-2 right-2">
+                  <button
+                    onClick={() => {
+                      handleCopyUrl(report?.seq);
+                      setCurrentSeq(report?.seq || null);
+                    }}
+                    className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
+                    aria-label={
+                      urlCopied && currentSeq === report?.seq
+                        ? t("urlCopied") || "URL Copied"
+                        : t("copyUrl") || "Copy URL"
+                    }
+                  >
+                    {urlCopied && currentSeq === report?.seq ? (
+                      <Check className="w-6 h-6" />
+                    ) : (
+                      <Copy className="w-6 h-6" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
