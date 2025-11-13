@@ -35,7 +35,7 @@ export const useBackendSearch = (classification: "digital" | "physical") => {
         setLoading(true);
         setError(null);
         setSearchTerm(term);
-        console.log("Searching for:", term);
+        console.log("Searching for:", term, loading, error);
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/search?q=${term}&classification=${classification}`
         );
