@@ -65,6 +65,7 @@ interface CustomAreaMapProps {
   areaName?: string;
   areaZoom?: number;
   requiresAuth?: boolean;
+  showDigitalReports?: boolean;
 }
 
 function CustomAreaMap({
@@ -73,6 +74,7 @@ function CustomAreaMap({
   areaName = "Custom Area",
   areaZoom = 7,
   requiresAuth = true,
+  showDigitalReports = false,
 }: CustomAreaMapProps) {
   const router = useRouter();
   // Only subscribe to the specific auth state properties we need
@@ -584,6 +586,7 @@ function CustomAreaMap({
             onReportClick={handleReportClick}
             isModalActive={false}
             selectedReport={selectedReport}
+            showDigitalReports={showDigitalReports}
           />
         </div>
       )}

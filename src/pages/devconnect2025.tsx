@@ -49,6 +49,7 @@ export default function Devconnect2025Page() {
         areaName="Devconnect 2025"
         areaFlag="🇦🇷" // Argentina flag
         areaZoom={16}
+        showDigitalReports={true}
       />
     </>
   );
