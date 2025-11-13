@@ -2616,13 +2616,17 @@ export default function GlobeView() {
                 );
               })}
               {searchLoading && (
-                <div className="p-2 text-white rounded-sm">Loading...</div>
+                <div className="p-2 text-white rounded-sm w-full">
+                  Loading...
+                </div>
               )}
               {searchError && (
-                <div className="p-2 text-white rounded-sm">{searchError}</div>
+                <div className="p-2 text-white rounded-sm w-full">
+                  {searchError}
+                </div>
               )}
               {searchResults.length == 0 && !searchLoading && !searchError && (
-                <div className="p-2 text-white rounded-sm">
+                <div className="p-2 text-white rounded-sm w-full">
                   No reports found
                 </div>
               )}
@@ -2657,75 +2661,75 @@ export default function GlobeView() {
               ref={listRef}
               className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500"
             >
-              <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
-                {searchResults.map((result) => {
-                  const analysis =
-                    result.analysis.find(
-                      (analysis) => analysis.language === locale
-                    ) || result.analysis[0];
-                  return (
-                    <button
-                      key={result.report.seq}
-                      className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
-                      onClick={() => {
-                        setSeq(result.report.seq);
-                        setReportWithAnalysis(result);
+              {searchResults.map((result) => {
+                const analysis =
+                  result.analysis.find(
+                    (analysis) => analysis.language === locale
+                  ) || result.analysis[0];
+                return (
+                  <button
+                    key={result.report.seq}
+                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
+                    onClick={() => {
+                      setSeq(result.report.seq);
+                      setReportWithAnalysis(result);
 
-                        let latitude = result.report.latitude;
-                        let longitude = result.report.longitude;
+                      let latitude = result.report.latitude;
+                      let longitude = result.report.longitude;
 
-                        if (isDigital) {
-                          const { lat, lon } = stringToLatLonColor(
-                            result.analysis[0]?.brand_name || "other"
-                          );
-                          latitude = lat;
-                          longitude = lon;
-                        } else {
-                          latitude = result.report.latitude;
-                          longitude = result.report.longitude;
-                        }
-
-                        flyToReport({
-                          lon: longitude,
-                          lat: latitude,
-                          zoom: 9.5,
-                        });
-
-                        setIsCleanAppProOpen(true);
-
-                        // Update URL with seq parameter
-                        router.push(
-                          {
-                            pathname: "/",
-                            query: {
-                              ...router.query,
-                              tab: selectedTab,
-                              seq: result.report.seq,
-                            },
-                          },
-                          undefined,
-                          { shallow: true }
+                      if (isDigital) {
+                        const { lat, lon } = stringToLatLonColor(
+                          result.analysis[0]?.brand_name || "other"
                         );
-                      }}
-                    >
-                      <p className="line-clamp-1">{analysis?.title}</p>
-                    </button>
-                  );
-                })}
-                {searchLoading && (
-                  <div className="p-2 text-white rounded-sm">Loading...</div>
-                )}
-                {searchError && (
-                  <div className="p-2 text-white rounded-sm">{searchError}</div>
-                )}
-                {searchResults.length == 0 &&
-                  !searchLoading &&
-                  !searchError && (
-                    <div className="p-2 text-white rounded-sm">
-                      No reports found
-                    </div>
-                  )}
-              </div>
+                        latitude = lat;
+                        longitude = lon;
+                      } else {
+                        latitude = result.report.latitude;
+                        longitude = result.report.longitude;
+                      }
+
+                      flyToReport({
+                        lon: longitude,
+                        lat: latitude,
+                        zoom: 9.5,
+                      });
+
+                      setIsCleanAppProOpen(true);
+
+                      // Update URL with seq parameter
+                      router.push(
+                        {
+                          pathname: "/",
+                          query: {
+                            ...router.query,
+                            tab: selectedTab,
+                            seq: result.report.seq,
+                          },
+                        },
+                        undefined,
+                        { shallow: true }
+                      );
+                    }}
+                  >
+                    <p className="line-clamp-1">{analysis?.title}</p>
+                  </button>
+                );
+              })}
+              {searchLoading && (
+                <div className="p-2 text-white rounded-sm w-full">
+                  Loading...
+                </div>
+              )}
+              {searchError && (
+                <div className="p-2 text-white rounded-sm w-full">
+                  {searchError}
+                </div>
+              )}
+              {searchResults.length == 0 && !searchLoading && !searchError && (
+                <div className="p-2 text-white rounded-sm w-full">
+                  No reports found
+                </div>
+              )}
             </div>
           )}
         </div>
