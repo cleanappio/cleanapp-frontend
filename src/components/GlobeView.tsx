@@ -35,7 +35,7 @@ import { useMapboxDraw } from "@/hooks/useMapboxDraw";
 import AreaCreationModal from "./AreaCreationModal";
 import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
-
+import { useBackendSearch } from "@/hooks/useBackendSearch";
 // Type for report data
 export interface Report {
   seq: number;
@@ -121,7 +121,7 @@ export default function GlobeView() {
   const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
     GeoJSON.Feature[]
   >([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // const [searchQuery, setSearchQuery] = useState<string>("");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef<HTMLInputElement>(null); // Reference to your input field
@@ -162,6 +162,16 @@ export default function GlobeView() {
     appendPhysicalFull,
     appendDigitalFull,
   } = useReportTabs();
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    searchResults,
+    loading: searchLoading,
+    error: searchError,
+  } = useBackendSearch(selectedTab);
+
+  const locale = getCurrentLocale();
 
   // Wrapper for setSelectedTab that ensures seq and brand_name="other" are preserved
   // The useReportTabs hook now preserves all query parameters, but we still need to ensure
@@ -284,7 +294,7 @@ export default function GlobeView() {
 
   // Fly to a lon/lat with retries
   const flyToReport = useCallback(
-    ({ lon, lat }: { lon?: number; lat?: number }) => {
+    ({ lon, lat, zoom }: { lon?: number; lat?: number; zoom?: number }) => {
       if (!lon || !lat) {
         console.log("Lon or lat is not defined");
         return;
@@ -298,7 +308,7 @@ export default function GlobeView() {
           if (map) {
             map.flyTo({
               center: lonLat,
-              zoom: map.getZoom() || 2.5,
+              zoom: zoom || map.getZoom() || 2.5,
               duration: 2000,
               essential: true,
             });
@@ -2527,7 +2537,7 @@ export default function GlobeView() {
         </div>
       )}
 
-      {!isMobile && isDigital && (
+      {!isMobile && (
         <div className="absolute top-4 right-20 flex flex-col gap-4 w-48 lg:w-80 xl:w-96  max-w-48 lg:max-w-80 xl:max-w-96">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
@@ -2540,20 +2550,83 @@ export default function GlobeView() {
               type="text"
               placeholder="Search"
               className="bg-gray-800 border-none focus:outline-none focus:border-b-2 text-white flex-1"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => {
+                // setSearchQuery(e.target.value);
+                setSearchTerm(e.target.value);
+
+                // if (e.target.value.length > 2) {
+                //   search(e.target.value, isDigital ? "digital" : "physical");
+                // } else {
+                // }
+              }}
             />
 
-            {searchQuery && (
+            {searchTerm && (
               <FiX
                 className="text-gray-300 w-6"
                 size={24}
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchTerm("")}
               />
             )}
           </button>
 
-          {searchQuery && (
+          {searchTerm && (
+            <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
+              {searchResults.map((result) => {
+                const analysis =
+                  result.analysis.find(
+                    (analysis) => analysis.language === locale
+                  ) || result.analysis[0];
+                return (
+                  <button
+                    key={result.report.seq}
+                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
+                    onClick={() => {
+                      setSeq(result.report.seq);
+                      setReportWithAnalysis(result);
+
+                      let latitude = result.report.latitude;
+                      let longitude = result.report.longitude;
+
+                      if (isDigital) {
+                        const { lat, lon } = stringToLatLonColor(
+                          result.analysis[0]?.brand_name || "other"
+                        );
+                        latitude = lat;
+                        longitude = lon;
+                      } else {
+                        latitude = result.report.latitude;
+                        longitude = result.report.longitude;
+                      }
+
+                      flyToReport({ lon: longitude, lat: latitude, zoom: 9.5 });
+
+                      setIsCleanAppProOpen(true);
+
+                      // Update URL with seq parameter
+                      router.push(
+                        {
+                          pathname: "/",
+                          query: {
+                            ...router.query,
+                            tab: selectedTab,
+                            seq: result.report.seq,
+                          },
+                        },
+                        undefined,
+                        { shallow: true }
+                      );
+                    }}
+                  >
+                    <p className="line-clamp-1">{analysis?.title}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* {searchQuery && (
             <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
               {digitalReportsByBrand
                 .filter((company: GeoJSON.Feature) =>
@@ -2600,9 +2673,9 @@ export default function GlobeView() {
                   </button>
                 ))}
             </div>
-          )}
+          )} */}
 
-          {searchQuery &&
+          {/* {searchQuery &&
             digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
               company.properties?.name
                 ?.toLowerCase()
@@ -2611,11 +2684,11 @@ export default function GlobeView() {
               <div className="bg-gray-800 -mt-4">
                 <p className="p-3 text-gray-400">No results found</p>
               </div>
-            )}
+            )} */}
         </div>
       )}
 
-      {isDigital && isMobileSearchOpen && (
+      {isMobileSearchOpen && (
         <div className="absolute top-0 bottom-0 left-0 right-0 flex flex-col items-start gap-4 z-50 bg-gray-800">
           <div className="top-0 right-0 absolute p-2">
             <FiX
@@ -2631,65 +2704,76 @@ export default function GlobeView() {
               type="text"
               placeholder="Search"
               className="bg-gray-800 focus:outline-none focus:border-b-2 text-white w-full border border-gray-700 rounded-md py-2 px-4 mx-4"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {searchQuery && (
+          {searchTerm && (
             <div
               ref={listRef}
               className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500"
             >
-              {digitalReportsByBrand
-                .filter((company: GeoJSON.Feature) =>
-                  company.properties?.name
-                    ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase())
-                )
-                .map((company: GeoJSON.Feature) => (
-                  <button
-                    key={company.properties?.name}
-                    className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setIsMobileSearchOpen(false);
+              <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
+                {searchResults.map((result) => {
+                  const analysis =
+                    result.analysis.find(
+                      (analysis) => analysis.language === locale
+                    ) || result.analysis[0];
+                  return (
+                    <button
+                      key={result.report.seq}
+                      className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
+                      onClick={() => {
+                        setSeq(result.report.seq);
+                        setReportWithAnalysis(result);
 
-                      const lonLat: [number, number] = [
-                        company.geometry.type === "Point"
-                          ? company.geometry.coordinates[0]
-                          : 0,
-                        company.geometry.type === "Point"
-                          ? company.geometry.coordinates[1]
-                          : 0,
-                      ];
+                        let latitude = result.report.latitude;
+                        let longitude = result.report.longitude;
 
-                      retryMapOperation(
-                        () => {
-                          const map = getSafeMap();
-                          if (map) {
-                            map.flyTo({
-                              center: lonLat,
-                              zoom: 5.5,
-                              duration: 2000,
-                              essential: true,
-                            });
-                            return true;
-                          }
-                          return false;
-                        },
-                        3,
-                        200
-                      );
-                    }}
-                  >
-                    <p className="line-clamp-1">{company.properties?.name}</p>
-                  </button>
-                ))}
+                        if (isDigital) {
+                          const { lat, lon } = stringToLatLonColor(
+                            result.analysis[0]?.brand_name || "other"
+                          );
+                          latitude = lat;
+                          longitude = lon;
+                        } else {
+                          latitude = result.report.latitude;
+                          longitude = result.report.longitude;
+                        }
+
+                        flyToReport({
+                          lon: longitude,
+                          lat: latitude,
+                          zoom: 9.5,
+                        });
+
+                        setIsCleanAppProOpen(true);
+
+                        // Update URL with seq parameter
+                        router.push(
+                          {
+                            pathname: "/",
+                            query: {
+                              ...router.query,
+                              tab: selectedTab,
+                              seq: result.report.seq,
+                            },
+                          },
+                          undefined,
+                          { shallow: true }
+                        );
+                      }}
+                    >
+                      <p className="line-clamp-1">{analysis?.title}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {searchQuery &&
+          {/* {searchQuery &&
             digitalReportsByBrand.filter((company: GeoJSON.Feature) =>
               company.properties?.name
                 ?.toLowerCase()
@@ -2698,11 +2782,11 @@ export default function GlobeView() {
               <div className="bg-gray-800 -mt-4">
                 <p className="p-3 text-gray-400">No results found</p>
               </div>
-            )}
+            )} */}
         </div>
       )}
 
-      {isDigital && isMobile && (
+      {isMobile && (
         <div className="absolute bottom-12 right-4">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
