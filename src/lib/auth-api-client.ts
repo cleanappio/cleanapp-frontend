@@ -157,6 +157,8 @@ export class AuthApiClient {
   async logout(): Promise<void> {
     try {
       await this.axios.post("/api/v3/auth/logout");
+    } catch (e) {
+      console.error("Error logging out:", e);
     } finally {
       this.setAuthToken(null);
     }
