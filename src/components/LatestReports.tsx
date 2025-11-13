@@ -26,6 +26,11 @@ const LatestReports: React.FC<LatestReportsProps> = ({
     []
   );
 
+  const [isDigitalReportsLoading, setIsDigitalReportsLoading] = useState(false);
+  const [digitalReportsError, setDigitalReportsError] = useState<string | null>(
+    null
+  );
+
   const [selectedTab, setSelectedTab] = useState<"physical" | "digital">(
     "physical"
   );
@@ -33,6 +38,8 @@ const LatestReports: React.FC<LatestReportsProps> = ({
   useEffect(() => {
     const fetchDigitalReports = async () => {
       try {
+        setIsDigitalReportsLoading(true);
+        setDigitalReportsError(null);
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=devconnect&n=10`
         );
@@ -44,6 +51,11 @@ const LatestReports: React.FC<LatestReportsProps> = ({
         }
       } catch (error) {
         console.error("Error fetching digital reports:", error);
+        setDigitalReportsError(
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      } finally {
+        setIsDigitalReportsLoading(false);
       }
     };
     fetchDigitalReports();
@@ -139,49 +151,57 @@ const LatestReports: React.FC<LatestReportsProps> = ({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto scrollbar-hide">
-            {digitalReports.map((item, idx) => {
-               const isSelected =
-               selectedReport?.report?.seq === item.report?.seq;
+            {isDigitalReportsLoading ? (
+              <p className="text-xs text-gray-400">{t("loading")}...</p>
+            ) : digitalReportsError ? (
+              <p className="text-xs text-gray-400">{digitalReportsError}</p>
+            ) : digitalReports.length === 0 ? (
+              <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
+            ) : (
+              digitalReports.map((item, idx) => {
+                const isSelected =
+                  selectedReport?.report?.seq === item.report?.seq;
 
-             const title = Array.isArray(item.analysis)
-               ? item.analysis.find(
-                   (analysis) => analysis.language === locale
-                 )
-               : item.analysis;
+                const title = Array.isArray(item.analysis)
+                  ? item.analysis.find(
+                      (analysis) => analysis.language === locale
+                    )
+                  : item.analysis;
 
-             return (
-               <div
-                 key={item.report?.seq || idx}
-                 onClick={() => onReportClick(item)}
-                 className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${
-                   isSelected
-                     ? "border-blue-400 bg-blue-600/20 text-white"
-                     : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
-                 }`}
-               >
-                 <p className="text-xs">
-                   {title?.title || t("report")}
-                   {item.report?.timestamp
-                     ? `, ${new Date(
-                         item.report.timestamp
-                       ).toLocaleString()}`
-                     : ""}
-                 </p>
-                 <p className="text-xs text-gray-400 line-clamp-2">
-                   {Array.isArray(item.analysis)
-                     ? item.analysis.find(
-                         (analysis) => analysis.language === locale
-                       )?.summary ||
-                       item.analysis.find(
-                         (analysis) => analysis.language === locale
-                       )?.description
-                     : title?.summary ||
-                       title?.description ||
-                       t("noSummary")}
-                 </p>
-               </div>
-             );
-            })}
+                return (
+                  <div
+                    key={item.report?.seq || idx}
+                    onClick={() => onReportClick(item)}
+                    className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${
+                      isSelected
+                        ? "border-blue-400 bg-blue-600/20 text-white"
+                        : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <p className="text-xs">
+                      {title?.title || t("report")}
+                      {item.report?.timestamp
+                        ? `, ${new Date(
+                            item.report.timestamp
+                          ).toLocaleString()}`
+                        : ""}
+                    </p>
+                    <p className="text-xs text-gray-400 line-clamp-2">
+                      {Array.isArray(item.analysis)
+                        ? item.analysis.find(
+                            (analysis) => analysis.language === locale
+                          )?.summary ||
+                          item.analysis.find(
+                            (analysis) => analysis.language === locale
+                          )?.description
+                        : title?.summary ||
+                          title?.description ||
+                          t("noSummary")}
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
