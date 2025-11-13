@@ -2615,6 +2615,17 @@ export default function GlobeView() {
                   </button>
                 );
               })}
+              {searchLoading && (
+                <div className="p-2 text-white rounded-sm">Loading...</div>
+              )}
+              {searchError && (
+                <div className="p-2 text-white rounded-sm">{searchError}</div>
+              )}
+              {searchResults.length == 0 && !searchLoading && !searchError && (
+                <div className="p-2 text-white rounded-sm">
+                  No reports found
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2701,6 +2712,19 @@ export default function GlobeView() {
                     </button>
                   );
                 })}
+                {searchLoading && (
+                  <div className="p-2 text-white rounded-sm">Loading...</div>
+                )}
+                {searchError && (
+                  <div className="p-2 text-white rounded-sm">{searchError}</div>
+                )}
+                {searchResults.length == 0 &&
+                  !searchLoading &&
+                  !searchError && (
+                    <div className="p-2 text-white rounded-sm">
+                      No reports found
+                    </div>
+                  )}
               </div>
             </div>
           )}
