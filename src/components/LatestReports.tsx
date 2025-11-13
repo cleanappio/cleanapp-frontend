@@ -144,8 +144,11 @@ const LatestReports: React.FC<LatestReportsProps> = ({
         setIsDigitalReportsLoading(false);
       }
     };
-    fetchDigitalReports();
-  }, []);
+
+    if (showDigitalReports) {
+      fetchDigitalReports();
+    }
+  }, [showDigitalReports]);
 
   return (
     <div
