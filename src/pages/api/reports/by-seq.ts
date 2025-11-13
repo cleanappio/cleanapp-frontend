@@ -1,15 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-
-// Simple in-memory cache (for production, consider Redis)
-interface CacheEntry {
-  data: any;
-  timestamp: number; // Creation time for TTL validation
-  lastAccess: number; // Last access time for LRU eviction
-}
-
-const cache = new Map<string, CacheEntry>();
-const inFlightRequests = new Map<string, Promise<any>>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour in milliseconds
+import { cache, inFlightRequests, CACHE_TTL } from "@/lib/report-cache";
 
 export default async function handler(
   req: NextApiRequest,

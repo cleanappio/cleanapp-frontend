@@ -137,6 +137,20 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         seq: reportItem.report.seq,
       });
       if (response.success) {
+        // Invalidate the cache for this report so fresh data is fetched next time
+        try {
+          await fetch("/api/reports/invalidate-cache", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ seq: reportItem.report.seq }),
+          });
+        } catch (cacheError) {
+          // Log but don't fail the operation if cache invalidation fails
+          console.warn("Failed to invalidate cache:", cacheError);
+        }
+
         setMarkFixedSuccess(response.message || t("reportMarkedAsFixed"));
         // Notify parent component that report was fixed
         if (onReportFixed && reportItem?.report?.seq) {
