@@ -1478,11 +1478,10 @@ export default function GlobeView() {
         });
       }
 
-      // TODO: Update latestReports state to include the new report
-      // setLatestReports((prev) => {
-      //   const newReports = [reportWithAnalysis, ...prev];
-      //   return newReports;
-      // });
+      setLatestReportsWithAnalysis((prev) => {
+        const newReports = [reportWithAnalysis, ...prev];
+        return newReports;
+      });
 
       // Create a temporary animated pin for the new report
       const animatedPinId = `animated-pin-${report.seq}`;
@@ -2017,6 +2016,7 @@ export default function GlobeView() {
 
       if (message.type === "reports") {
         const batch = message.data;
+        console.log("Batch", batch);
         const currentLocale = getCurrentLocale();
         const filteredReports = filterAnalysesByLanguage(
           batch.reports || [],
