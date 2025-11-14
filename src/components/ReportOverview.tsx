@@ -210,7 +210,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     return "from-red-500 to-red-400";
   };
 
-  // TODO: Display difference in time between report and current time
   const formatTime = (timestamp: string) => {
     const reportTime = new Date(timestamp);
     const currentTime = new Date();

@@ -85,7 +85,7 @@ function CustomAreaMap({
   const [municipalitiesPolygons, setMunicipalitiesPolygons] = useState<any[]>(
     []
   );
-  const [viewMode, setViewMode] = useState<"Stats" | "Reports">("Stats");
+  const [viewMode, setViewMode] = useState<"Stats" | "Reports">("Reports");
   const [reports, setReports] = useState<ReportWithAnalysis[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [selectedReport, setSelectedReport] =
@@ -426,16 +426,6 @@ function CustomAreaMap({
         <div className="absolute top-2 lg:top-4 left-1/2 lg:left-4 transform -translate-x-1/2 lg:translate-x-0 z-[1000] bg-white rounded-lg shadow-lg p-2 lg:p-2">
           <div className="flex space-x-2 lg:space-x-1">
             <button
-              onClick={() => setViewMode("Stats")}
-              className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
-                viewMode === "Stats"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {t("stats")}
-            </button>
-            <button
               onClick={() => setViewMode("Reports")}
               className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
                 viewMode === "Reports"
@@ -444,6 +434,16 @@ function CustomAreaMap({
               }`}
             >
               {t("reports")}
+            </button>
+            <button
+              onClick={() => setViewMode("Stats")}
+              className={`px-4 lg:px-3 py-2 lg:py-1 text-sm lg:text-sm font-medium rounded-md transition-colors ${
+                viewMode === "Stats"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {t("statistics")}
             </button>
           </div>
         </div>
