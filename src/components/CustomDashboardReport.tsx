@@ -23,6 +23,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { ReportWithAnalysis } from "./GlobeView";
 import Image from "next/image";
+import TextToImage from "./TextToImage";
 
 // Map controller component to set center and zoom
 function MapController({ center }: { center: [number, number] }) {
@@ -56,6 +57,8 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslations();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -64,10 +67,12 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       return;
     }
     if (reportItem?.report?.seq) {
+      console.log("reportItem seq:", reportItem.report.seq);
       setImageUrl(
         `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.report.seq}`
       );
     } else {
+      console.log("reportItem no seq:", reportItem);
       setFullReport(null);
       setError(null);
     }
@@ -815,7 +820,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         {/* Image Section */}
         <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6">
           <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center min-h-64 lg:h-full">
-            {imageUrl ? (
+            {imageUrl && !imageError ? (
               <Image
                 src={imageUrl}
                 alt={t("report")}
@@ -826,14 +831,20 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                   e.currentTarget.nextElementSibling?.classList.remove(
                     "hidden"
                   );
+                  setImageError("Failed to load image: " + imageUrl);
+                  setImageLoading(false);
+                }}
+                onLoadingComplete={() => {
+                  setImageLoading(false);
+                  setImageError(null);
                 }}
                 width={400}
                 height={160}
               />
             ) : (
-              <div className="text-gray-400 text-center">
-                <p>{t("noImageAvailable")}</p>
-              </div>
+              <TextToImage
+                text={analysis?.summary || analysis?.description || ""}
+              />
             )}
           </div>
         </div>
@@ -842,60 +853,64 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6 lg:overflow-y-auto">
           <div className="space-y-4 lg:space-y-6">
             {/* Location Info */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">
-                {t("location")}
-              </h3>
+            {report.latitude !== 0 && report.longitude !== 0 && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  {t("location")}
+                </h3>
 
-              {/* Map */}
-              <div className="h-64 lg:h-96 mb-3 rounded-lg overflow-hidden border">
-                <MapContainer
-                  center={[report.latitude, report.longitude]}
-                  zoom={16}
-                  style={{ height: "100%", width: "100%" }}
-                  zoomControl={false}
-                  scrollWheelZoom={true}
-                  dragging={true}
-                  touchZoom={true}
-                  doubleClickZoom={true}
-                  boxZoom={true}
-                  keyboard={true}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <CircleMarker
+                {/* Map */}
+                <div className="h-64 lg:h-96 mb-3 rounded-lg overflow-hidden border">
+                  <MapContainer
                     center={[report.latitude, report.longitude]}
-                    radius={8}
-                    pathOptions={{
-                      color: "#ef4444",
-                      fillColor: "#ef4444",
-                      fillOpacity: 0.8,
-                      weight: 2,
-                      opacity: 1,
-                    }}
-                  />
-                  <MapController center={[report.latitude, report.longitude]} />
-                </MapContainer>
-              </div>
+                    zoom={16}
+                    style={{ height: "100%", width: "100%" }}
+                    zoomControl={false}
+                    scrollWheelZoom={true}
+                    dragging={true}
+                    touchZoom={true}
+                    doubleClickZoom={true}
+                    boxZoom={true}
+                    keyboard={true}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <CircleMarker
+                      center={[report.latitude, report.longitude]}
+                      radius={8}
+                      pathOptions={{
+                        color: "#ef4444",
+                        fillColor: "#ef4444",
+                        fillOpacity: 0.8,
+                        weight: 2,
+                        opacity: 1,
+                      }}
+                    />
+                    <MapController
+                      center={[report.latitude, report.longitude]}
+                    />
+                  </MapContainer>
+                </div>
 
-              {/* Coordinates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">{t("latitude")}:</span>
-                  <span className="ml-2 font-medium">
-                    {report.latitude.toFixed(6)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-600">{t("longitude")}:</span>
-                  <span className="ml-2 font-medium">
-                    {report.longitude.toFixed(6)}
-                  </span>
+                {/* Coordinates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">{t("latitude")}:</span>
+                    <span className="ml-2 font-medium">
+                      {report.latitude.toFixed(6)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">{t("longitude")}:</span>
+                    <span className="ml-2 font-medium">
+                      {report.longitude.toFixed(6)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Brand Info */}
             {(analysis?.brand_display_name || analysis?.brand_name) && (
