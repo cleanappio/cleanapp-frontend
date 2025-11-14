@@ -58,10 +58,35 @@ const LatestReports: React.FC<LatestReportsProps> = ({
   );
 
   const {
-    reports: digitalReportsByTags,
-    loading: digitalReportsByTagsLoading,
-    error: digitalReportsByTagsError,
+    reports: reportsByTags,
+    loading: reportsByTagsLoading,
+    error: reportsByTagsError,
   } = useReportsByTags(brands, 10, showDigitalReports);
+
+  const digitalReportsbyTags = reportsByTags.filter(
+    (report: ReportWithAnalysis) =>
+      report.analysis?.[0]?.classification === "digital"
+  );
+  const physicalReportsbyTags = reportsByTags.filter(
+    (report: ReportWithAnalysis) =>
+      report.analysis?.[0]?.classification === "physical"
+  );
+
+  const combinedPhysicalReports = [...reports, ...physicalReportsbyTags];
+
+  if (showDigitalReports) {
+    combinedPhysicalReports.sort(
+      (a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+        const timeA = a.report?.timestamp
+          ? new Date(a.report.timestamp).getTime()
+          : 0;
+        const timeB = b.report?.timestamp
+          ? new Date(b.report.timestamp).getTime()
+          : 0;
+        return timeB - timeA; // Descending order (newest first)
+      }
+    );
+  }
 
   return (
     <div
@@ -103,10 +128,10 @@ const LatestReports: React.FC<LatestReportsProps> = ({
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
-            ) : reports.length === 0 ? (
+            ) : combinedPhysicalReports.length === 0 ? (
               <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
             ) : (
-              reports.map((item, idx) => {
+              combinedPhysicalReports.map((item, idx) => {
                 const isSelected =
                   selectedReport?.report?.seq === item.report?.seq;
 
@@ -153,16 +178,14 @@ const LatestReports: React.FC<LatestReportsProps> = ({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto scrollbar-hide">
-            {digitalReportsByTagsLoading ? (
+            {reportsByTagsLoading ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
-            ) : digitalReportsByTagsError ? (
-              <p className="text-xs text-gray-400">
-                {digitalReportsByTagsError}
-              </p>
-            ) : digitalReportsByTags.length === 0 ? (
+            ) : reportsByTagsError ? (
+              <p className="text-xs text-gray-400">{reportsByTagsError}</p>
+            ) : digitalReportsbyTags.length === 0 ? (
               <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
             ) : (
-              digitalReportsByTags.map(
+              digitalReportsbyTags.map(
                 (item: ReportWithAnalysis, idx: number) => {
                   const isSelected =
                     selectedReport?.report?.seq === item.report?.seq;
