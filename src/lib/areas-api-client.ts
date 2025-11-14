@@ -179,12 +179,14 @@ export class AreasApiClient {
   ): Promise<AreasResponse> {
     const params: Record<string, string> = {};
 
-    if (viewport) {
-      params.sw_lat = viewport.lat_min.toString();
-      params.sw_lon = viewport.lon_min.toString();
-      params.ne_lat = viewport.lat_max.toString();
-      params.ne_lon = viewport.lon_max.toString();
+    if (!viewport) {
+      throw new Error("Viewport is required");
     }
+
+    params.sw_lat = viewport.lat_min.toString();
+    params.sw_lon = viewport.lon_min.toString();
+    params.ne_lat = viewport.lat_max.toString();
+    params.ne_lon = viewport.lon_max.toString();
 
     if (type) {
       params.type = type;

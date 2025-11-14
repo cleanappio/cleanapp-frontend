@@ -2321,6 +2321,12 @@ export default function GlobeView() {
           console.log("No user location available, fetching all areas");
         }
 
+        if (!viewport) {
+          setAreasLoading(false);
+          console.log("No user location available.");
+          return;
+        }
+
         const response = await areasApiClient.getAreas(viewport, "poi");
 
         // Filter to only custom areas (areas drawn by users)
