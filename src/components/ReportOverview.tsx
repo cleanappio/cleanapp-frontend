@@ -543,7 +543,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             {isDigital && (
               <>
                 <Link
-                  href={`/digital/${getBrandNameDisplay(analysis).brandName}`}
+                  href={`/digital/${encodeURIComponent(
+                    getBrandNameDisplay(analysis).brandName
+                  )}`}
                   className="text-blue-600 hover:text-blue-800 text-sm underline"
                   target="_blank"
                   rel="noopener noreferrer"
