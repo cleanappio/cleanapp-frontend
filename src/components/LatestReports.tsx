@@ -14,6 +14,11 @@ interface LatestReportsProps {
 
 const brands = [
   "devconnect",
+  "efdevcon",
+  "get_para",
+  "para",
+  "peanut",
+  "simplefi",
   "zupass",
   "roamless",
   "lnvpn",
