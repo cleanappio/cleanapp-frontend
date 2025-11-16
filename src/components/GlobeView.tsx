@@ -1478,10 +1478,12 @@ export default function GlobeView() {
         });
       }
 
-      setLatestReportsWithAnalysis((prev) => {
-        const newReports = [reportWithAnalysis, ...prev];
-        return newReports;
-      });
+      if (classification === selectedTab) {
+        setLatestReportsWithAnalysis((prev) => {
+          const newReports = [reportWithAnalysis, ...prev];
+          return newReports;
+        });
+      }
 
       // Create a temporary animated pin for the new report
       const animatedPinId = `animated-pin-${report.seq}`;
@@ -2908,7 +2910,11 @@ export default function GlobeView() {
           // Set reportWithAnalysis directly when clicking from LatestReports
           setReportWithAnalysis(report);
 
-          if (isPhysical && report.analysis[0].classification === "physical") {
+          if (
+            isPhysical &&
+            report.analysis &&
+            report.analysis?.[0]?.classification === "physical"
+          ) {
             const physicalReport = latestReports.find(
               (r) =>
                 r.classification === "physical" && r.seq === report.report.seq
@@ -2937,7 +2943,8 @@ export default function GlobeView() {
             );
           } else if (
             isDigital &&
-            report.analysis[0].classification === "digital"
+            report.analysis &&
+            report.analysis?.[0]?.classification === "digital"
           ) {
             const brandName = report.analysis[0].brand_name || "other";
             const reportSeq = report.report.seq;
