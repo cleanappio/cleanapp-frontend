@@ -72,12 +72,16 @@ const LatestReports: React.FC<LatestReportsProps> = ({
     (report: ReportWithAnalysis) =>
       report.analysis?.[0]?.classification === "digital"
   );
+
   const physicalReportsbyTags = reportsByTags.filter(
     (report: ReportWithAnalysis) =>
       report.analysis?.[0]?.classification === "physical"
   );
 
-  const combinedPhysicalReports = [...reports, ...physicalReportsbyTags];
+  const combinedPhysicalReports = [...reports, ...physicalReportsbyTags].filter(
+    (report, index, self) =>
+      index === self.findIndex((t) => t.report?.seq === report.report?.seq)
+  );
 
   if (showDigitalReports) {
     combinedPhysicalReports.sort(
@@ -205,7 +209,9 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                   return (
                     <div
                       key={item.report?.seq || idx}
-                      onClick={() => onReportClick(item)}
+                      onClick={() => {
+                        onReportClick(item);
+                      }}
                       className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${
                         isSelected
                           ? "border-blue-400 bg-blue-600/20 text-white"
