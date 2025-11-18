@@ -31,7 +31,7 @@ export default function AreasAdminPage() {
 
   // Check authentication
   if (!isLoading && !isAuthenticated) {
-    router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+    router.replace(`/login?redirect=${encodeURIComponent(router.asPath)}`);
     return null;
   }
 

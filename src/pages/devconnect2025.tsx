@@ -20,7 +20,7 @@ export default function Devconnect2025Page() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      router.replace(`/login?redirect=${encodeURIComponent(router.asPath)}`);
     }
   }, [isAuthenticated, isLoading, router]);
 
