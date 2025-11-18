@@ -12,7 +12,7 @@ export default function NewYorkPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      router.replace(`/login?redirect=${encodeURIComponent(router.asPath)}`);
     }
   }, [isAuthenticated, isLoading, router]);
 

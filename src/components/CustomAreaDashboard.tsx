@@ -43,7 +43,7 @@ function CustomAreaDashboard({
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.replace("/");
   };
 
   // Dynamically import the entire map component to avoid SSR issues

@@ -42,9 +42,9 @@ export default function SignupPage() {
       const redirectUrl = sessionStorage.getItem('authRedirect');
       if (redirectUrl) {
         sessionStorage.removeItem('authRedirect');
-        router.push(redirectUrl);
+        router.replace(redirectUrl);
       } else {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || t('failedToCreateAccount'));
