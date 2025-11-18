@@ -83,8 +83,20 @@ const LatestReports: React.FC<LatestReportsProps> = ({
       index === self.findIndex((t) => t.report?.seq === report.report?.seq)
   );
 
+  combinedPhysicalReports.sort(
+    (a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+      const timeA = a.report?.timestamp
+        ? new Date(a.report.timestamp).getTime()
+        : 0;
+      const timeB = b.report?.timestamp
+        ? new Date(b.report.timestamp).getTime()
+        : 0;
+      return timeB - timeA; // Descending order (newest first)
+    }
+  );
+
   if (showDigitalReports) {
-    combinedPhysicalReports.sort(
+    digitalReportsbyTags.sort(
       (a: ReportWithAnalysis, b: ReportWithAnalysis) => {
         const timeA = a.report?.timestamp
           ? new Date(a.report.timestamp).getTime()
