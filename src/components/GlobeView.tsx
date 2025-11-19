@@ -2055,12 +2055,32 @@ export default function GlobeView() {
         ) {
           const classification = toAppend[0].analysis[0].classification;
           if (classification === "physical") {
-            // Update lite arrays for map
-            appendPhysicalLiteV2(toAppend as any);
+            for (const report of toAppend) {
+              // Update lite arrays for map
+              appendPhysicalLiteV2([
+                {
+                  classification: "physical",
+                  seq: report.report.seq,
+                  latitude: report.report.latitude,
+                  longitude: report.report.longitude,
+                  severity_level: report.analysis[0].severity_level,
+                } as PhysicalReportResponse,
+              ]);
+            }
             // Update full arrays for list
             appendPhysicalFull(toAppend);
           } else {
-            appendDigitalLiteV2(toAppend as any);
+            for (const report of toAppend) {
+              appendDigitalLiteV2([
+                {
+                  classification: "digital",
+                  brand_name: report.analysis[0]?.brand_name || "other",
+                  brand_display_name:
+                    report.analysis[0]?.brand_display_name || "Other",
+                  total: report.analysis[0]?.total || 1,
+                } as DigitalReportResponse,
+              ]);
+            }
             appendDigitalFull(toAppend);
           }
         }
