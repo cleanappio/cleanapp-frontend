@@ -10,9 +10,13 @@ interface LatestReportsProps {
   isModalActive?: boolean;
   selectedReport?: ReportWithAnalysis | null;
   showDigitalReports?: boolean;
+  digitalReports?: ReportWithAnalysis[];
+  disableFetching?: boolean;
+  activeTab?: "physical" | "digital";
+  onTabChange?: (tab: "physical" | "digital") => void;
 }
 
-const brands = [
+export const brands = [
   "devconnect",
   "efdevcon",
   "get_para",
@@ -53,38 +57,71 @@ const LatestReports: React.FC<LatestReportsProps> = ({
   isModalActive = false,
   selectedReport = null,
   showDigitalReports = false, // Currently used only in devconnect dashboard
+  digitalReports = [],
+  disableFetching = false,
+  activeTab,
+  onTabChange,
 }) => {
   const { t } = useTranslations();
   const locale = getCurrentLocale();
   const isMobile = useIsMobile();
 
-  const [selectedTab, setSelectedTab] = useState<"physical" | "digital">(
-    "physical"
-  );
+  const [internalSelectedTab, setInternalSelectedTab] = useState<
+    "physical" | "digital"
+  >("physical");
+
+  const selectedTab = activeTab || internalSelectedTab;
+
+  const handleTabChange = (tab: "physical" | "digital") => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setInternalSelectedTab(tab);
+    }
+  };
 
   const {
     reports: reportsByTags,
     loading: reportsByTagsLoading,
     error: reportsByTagsError,
-  } = useReportsByTags(brands, 10, showDigitalReports);
+  } = useReportsByTags(brands, 10, showDigitalReports && !disableFetching);
 
-  const digitalReportsbyTags = reportsByTags.filter(
-    (report: ReportWithAnalysis) =>
-      report.analysis?.[0]?.classification === "digital"
-  );
+  // If fetching is disabled, we rely on props
+  const finalDigitalReports = disableFetching
+    ? digitalReports
+    : reportsByTags.filter(
+        (report: ReportWithAnalysis) =>
+          report.analysis?.[0]?.classification === "digital"
+      );
 
-  const physicalReportsbyTags = reportsByTags.filter(
-    (report: ReportWithAnalysis) =>
-      report.analysis?.[0]?.classification === "physical"
-  );
+  const finalPhysicalReports = disableFetching
+    ? reports // In disableFetching mode, 'reports' prop is assumed to be the full combined list
+    : (() => {
+        const physicalReportsbyTags = reportsByTags.filter(
+          (report: ReportWithAnalysis) =>
+            report.analysis?.[0]?.classification === "physical"
+        );
 
-  const combinedPhysicalReports = [...reports, ...physicalReportsbyTags].filter(
-    (report, index, self) =>
-      index === self.findIndex((t) => t.report?.seq === report.report?.seq)
-  );
+        const combined = [...reports, ...physicalReportsbyTags].filter(
+          (report, index, self) =>
+            index ===
+            self.findIndex((t) => t.report?.seq === report.report?.seq)
+        );
 
-  combinedPhysicalReports.sort(
-    (a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+        combined.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+          const timeA = a.report?.timestamp
+            ? new Date(a.report.timestamp).getTime()
+            : 0;
+          const timeB = b.report?.timestamp
+            ? new Date(b.report.timestamp).getTime()
+            : 0;
+          return timeB - timeA; // Descending order (newest first)
+        });
+        return combined;
+      })();
+
+  if (showDigitalReports && !disableFetching) {
+    finalDigitalReports.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
       const timeA = a.report?.timestamp
         ? new Date(a.report.timestamp).getTime()
         : 0;
@@ -92,21 +129,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
         ? new Date(b.report.timestamp).getTime()
         : 0;
       return timeB - timeA; // Descending order (newest first)
-    }
-  );
-
-  if (showDigitalReports) {
-    digitalReportsbyTags.sort(
-      (a: ReportWithAnalysis, b: ReportWithAnalysis) => {
-        const timeA = a.report?.timestamp
-          ? new Date(a.report.timestamp).getTime()
-          : 0;
-        const timeB = b.report?.timestamp
-          ? new Date(b.report.timestamp).getTime()
-          : 0;
-        return timeB - timeA; // Descending order (newest first)
-      }
-    );
+    });
   }
 
   return (
@@ -129,7 +152,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
               className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${
                 selectedTab === "physical" ? "text-blue-400" : ""
               }`}
-              onClick={() => setSelectedTab("physical")}
+              onClick={() => handleTabChange("physical")}
             >
               {t("physical")}
             </p>
@@ -138,7 +161,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
               className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${
                 selectedTab === "digital" ? "text-blue-400" : ""
               }`}
-              onClick={() => setSelectedTab("digital")}
+              onClick={() => handleTabChange("digital")}
             >
               {t("digital")}
             </p>
@@ -149,10 +172,10 @@ const LatestReports: React.FC<LatestReportsProps> = ({
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
-            ) : combinedPhysicalReports.length === 0 ? (
+            ) : finalPhysicalReports.length === 0 ? (
               <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
             ) : (
-              combinedPhysicalReports.map((item, idx) => {
+              finalPhysicalReports.map((item, idx) => {
                 const isSelected =
                   selectedReport?.report?.seq === item.report?.seq;
 
@@ -199,14 +222,14 @@ const LatestReports: React.FC<LatestReportsProps> = ({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto scrollbar-hide">
-            {reportsByTagsLoading ? (
+            {(disableFetching ? loading : reportsByTagsLoading) ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
             ) : reportsByTagsError ? (
               <p className="text-xs text-gray-400">{reportsByTagsError}</p>
-            ) : digitalReportsbyTags.length === 0 ? (
+            ) : finalDigitalReports.length === 0 ? (
               <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
             ) : (
-              digitalReportsbyTags.map(
+              finalDigitalReports.map(
                 (item: ReportWithAnalysis, idx: number) => {
                   const isSelected =
                     selectedReport?.report?.seq === item.report?.seq;

@@ -106,9 +106,12 @@ export const useReportsByTags = (
       }
     };
 
-    if (useTags) {
-      fetchReports();
+    if (!useTags) {
+      setLoading(false);
+      return;
     }
+
+    fetchReports();
   }, [tags, limit, useTags]);
 
   return { reports, loading, error };

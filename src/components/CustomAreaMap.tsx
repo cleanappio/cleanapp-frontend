@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
+import { useEffect, useRef, useState, useCallback, memo, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -24,10 +24,11 @@ import {
   getCurrentLocale,
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
-import LatestReports from "./LatestReports";
+import LatestReports, { brands } from "./LatestReports";
 import CustomDashboardReport from "./CustomDashboardReport";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 import { ReportWithAnalysis } from "./GlobeView";
+import { useReportsByTags } from "@/hooks/useReportsByTag";
 
 // ReportStats structure
 interface ReportStats {
@@ -96,6 +97,7 @@ function CustomAreaMap({
   const [municipalitiesRate, setMunicipalitiesRate] = useState<
     Map<number, ReportStats>
   >(new Map());
+  const [activeTab, setActiveTab] = useState<"physical" | "digital">("physical");
   const { t } = useTranslations();
   const locale = getCurrentLocale();
 
@@ -155,6 +157,55 @@ function CustomAreaMap({
     setIsCleanAppProOpen(true);
   };
 
+  // Fetch reports by tags logic lifted from LatestReports
+  const {
+    reports: reportsByTags,
+    loading: reportsByTagsLoading,
+    error: reportsByTagsError,
+  } = useReportsByTags(brands, 10, showDigitalReports);
+
+  const digitalReports = useMemo(() => {
+    const filtered = reportsByTags.filter(
+      (report: ReportWithAnalysis) =>
+        report.analysis?.[0]?.classification === "digital"
+    );
+    return filtered.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+      const timeA = a.report?.timestamp
+        ? new Date(a.report.timestamp).getTime()
+        : 0;
+      const timeB = b.report?.timestamp
+        ? new Date(b.report.timestamp).getTime()
+        : 0;
+      return timeB - timeA;
+    });
+  }, [reportsByTags]);
+
+  const combinedPhysicalReports = useMemo(() => {
+    const physicalReportsbyTags = reportsByTags.filter(
+      (report: ReportWithAnalysis) =>
+        report.analysis?.[0]?.classification === "physical"
+    );
+
+    const combined = [...reports, ...physicalReportsbyTags].filter(
+      (report, index, self) =>
+        index === self.findIndex((t) => t.report?.seq === report.report?.seq)
+    );
+
+    return combined.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+      const timeA = a.report?.timestamp
+        ? new Date(a.report.timestamp).getTime()
+        : 0;
+      const timeB = b.report?.timestamp
+        ? new Date(b.report.timestamp).getTime()
+        : 0;
+      return timeB - timeA;
+    });
+  }, [reports, reportsByTags]);
+
+  // Determine the current list of reports based on the active tab
+  const currentReportList =
+    activeTab === "physical" ? combinedPhysicalReports : digitalReports;
+
   const handleReportFixed = (reportSeq: number) => {
     // Remove the fixed report from the reports list
     setReports((prevReports) =>
@@ -169,6 +220,30 @@ function CustomAreaMap({
     // Refresh the aggregated data
     fetchAreaAggrData();
   };
+
+  const handleNextReport = useCallback(() => {
+    if (!selectedReport || currentReportList.length === 0) return;
+
+    const currentIndex = currentReportList.findIndex(
+      (r) => r.report.seq === selectedReport.report.seq
+    );
+
+    if (currentIndex !== -1 && currentIndex < currentReportList.length - 1) {
+      setSelectedReport(currentReportList[currentIndex + 1]);
+    }
+  }, [selectedReport, currentReportList]);
+
+  const handlePreviousReport = useCallback(() => {
+    if (!selectedReport || currentReportList.length === 0) return;
+
+    const currentIndex = currentReportList.findIndex(
+      (r) => r.report.seq === selectedReport.report.seq
+    );
+
+    if (currentIndex > 0) {
+      setSelectedReport(currentReportList[currentIndex - 1]);
+    }
+  }, [selectedReport, currentReportList]);
 
   function getMunicipalityColor(osmId: number): string {
     if (!municipalitiesRate) {
@@ -239,6 +314,7 @@ function CustomAreaMap({
       setReportsLoading(false);
     }
   };
+
 
   // Fetch aggregated data for all areas
   const fetchAreaAggrData = async () => {
@@ -581,12 +657,16 @@ function CustomAreaMap({
       {viewMode === "Reports" && (
         <div className="hidden lg:block absolute left-4 bottom-8 z-[1000] w-80 h-96">
           <LatestReports
-            reports={reports}
-            loading={reportsLoading}
+            reports={combinedPhysicalReports}
+            loading={reportsLoading || reportsByTagsLoading}
             onReportClick={handleReportClick}
             isModalActive={false}
             selectedReport={selectedReport}
             showDigitalReports={showDigitalReports}
+            digitalReports={digitalReports}
+            disableFetching={true}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
         </div>
       )}
@@ -599,6 +679,21 @@ function CustomAreaMap({
             setIsCleanAppProOpen(false);
           }}
           onReportFixed={handleReportFixed}
+          onNext={
+            currentReportList.findIndex(
+              (r) => r.report.seq === selectedReport.report.seq
+            ) <
+            currentReportList.length - 1
+              ? handleNextReport
+              : undefined
+          }
+          onPrevious={
+            currentReportList.findIndex(
+              (r) => r.report.seq === selectedReport.report.seq
+            ) > 0
+              ? handlePreviousReport
+              : undefined
+          }
         />
       )}
     </div>

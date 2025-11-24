@@ -9,7 +9,7 @@ import {
 } from "@/lib/i18n";
 import { reportProcessingApiClient } from "@/lib/report-processing-api-client";
 import Link from "next/link";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   MapContainer,
   TileLayer,
@@ -40,12 +40,16 @@ interface CustomDashboardReportProps {
   reportItem: ReportWithAnalysis | null;
   onClose?: () => void;
   onReportFixed?: (reportSeq: number) => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
 }
 
 const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   reportItem,
   onClose,
   onReportFixed,
+  onNext,
+  onPrevious,
 }) => {
   const { isAuthenticated } = useAuthStore();
   const [fullReport, setFullReport] = useState<any>(null);
@@ -819,7 +823,33 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       >
         {/* Image Section */}
         <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6">
-          <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center min-h-64 lg:h-full">
+          <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center min-h-64 lg:h-full relative group">
+            {onPrevious && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPrevious();
+                }}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                title={t("previousReport") || "Previous Report"}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {onNext && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                title={t("nextReport") || "Next Report"}
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
             {imageUrl && !imageError ? (
               <Image
                 src={imageUrl}
