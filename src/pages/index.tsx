@@ -18,20 +18,20 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>CleanApp - Real-time Environmental Monitoring</title>
+        <title>CleanApp - Trash is cash</title>
         <meta
           name="description"
-          content="Track environmental issues in real-time. Monitor litter, hazards, and digital pollution with AI-powered insights and live data alerts."
+          content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix."
         />
 
         {/* Open Graph Meta Tags */}
         <meta
           property="og:title"
-          content="CleanApp - Real-time Environmental Monitoring"
+          content="CleanApp - Trash is cash"
         />
         <meta
           property="og:description"
-          content="Track environmental issues in real-time. Monitor litter, hazards, and digital pollution with AI-powered insights and live data alerts."
+          content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix."
         />
         <meta
           property="og:image"
@@ -47,11 +47,11 @@ export default function Home() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="CleanApp - Real-time Environmental Monitoring"
+          content="CleanApp - Trash is cash"
         />
         <meta
           name="twitter:description"
-          content="Track environmental issues in real-time. Monitor litter, hazards, and digital pollution with AI-powered insights and live data alerts."
+          content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix."
         />
         <meta
           name="twitter:image"

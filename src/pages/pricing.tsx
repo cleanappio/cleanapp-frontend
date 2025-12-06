@@ -75,7 +75,7 @@ export default function PricingPage() {
     },
     {
       id: 'lite',
-      name: t('cleanAppLive'),
+      name: 'CleanApp Pro',
       description: t('forBusinessesAndBrands'),
       apiPlanType: 'base',
       billingCycles: getPricesForPlan('base'),
@@ -153,6 +153,15 @@ export default function PricingPage() {
 
   const getPriceDisplay = (plan: SubscriptionPlan) => {
     const price = plan.billingCycles?.find((bc) => bc.type === billingCycle);
+
+    // Map currency codes to symbols
+    const currencySymbols: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+    };
+    const symbol = currencySymbols[price?.currency || 'USD'] || '$';
+
     if (!price) {
       return {
         monthly: 'Contact Sales',
@@ -161,12 +170,19 @@ export default function PricingPage() {
     }
     if (billingCycle === 'annual' && price) {
       return {
-        monthly: `${price.price / 12} ${price.currency}/mo`,
-        annual: `${price.price} ${price.currency}/yr`,
+        monthly: `${symbol}${(price.price / 12).toFixed(2)}/mo`,
+        annual: `${symbol}${price.price.toFixed(2)}/yr`,
+      };
+    }
+    // Show "FREE" for zero-price plans
+    if (price.price === 0) {
+      return {
+        monthly: 'FREE',
+        annual: null,
       };
     }
     return {
-      monthly: `${price.price} ${price.currency}/mo`,
+      monthly: `${symbol}${price.price.toFixed(2)}/mo`,
       annual: null,
     };
   };
@@ -218,7 +234,7 @@ export default function PricingPage() {
       <Head>
         <title>CleanApp Pricing - Environmental Monitoring Plans</title>
         <meta name="description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
-        
+
         {/* Open Graph Meta Tags */}
         <meta property="og:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
         <meta property="og:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
@@ -228,208 +244,204 @@ export default function PricingPage() {
         <meta property="og:image:type" content="image/png" />
         <meta property="og:url" content="https://cleanapp.io/pricing" />
         <meta property="og:type" content="website" />
-        
+
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
         <meta name="twitter:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
         <meta name="twitter:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
-        
+
         {/* Telegram Specific Meta Tags */}
         <meta name="telegram:channel" content="@cleanapp" />
         <meta name="telegram:site" content="@cleanapp" />
       </Head>
       <div className='min-h-screen bg-gray-50'>
-      {/* Header */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/cleanapp-logo.png"
-                  alt="CleanApp Logo"
-                  width={200}
-                  height={60}
-                  className="h-12 w-auto"
-                  priority
-                />
-              </Link>
-            </div>
+        {/* Header */}
+        <nav className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex">
+                <Link href="/" className="flex items-center">
+                  <Image
+                    src="/cleanapp-logo.png"
+                    alt="CleanApp Logo"
+                    width={200}
+                    height={60}
+                    className="h-12 w-auto"
+                    priority
+                  />
+                </Link>
+              </div>
 
-            <div className="flex items-center space-x-4">
-              <LanguageSwitcher />
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-700">{user?.email}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="space-x-4">
-                  <Link
-                    href="/login"
-                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                  >
-                    {t('signIn')}
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    {t('getStarted')}
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-            <div className='py-12 px-4 sm:px-6 lg:px-8'>
-        <div className='max-w-7xl mx-auto'>
-          <Link href='/'>
-            <button className='flex items-center text-gray-600 hover:text-gray-900 mb-8'>
-              <FaArrowLeftLong className='w-4 h-4 mr-2' />
-              {t('backToMap')}
-            </button>
-          </Link>
-          {/* Header */}
-          <div className='text-center mb-12'>
-            <div className='flex justify-center mb-4'>
-              <Image
-                src='/cleanapp-logo-high-res.png'
-                alt='CleanApp Logo'
-                width={125}
-                height={100}
-              />
-            </div>
-            <h1 className='text-5xl font-bold text-gray-900 mb-4'>
-              {t('trashIsCash')}
-            </h1>
-            <p className='text-xl text-gray-600'>
-              {t('liveInsightsLowerCosts')} <span className='font-bold'>{t('muchHigherMargins')}</span>
-            </p>
-          </div>
-
-        {/* Billing Toggle - Only show if there are paid plans */}
-        <div className='flex justify-center mb-12'>
-          <div className='bg-white rounded-full shadow-sm p-1 inline-flex'>
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                billingCycle === 'monthly'
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {t('monthly')}
-            </button>
-            <button
-              onClick={() => setBillingCycle('annual')}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                billingCycle === 'annual'
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {t('annual')} <span className='text-sm'>({t('discount')})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Plans Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg shadow-sm border ${
-                plan.id === 'lite' ? 'ring-2 ring-green-600 shadow-lg' : ''
-              }`}
-            >
-              {/* Current Plan Badge */}
-              {isCurrentPlan(plan) && (
-                <div className='absolute top-4 left-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full z-10'>
-                  Current Plan
-                </div>
-              )}
-
-              {/* Plan Image */}
-              <div className='h-40 relative overflow-hidden'>
-                <Image
-                  src={plan.imageSrc || '/api/placeholder/400/300'}
-                  alt={`${plan.name} plan`}
-                  width={400}
-                  height={160}
-                  className='w-full h-full object-cover'
-                  priority={plan.popular}
-                />
-                {plan.popular && !isCurrentPlan(plan) && (
-                  <div className='absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full'>
-                    Popular
+              <div className="flex items-center space-x-4">
+                <LanguageSwitcher />
+                {isAuthenticated ? (
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-700">{user?.email}</span>
+                    <button
+                      onClick={handleLogout}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-x-4">
+                    <Link
+                      href="/login"
+                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                      {t('signIn')}
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      {t('getStarted')}
+                    </Link>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </nav>
 
-              {/* Plan Details */}
-              <div className='p-6'>
-                {/* Plan Name and Price */}
-                <div className='text-center mb-6'>
-                  <h3 className='text-2xl font-bold text-green-700 mb-2'>
-                    {plan.name}
-                  </h3>
-                  <p>{plan.description}</p>
+        <div className='py-12 px-4 sm:px-6 lg:px-8'>
+          <div className='max-w-7xl mx-auto'>
+            <Link href='/'>
+              <button className='flex items-center text-gray-600 hover:text-gray-900 mb-8'>
+                <FaArrowLeftLong className='w-4 h-4 mr-2' />
+                {t('backToMap')}
+              </button>
+            </Link>
+            {/* Header */}
+            <div className='text-center mb-12'>
+              <div className='flex justify-center mb-4'>
+                <Image
+                  src='/cleanapp-logo-high-res.png'
+                  alt='CleanApp Logo'
+                  width={125}
+                  height={100}
+                />
+              </div>
+              <h1 className='text-5xl font-bold text-gray-900 mb-4'>
+                {t('trashIsCash')}
+              </h1>
+              <p className='text-xl text-gray-600'>
+                {t('liveInsightsLowerCosts')} <span className='font-bold'>{t('muchHigherMargins')}</span>
+              </p>
+            </div>
 
-                  <p className='text-3xl font-bold text-gray-900 mt-4'>
-                    {getPriceDisplay(plan).monthly}
-                  </p>
-                  {billingCycle === 'annual' && (
-                    <p className='text-sm text-gray-600 mt-1'>
-                      {getPriceDisplay(plan).annual}
-                    </p>
-                  )}
-                </div>
-
-                {/* Features */}
-                <ul className='space-y-3 mb-6 min-h-[200px]'>
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className='flex items-start'>
-                      <Check className='w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5' />
-                      <span className='text-sm text-gray-700 leading-tight'>
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA Button */}
+            {/* Billing Toggle - Only show if there are paid plans */}
+            <div className='flex justify-center mb-12'>
+              <div className='bg-white rounded-full shadow-sm p-1 inline-flex'>
                 <button
-                  onClick={() => handleSelectPlan(plan)}
-                  disabled={isCurrentPlan(plan)}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${getButtonStyle(
-                    plan
-                  )} ${
-                    isCurrentPlan(plan) ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-4 py-2 rounded-full transition-colors ${billingCycle === 'monthly'
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
-                  {getButtonText(plan)}
-                  {!isCurrentPlan(plan) &&
-                    !plan.customPricing &&
-                    plan.id !== 'free' && (
-                      <ChevronRight className='w-4 h-4 ml-2' />
-                    )}
+                  {t('monthly')}
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`px-4 py-2 rounded-full transition-colors ${billingCycle === 'annual'
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {t('annual')} <span className='text-sm'>({t('discount')})</span>
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Plans Grid */}
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {plans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg shadow-sm border ${plan.id === 'lite' ? 'ring-2 ring-green-600 shadow-lg' : ''
+                    }`}
+                >
+                  {/* Current Plan Badge */}
+                  {isCurrentPlan(plan) && (
+                    <div className='absolute top-4 left-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full z-10'>
+                      Current Plan
+                    </div>
+                  )}
+
+                  {/* Plan Image */}
+                  <div className='h-40 relative overflow-hidden'>
+                    <Image
+                      src={plan.imageSrc || '/api/placeholder/400/300'}
+                      alt={`${plan.name} plan`}
+                      width={400}
+                      height={160}
+                      className='w-full h-full object-cover'
+                      priority={plan.popular}
+                    />
+                    {plan.popular && !isCurrentPlan(plan) && (
+                      <div className='absolute top-4 right-4 bg-green-600 text-white px-3 py-1 text-sm font-semibold rounded-full'>
+                        Popular
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Plan Details */}
+                  <div className='p-6'>
+                    {/* Plan Name and Price */}
+                    <div className='text-center mb-6'>
+                      <h3 className='text-2xl font-bold text-green-700 mb-2'>
+                        {plan.name}
+                      </h3>
+                      <p>{plan.description}</p>
+
+                      <p className='text-3xl font-bold text-gray-900 mt-4'>
+                        {getPriceDisplay(plan).monthly}
+                      </p>
+                      {billingCycle === 'annual' && (
+                        <p className='text-sm text-gray-600 mt-1'>
+                          {getPriceDisplay(plan).annual}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Features */}
+                    <ul className='space-y-3 mb-6 min-h-[200px]'>
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className='flex items-start'>
+                          <Check className='w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5' />
+                          <span className='text-sm text-gray-700 leading-tight'>
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA Button */}
+                    <button
+                      onClick={() => handleSelectPlan(plan)}
+                      disabled={isCurrentPlan(plan)}
+                      className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${getButtonStyle(
+                        plan
+                      )} ${isCurrentPlan(plan) ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                    >
+                      {getButtonText(plan)}
+                      {!isCurrentPlan(plan) &&
+                        !plan.customPricing &&
+                        plan.id !== 'free' && (
+                          <ChevronRight className='w-4 h-4 ml-2' />
+                        )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
