@@ -238,7 +238,7 @@ export default function PricingPage() {
         {/* Open Graph Meta Tags */}
         <meta property="og:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
         <meta property="og:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
-        <meta property="og:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
+        <meta property="og:image" content="https://cleanapp.io/cleanapp-social-card.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
@@ -249,7 +249,7 @@ export default function PricingPage() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="CleanApp Pricing - Environmental Monitoring Plans" />
         <meta name="twitter:description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
-        <meta name="twitter:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
+        <meta name="twitter:image" content="https://cleanapp.io/cleanapp-social-card.png" />
 
         {/* Telegram Specific Meta Tags */}
         <meta name="telegram:channel" content="@cleanapp" />

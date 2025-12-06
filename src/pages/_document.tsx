@@ -20,10 +20,10 @@ export default function Document() {
         <meta property="og:type" content="website" />
         <meta property="og:title" content="CleanApp - Trash is cash" />
         <meta property="og:description" content="The world's easiest & most rewarding feedback tool. With just 1-click, CleanApp turns complaints & feature requests into massive opportunities for brands, property owners, and cities. Users get paid to spot glitches in the matrix & train AI. Firms subscribe to lower risk & boost profits. Win-win-win." />
-        <meta property="og:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
+        <meta property="og:image" content="https://cleanapp.io/cleanapp-social-card.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="CleanApp Logo - Environmental Monitoring Platform" />
+        <meta property="og:image:alt" content="CleanApp - Trash is Cash" />
         <meta property="og:image:type" content="image/png" />
         <meta property="og:url" content="https://cleanapp.io" />
         <meta property="og:site_name" content="CleanApp" />
@@ -35,8 +35,8 @@ export default function Document() {
         <meta name="twitter:creator" content="@cleanapp" />
         <meta name="twitter:title" content="CleanApp - Trash is cash" />
         <meta name="twitter:description" content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix." />
-        <meta name="twitter:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
-        <meta name="twitter:image:alt" content="CleanApp Logo - Environmental Monitoring Platform" />
+        <meta name="twitter:image" content="https://cleanapp.io/cleanapp-social-card.png" />
+        <meta name="twitter:image:alt" content="CleanApp - Trash is Cash" />
 
         {/* Telegram Specific Meta Tags */}
         <meta name="telegram:channel" content="@cleanapp" />
