@@ -2790,9 +2790,8 @@ export default function GlobeView() {
 
           <div
             ref={menuRef}
-            className={`px-3 py-2 bg-gray-900 rounded-md mt-4 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
-              isMenuOpen ? "block" : "hidden"
-            }`}
+            className={`px-3 py-2 bg-gray-900 rounded-md mt-4 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${isMenuOpen ? "block" : "hidden"
+              }`}
           >
             {/* Language Switcher */}
             <div className="px-4 py-2">
@@ -2848,17 +2847,15 @@ export default function GlobeView() {
       {/* Drawing mode toggle button */}
       {!isDigital && (
         <div
-          className={`absolute ${
-            isEmbeddedMode ? "top-4" : "top-20"
-          } right-4 z-10 flex flex-col gap-2`}
+          className={`absolute ${isEmbeddedMode ? "top-4" : "top-20"
+            } right-4 z-10 flex flex-col gap-2`}
         >
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
-            className={`p-3 rounded-md border transition-colors ${
-              enableDrawing
+            className={`p-3 rounded-md border transition-colors ${enableDrawing
                 ? "bg-purple-600 border-purple-500 text-white"
                 : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-            }`}
+              }`}
             title={
               enableDrawing ? "Disable drawing mode" : "Enable drawing mode"
             }
@@ -2882,22 +2879,20 @@ export default function GlobeView() {
             <div className="flex flex-col gap-1 bg-gray-800 border border-gray-700 rounded-md p-1">
               <button
                 onClick={() => setDrawMode("rectangle")}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
-                  drawMode === "rectangle"
+                className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "rectangle"
                     ? "bg-purple-600 text-white"
                     : "text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
                 title="Rectangle drawing mode"
               >
                 Rectangle
               </button>
               <button
                 onClick={() => setDrawMode("freehand")}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
-                  drawMode === "freehand"
+                className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "freehand"
                     ? "bg-purple-600 text-white"
                     : "text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
                 title="Freehand drawing mode"
               >
                 Freehand
@@ -3031,7 +3026,7 @@ export default function GlobeView() {
               lastFetchedSeqRef.current = null;
               const { lat, lon } = stringToLatLonColor(
                 (digitalReport as DigitalReportResponse)?.brand_name ||
-                  brandName
+                brandName
               );
               flyToReport({ lon: lon, lat: lat });
               // Update URL with brand_name parameter for digital reports
@@ -3061,39 +3056,11 @@ export default function GlobeView() {
         report={selectedReport as ReportWithAnalysis | null}
       />
 
-      {/* Bottom center logo */}
-      {!isEmbeddedMode && (
-        <div
-          className={`${
-            isMobile ? "bg-black" : "bg-black/10"
-          } p-2 text-center text-white text-sm absolute bottom-0 ${
-            isMobile ? "right-0 left-0" : "right-1/3 left-1/3"
-          } z-10`}
-        >
-          <Link href={"https://stxn.io/"} target="_blank">
-            <div className="flex items-center justify-center gap-2">
-              <span>{t("poweredBy")}</span>
-              <span>
-                <Image
-                  src={"/stxn.svg"}
-                  alt={"STXN Logo"}
-                  width={"24"}
-                  height={"24"}
-                  style={{ height: "14px", width: "auto" }}
-                />
-              </span>
-              <span className="underline underline-offset-4">
-                {"Smart Transactions"}
-              </span>
-            </div>
-          </Link>
-        </div>
-      )}
+
 
       <div
-        className={`absolute ${
-          isMobile ? `bottom-12 right-20` : "bottom-10 right-4"
-        }`}
+        className={`absolute ${isMobile ? `bottom-12 right-20` : "bottom-10 right-4"
+          }`}
       >
         <ReportCounter selectedTab={selectedTab} />
       </div>
@@ -3115,11 +3082,11 @@ export default function GlobeView() {
         report={selectedReport}
         seq={seq}
         reportWithAnalysis={reportWithAnalysis}
-        // allReports={latestReportsWithAnalysis}
-        // onReportChange={(report) => {
-        //   // setSelectedReport(report);
-        //   // flyToReport(report);
-        // }}
+      // allReports={latestReportsWithAnalysis}
+      // onReportChange={(report) => {
+      //   // setSelectedReport(report);
+      //   // flyToReport(report);
+      // }}
       />
     </div>
   );
