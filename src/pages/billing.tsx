@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -48,7 +49,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
   const [cardholderName, setCardholderName] = useState('');
   const [email, setEmail] = useState(user?.email || '');
   const [setAsDefault, setSetAsDefault] = useState(false);
-  
+
   // Billing address fields
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -106,7 +107,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
       // Add payment method via store
       await addPaymentMethod(paymentMethod.id, setAsDefault);
-      
+
       toast.success('Payment method added successfully!');
       onSuccess();
     } catch (error: any) {
@@ -171,7 +172,7 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
         {/* Billing Address Section */}
         <div className="border-t pt-4">
           <h4 className="text-md font-medium text-gray-900 mb-3">{t('billing_address')}</h4>
-          
+
           <div className="space-y-4">
             <div>
               <label htmlFor="address-line1" className="block text-sm font-medium text-gray-700 mb-1">
@@ -312,11 +313,11 @@ function PaymentMethodForm({ onSuccess, onCancel }: PaymentMethodFormProps) {
 
 function BillingPageContent() {
   const router = useRouter();
-  const { 
+  const {
     isAuthenticated,
     isLoading,
-    subscription, 
-    paymentMethods, 
+    subscription,
+    paymentMethods,
     billingHistory,
     billingLoading,
     fetchBillingData,
@@ -325,7 +326,7 @@ function BillingPageContent() {
     setDefaultPaymentMethod,
     downloadInvoice
   } = useAuthStore();
-  
+
   const [cancelling, setCancelling] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const { t } = useTranslations();
@@ -437,200 +438,201 @@ function BillingPageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>CleanApp - Billing</title>
+      </Head>
       <PageHeader />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('billing_subscription')}</h1>
 
-      {/* Current Subscription */}
-      <div className="bg-white rounded-lg shadow mb-8 p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('current_subscription')}</h2>
-        {subscription ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">{t('plan')}</p>
-                <p className="font-semibold">{formatPlanName(subscription.plan_type)}</p>
+        {/* Current Subscription */}
+        <div className="bg-white rounded-lg shadow mb-8 p-6">
+          <h2 className="text-xl font-semibold mb-4">{t('current_subscription')}</h2>
+          {subscription ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">{t('plan')}</p>
+                  <p className="font-semibold">{formatPlanName(subscription.plan_type)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">{t('billing_cycle')}</p>
+                  <p className="font-semibold capitalize">{subscription.billing_cycle}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">{t('status')}</p>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subscription.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {subscription.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">{t('next_billing_date')}</p>
+                  <p className="font-semibold">{formatDate(subscription.next_billing_date)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">{t('billing_cycle')}</p>
-                <p className="font-semibold capitalize">{subscription.billing_cycle}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">{t('status')}</p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  subscription.status === 'active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {subscription.status}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">{t('next_billing_date')}</p>
-                <p className="font-semibold">{formatDate(subscription.next_billing_date)}</p>
+
+              <div className="pt-4 border-t flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                >
+                  {t('change_plan')}
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={cancelling}
+                  className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                >
+                  {cancelling ? t('cancelling') : t('cancel_subscription')}
+                </button>
               </div>
             </div>
-            
-            <div className="pt-4 border-t flex flex-col sm:flex-row gap-4">
+          ) : (
+            <div>
+              <p className="text-gray-600 mb-4">{t('no_active_subscription')}</p>
               <button
                 onClick={() => router.push('/pricing')}
                 className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
               >
-                {t('change_plan')}
-              </button>
-              <button
-                onClick={handleCancelSubscription}
-                disabled={cancelling}
-                className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-              >
-                {cancelling ? t('cancelling') : t('cancel_subscription')}
+                {t('view_plans')}
               </button>
             </div>
-          </div>
-        ) : (
-          <div>
-            <p className="text-gray-600 mb-4">{t('no_active_subscription')}</p>
+          )}
+        </div>
+
+        {/* Payment Methods */}
+        <div className="bg-white rounded-lg shadow mb-8 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">{t('payment_methods')}</h2>
             <button
-              onClick={() => router.push('/pricing')}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+              onClick={() => setShowAddPaymentForm(!showAddPaymentForm)}
+              className="flex items-center text-green-600 hover:text-green-700 font-medium"
             >
-              {t('view_plans')}
+              <Plus className="w-4 h-4 mr-1" />
+              {t('add_new')}
+              {showAddPaymentForm ? (
+                <ChevronUp className="w-4 h-4 ml-1" />
+              ) : (
+                <ChevronDown className="w-4 h-4 ml-1" />
+              )}
             </button>
           </div>
-        )}
-      </div>
 
-      {/* Payment Methods */}
-      <div className="bg-white rounded-lg shadow mb-8 p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">{t('payment_methods')}</h2>
-          <button
-            onClick={() => setShowAddPaymentForm(!showAddPaymentForm)}
-            className="flex items-center text-green-600 hover:text-green-700 font-medium"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {t('add_new')}
-            {showAddPaymentForm ? (
-              <ChevronUp className="w-4 h-4 ml-1" />
-            ) : (
-              <ChevronDown className="w-4 h-4 ml-1" />
-            )}
-          </button>
-        </div>
-        
-        {showAddPaymentForm && (
-          <PaymentMethodForm
-            onSuccess={handlePaymentMethodAdded}
-            onCancel={() => setShowAddPaymentForm(false)}
-          />
-        )}
-        
-        {paymentMethods && paymentMethods.length > 0 ? (
-          <div className="space-y-3">
-            {paymentMethods.map((method) => (
-              <div key={method.id} className="border rounded-lg p-4 flex items-center justify-between">
-                <div className="flex items-center">
-                  <CreditCard className="w-8 h-8 text-gray-400 mr-4" />
-                  <div>
-                    <p className="font-medium">
-                      {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {t('expires')} {method.exp_month}/{method.exp_year}
-                    </p>
+          {showAddPaymentForm && (
+            <PaymentMethodForm
+              onSuccess={handlePaymentMethodAdded}
+              onCancel={() => setShowAddPaymentForm(false)}
+            />
+          )}
+
+          {paymentMethods && paymentMethods.length > 0 ? (
+            <div className="space-y-3">
+              {paymentMethods.map((method) => (
+                <div key={method.id} className="border rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <CreditCard className="w-8 h-8 text-gray-400 mr-4" />
+                    <div>
+                      <p className="font-medium">
+                        {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last_four}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {t('expires')} {method.exp_month}/{method.exp_year}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {!method.is_default && (
+                      <button
+                        onClick={() => handleSetDefaultPaymentMethod(method.id)}
+                        className="text-sm text-green-600 hover:text-green-700"
+                      >
+                        {t('set_as_default')}
+                      </button>
+                    )}
+                    {method.is_default && (
+                      <span className="ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {t('default')}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleDeletePaymentMethod(method.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {!method.is_default && (
-                    <button
-                      onClick={() => handleSetDefaultPaymentMethod(method.id)}
-                      className="text-sm text-green-600 hover:text-green-700"
-                    >
-                      {t('set_as_default')}
-                    </button>
-                  )}
-                  {method.is_default && (
-                    <span className="ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {t('default')}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleDeletePaymentMethod(method.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-600">{t('no_payment_methods')}</p>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">{t('no_payment_methods')}</p>
+          )}
+        </div>
 
-      {/* Billing History */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('billing_history')}</h2>
-        {billingHistory && billingHistory.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('date')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('amount')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('status')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('invoice')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {billingHistory.map((record) => (
-                  <tr key={record.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(record.payment_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatPrice(record.amount)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        record.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : record.status === 'failed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button 
-                        onClick={() => handleDownloadInvoice(record.id)}
-                        className="text-green-600 hover:text-green-700"
-                        title={t('download_invoice')}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </td>
+        {/* Billing History */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">{t('billing_history')}</h2>
+          {billingHistory && billingHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('date')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('amount')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('status')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('invoice')}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-600">{t('no_billing_history')}</p>
-        )}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {billingHistory.map((record) => (
+                    <tr key={record.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(record.payment_date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatPrice(record.amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : record.status === 'failed'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button
+                          onClick={() => handleDownloadInvoice(record.id)}
+                          className="text-green-600 hover:text-green-700"
+                          title={t('download_invoice')}
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-600">{t('no_billing_history')}</p>
+          )}
+        </div>
       </div>
     </div>
-  </div>
   );
 }
 

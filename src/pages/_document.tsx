@@ -12,14 +12,14 @@ export default function Document() {
         <meta name="theme-color" content="#16a34a" />
 
         {/* Basic Meta Tags */}
-        <meta name="description" content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix." />
+        <meta name="description" content="The world's easiest & most rewarding feedback tool. With just 1-click, CleanApp turns complaints & feature requests into massive opportunities for brands, property owners, and cities. Users get paid to spot glitches in the matrix & train AI. Firms subscribe to lower risk & boost profits. Win-win-win." />
         <meta name="keywords" content="environmental monitoring, litter tracking, pollution detection, AI insights, real-time data, CleanApp, ground truth, physical hazards, digital bugs" />
         <meta name="author" content="CleanApp" />
 
         {/* Open Graph Meta Tags (Facebook, LinkedIn, WhatsApp, etc.) */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="CleanApp - Trash is cash" />
-        <meta property="og:description" content="CleanApp is ground truth for AI. CleanApp turns photos of physical hazards and digital bugs into live maps and risk insights for brands, property owners, and cities. Get paid to spot glitches in the matrix." />
+        <meta property="og:description" content="The world's easiest & most rewarding feedback tool. With just 1-click, CleanApp turns complaints & feature requests into massive opportunities for brands, property owners, and cities. Users get paid to spot glitches in the matrix & train AI. Firms subscribe to lower risk & boost profits. Win-win-win." />
         <meta property="og:image" content="https://cleanapp.io/cleanapp-logo-high-res.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />

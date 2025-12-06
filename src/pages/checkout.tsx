@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -96,7 +97,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
   };
 
   const updateBrand = (index: number, field: 'name' | 'isPublic', value: string | boolean) => {
-    setBrands(prev => prev.map((brand, i) => 
+    setBrands(prev => prev.map((brand, i) =>
       i === index ? { ...brand, [field]: value } : brand
     ));
   };
@@ -294,7 +295,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           // Step 3: Combine all area IDs (existing selected + newly created drawn)
           const allAreaIds = [...selectedAreaIds, ...drawnAreaIds];
           console.log(`Total area IDs for customer: ${allAreaIds.length} (${selectedAreaIds.length} selected + ${drawnAreaIds.length} drawn)`, allAreaIds);
-          
+
           // Step 4: Update customer with all area IDs
           const customerAreas = allAreaIds.map(areaId => ({
             customer_id: '', // Will be set by backend based on authenticated user
@@ -304,7 +305,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
           }));
           const updateResponse = await apiClient.updateCustomerAreas({ areas: customerAreas });
           console.log('Customer areas updated successfully:', updateResponse);
-          
+
           // Show success messages
           if (hasSelectedAreas) {
             toast.success(t('areasSelectedForSubscription', { count: selectedAreas.length, plural: selectedAreas.length !== 1 ? 's' : '' }));
@@ -523,8 +524,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                     <label
                       key={method.id}
                       className={`flex items-center p-3 border rounded-lg cursor-not-allowed transition-colors ${selectedPaymentMethod === method.stripe_payment_method_id
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200'
                         }`}
                     >
                       <input
@@ -621,6 +622,9 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+      <Head>
+        <title>CleanApp - Checkout</title>
+      </Head>
       {/* Auth Status Box */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center text-green-600">
@@ -744,8 +748,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                 <label
                   key={method.id}
                   className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${selectedPaymentMethod === method.stripe_payment_method_id
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <input
@@ -786,8 +790,8 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
                   }
                 }}
                 className={`w-full flex items-center justify-center p-3 border rounded-lg transition-colors ${showNewPaymentForm
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900'
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900'
                   }`}
               >
                 <Plus className="w-5 h-5 mr-2" />

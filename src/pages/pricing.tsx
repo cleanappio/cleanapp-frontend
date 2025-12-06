@@ -210,7 +210,7 @@ export default function PricingPage() {
     }
 
     // If no subscription (on free plan), show different text
-    return t('subscribeNow');
+    return t('subscribe');
   };
 
   const getButtonStyle = (plan: SubscriptionPlan) => {
@@ -232,7 +232,7 @@ export default function PricingPage() {
   return (
     <>
       <Head>
-        <title>CleanApp Pricing - Environmental Monitoring Plans</title>
+        <title>CleanApp - Pricing</title>
         <meta name="description" content="Choose the perfect CleanApp plan for your environmental monitoring needs. From free individual tracking to enterprise solutions with AI insights." />
 
         {/* Open Graph Meta Tags */}
@@ -361,7 +361,7 @@ export default function PricingPage() {
               {plans.map((plan) => (
                 <div
                   key={plan.id}
-                  className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg shadow-sm border ${plan.id === 'lite' ? 'ring-2 ring-green-600 shadow-lg' : ''
+                  className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg shadow-sm border flex flex-col ${plan.id === 'lite' ? 'ring-2 ring-green-600 shadow-lg' : ''
                     }`}
                 >
                   {/* Current Plan Badge */}
@@ -389,7 +389,7 @@ export default function PricingPage() {
                   </div>
 
                   {/* Plan Details */}
-                  <div className='p-6'>
+                  <div className='p-6 flex flex-col flex-grow'>
                     {/* Plan Name and Price */}
                     <div className='text-center mb-6'>
                       <h3 className='text-2xl font-bold text-green-700 mb-2'>
@@ -423,7 +423,7 @@ export default function PricingPage() {
                     <button
                       onClick={() => handleSelectPlan(plan)}
                       disabled={isCurrentPlan(plan)}
-                      className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${getButtonStyle(
+                      className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center mt-auto ${getButtonStyle(
                         plan
                       )} ${isCurrentPlan(plan) ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
@@ -441,7 +441,7 @@ export default function PricingPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div >
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import Head from 'next/head';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/lib/auth-store';
 import toast from 'react-hot-toast';
@@ -19,7 +20,7 @@ export default function SignupPage() {
   const signup = useAuthStore((state) => state.signup);
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslations();
-  
+
   const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>();
   const password = watch('password');
 
@@ -37,7 +38,7 @@ export default function SignupPage() {
     try {
       await signup(data.name, data.email, data.password);
       toast.success(t('accountCreated'));
-      
+
       // Check for stored redirect URL
       const redirectUrl = sessionStorage.getItem('authRedirect');
       if (redirectUrl) {
@@ -55,110 +56,113 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>CleanApp - Sign Up</title>
+      </Head>
       <PageHeader />
       <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {t('createYourAccount')}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {t('or')}{' '}
-            <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
-              {t('signInToExistingAccount')}
-            </Link>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                {t('fullName')}
-              </label>
-              <input
-                {...register('name', { required: t('nameRequired') })}
-                type="text"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder={t('johnDoe')}
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                {t('emailAddress')}
-              </label>
-              <input
-                {...register('email', { 
-                  required: t('emailRequired'),
-                  pattern: {
-                    value: /^\S+@\S+$/i,
-                    message: t('invalidEmailAddress')
-                  }
-                })}
-                type="email"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder={t('johnEmail')}
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                {t('password')}
-              </label>
-              <input
-                {...register('password', { 
-                  required: t('passwordRequired'),
-                  minLength: {
-                    value: 8,
-                    message: t('passwordMinLength')
-                  }
-                })}
-                type="password"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder={t('passwordPlaceholder')}
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                {t('confirmPassword')}
-              </label>
-              <input
-                {...register('confirmPassword', { 
-                  required: t('confirmPasswordRequired'),
-                  validate: value => value === password || t('passwordsDoNotMatch')
-                })}
-                type="password"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder={t('passwordPlaceholder')}
-              />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-          </div>
-
+        <div className="max-w-md w-full space-y-8">
           <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? t('creatingAccount') : t('createAccount')}
-            </button>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              {t('createYourAccount')}
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              {t('or')}{' '}
+              <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
+                {t('signInToExistingAccount')}
+              </Link>
+            </p>
           </div>
-        </form>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  {t('fullName')}
+                </label>
+                <input
+                  {...register('name', { required: t('nameRequired') })}
+                  type="text"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                  placeholder={t('johnDoe')}
+                />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  {t('emailAddress')}
+                </label>
+                <input
+                  {...register('email', {
+                    required: t('emailRequired'),
+                    pattern: {
+                      value: /^\S+@\S+$/i,
+                      message: t('invalidEmailAddress')
+                    }
+                  })}
+                  type="email"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                  placeholder={t('johnEmail')}
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  {t('password')}
+                </label>
+                <input
+                  {...register('password', {
+                    required: t('passwordRequired'),
+                    minLength: {
+                      value: 8,
+                      message: t('passwordMinLength')
+                    }
+                  })}
+                  type="password"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                  placeholder={t('passwordPlaceholder')}
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  {t('confirmPassword')}
+                </label>
+                <input
+                  {...register('confirmPassword', {
+                    required: t('confirmPasswordRequired'),
+                    validate: value => value === password || t('passwordsDoNotMatch')
+                  })}
+                  type="password"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                  placeholder={t('passwordPlaceholder')}
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? t('creatingAccount') : t('createAccount')}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
   );
 }
