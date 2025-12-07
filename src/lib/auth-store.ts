@@ -8,36 +8,37 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+
   // Billing state
   subscription: Subscription | null;
   paymentMethods: PaymentMethod[];
   billingHistory: BillingHistory[];
   billingLoading: boolean;
   prices: Price[];
-  
+
   // Auth actions
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
   loginWithFacebook: (accessToken: string) => Promise<void>;
   loginWithApple: (authorizationCode: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
-  
+
   // Billing actions
   fetchBillingData: () => Promise<void>;
   fetchSubscription: () => Promise<void>;
   fetchPaymentMethods: () => Promise<void>;
   fetchBillingHistory: (page?: number, limit?: number) => Promise<void>;
-  
+
   // Subscription actions
   createSubscription: (planType: string, billingCycle: 'monthly' | 'annual', paymentMethodId: string) => Promise<void>;
   updateSubscription: (planType: string, billingCycle: 'monthly' | 'annual') => Promise<void>;
   cancelSubscription: () => Promise<void>;
   reactivateSubscription: () => Promise<void>;
-  
+
   // Payment method actions
   addPaymentMethod: (stripePaymentMethodId: string, isDefault?: boolean) => Promise<PaymentMethod>;
   setDefaultPaymentMethod: (id: number) => Promise<void>;
@@ -48,9 +49,9 @@ interface AuthState {
 
   // Pricing actions
   fetchPrices: () => Promise<void>;
-  
+
   // Brand actions
-      addCustomerBrands: (brandData: { brands: Array<{ brand_name: string; is_public: boolean }> }) => Promise<void>;
+  addCustomerBrands: (brandData: { brands: Array<{ brand_name: string; is_public: boolean }> }) => Promise<void>;
   getBrands: () => Promise<Brand[]>;
   getBrandReports: (brandId: string, params?: { page?: number; limit?: number }) => Promise<any[]>;
 }
@@ -140,6 +141,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     get().fetchBillingData();
   },
 
+  forgotPassword: async (email) => {
+    await authApiClient.forgotPassword(email);
+  },
+
   logout: async () => {
     try {
       await authApiClient.logout();
@@ -148,8 +153,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       authApiClient.setAuthToken(null);
       localStorage.removeItem('refresh_token');
-      set({ 
-        user: null, 
+      set({
+        user: null,
         isAuthenticated: false,
         subscription: null,
         paymentMethods: [],
@@ -308,7 +313,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Get customer and subscription data
       const customer = get().user;
       const subscription = get().subscription;
-      
+
       if (!customer) {
         throw new Error('Customer information not found');
       }
@@ -316,7 +321,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Generate PDF using the invoice generator
       const { generateInvoicePDF } = await import('./invoice-generator');
       const blob = await generateInvoicePDF(billingRecord, customer, subscription || undefined);
-      
+
       // Create a download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

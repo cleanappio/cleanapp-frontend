@@ -51,6 +51,9 @@ export const translations: {
     // Auth
     signIn: "Sign in",
     signInToAccount: "Sign in to your account",
+    diveIntoInsights: "Get CleanApp Insights",
+    resetPassword: "Reset password",
+    resetLinkSent: "Reset link sent to your email",
     signUp: "Sign up",
     createAccount: "Create account",
     getStarted: "Get started",

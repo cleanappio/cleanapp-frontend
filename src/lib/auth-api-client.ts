@@ -154,6 +154,13 @@ export class AuthApiClient {
     return data;
   }
 
+  async forgotPassword(email: string): Promise<MessageResponse> {
+    const { data } = await this.axios.post<MessageResponse>("/api/v3/auth/forgot-password", {
+      email,
+    });
+    return data;
+  }
+
   async logout(): Promise<void> {
     try {
       await this.axios.post("/api/v3/auth/logout");
