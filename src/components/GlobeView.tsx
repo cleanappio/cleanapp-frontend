@@ -2264,34 +2264,57 @@ export default function GlobeView() {
     return 2;
   };
 
-  // Find matching brand from digital reports for search results
-  // When user searches in digital mode, check if search term matches a brand
-  const matchingBrand = useMemo(() => {
-    if (!searchTerm || searchTerm.length < 2 || !isDigital) return null;
+  // Query backend to check if a brand dashboard exists for the search term
+  // Simple approach: call /api/v3/reports/by-brand to see if brand has reports
+  const [matchingBrand, setMatchingBrand] = useState<{
+    brand_name: string;
+    brand_display_name: string;
+    total: number;
+  } | null>(null);
 
-    const searchLower = searchTerm.toLowerCase();
-
-    // Look through latestReports (which contains DigitalReportResponse when in digital mode)
-    for (const report of latestReports) {
-      // Check if this is a digital report with brand data
-      const digitalReport = report as DigitalReportResponse;
-      if (digitalReport.classification !== 'digital') continue;
-
-      const brandName = digitalReport.brand_name?.toLowerCase() || '';
-      const brandDisplayName = digitalReport.brand_display_name?.toLowerCase() || '';
-      const total = digitalReport.total || 0;
-
-      // Check if search term is contained in brand name or display name
-      if (brandName.includes(searchLower) || brandDisplayName.includes(searchLower)) {
-        return {
-          brand_name: digitalReport.brand_name,
-          brand_display_name: digitalReport.brand_display_name,
-          total: total,
-        };
-      }
+  useEffect(() => {
+    // Reset when search term changes or not in digital mode
+    if (!searchTerm || searchTerm.length < 2 || !isDigital) {
+      setMatchingBrand(null);
+      return;
     }
-    return null;
-  }, [searchTerm, latestReports, isDigital]);
+
+    // Debounce the API call
+    const timeoutId = setTimeout(async () => {
+      try {
+        // Query the backend to check if this brand exists with reports
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(searchTerm)}&n=1`
+        );
+
+        if (!response.ok) {
+          setMatchingBrand(null);
+          return;
+        }
+
+        const data = await response.json();
+
+        // If we got reports back, there's a dashboard for this brand
+        if (data.reports && data.reports.length > 0) {
+          const firstReport = data.reports[0];
+          const analysis = firstReport.analysis?.[0];
+
+          setMatchingBrand({
+            brand_name: analysis?.brand_name || searchTerm,
+            brand_display_name: analysis?.brand_display_name || analysis?.brand_name || searchTerm,
+            total: data.count || data.reports.length,
+          });
+        } else {
+          setMatchingBrand(null);
+        }
+      } catch (error) {
+        console.error('Error checking brand dashboard:', error);
+        setMatchingBrand(null);
+      }
+    }, 300); // Small debounce to avoid too many API calls
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, isDigital]);
 
   // Drawing handlers
   const handleAreaCreated = useCallback(async (area: Area) => {
@@ -2732,7 +2755,6 @@ export default function GlobeView() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-green-400 text-lg">🏢</span>
                       <div>
                         <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
                         <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
@@ -2848,7 +2870,6 @@ export default function GlobeView() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-green-400 text-lg">🏢</span>
                       <div>
                         <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
                         <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
