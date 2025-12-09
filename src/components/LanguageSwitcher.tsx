@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from '@/lib/i18n';
 import { ChevronDown, Globe } from 'lucide-react';
 
-const languages = [
+// All available languages
+const allLanguages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'me', name: 'Crnogorski', flag: '🇲🇪' },
 ];
@@ -13,6 +14,17 @@ export default function LanguageSwitcher() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { t } = useTranslations();
+
+  // Only show Montenegrin on Montenegro dashboard routes
+  const isMontenegroPage = router.asPath.includes('/montenegro') || router.asPath.includes('/me/montenegro');
+
+  const languages = useMemo(() => {
+    if (isMontenegroPage) {
+      return allLanguages; // Show all languages including Montenegrin
+    }
+    // Filter out Montenegrin for non-Montenegro pages
+    return allLanguages.filter(lang => lang.code !== 'me');
+  }, [isMontenegroPage]);
 
   const currentLanguage = languages.find(lang => lang.code === (router.locale || 'en')) || languages[0];
 
@@ -54,9 +66,8 @@ export default function LanguageSwitcher() {
               <button
                 key={language.code}
                 onClick={() => handleLanguageChange(language.code)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3 ${
-                  (router.locale || 'en') === language.code ? 'bg-green-50 text-green-700' : 'text-gray-700'
-                }`}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3 ${(router.locale || 'en') === language.code ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                  }`}
               >
                 <span className="text-lg">{language.flag}</span>
                 <span>{language.name}</span>
