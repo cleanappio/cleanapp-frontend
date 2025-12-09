@@ -46,6 +46,11 @@ export default function LanguageSwitcher() {
     router.push(router.asPath, router.asPath, { locale });
   };
 
+  // Don't render the switcher if only one language is available
+  if (languages.length <= 1) {
+    return null;
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
