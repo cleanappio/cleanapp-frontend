@@ -1030,91 +1030,191 @@ export default function GlobeView() {
     };
   }, []);
 
-  // Get user's current location on component mount
+  // Get user's current location on component mount with localStorage caching
   useEffect(() => {
-    if (navigator.geolocation) {
-      // Try to get location with different options
-      const getLocation = () => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            console.log("Location obtained:", position.coords);
-            setUserLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
+    // Constants for location caching
+    const LOCATION_CACHE_KEY = 'cleanapp_user_location';
+    const PERMISSION_STATE_KEY = 'cleanapp_location_permission';
+    const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+
+    // Helper to get cached location
+    const getCachedLocation = (): { latitude: number; longitude: number; timestamp: number } | null => {
+      try {
+        const cached = localStorage.getItem(LOCATION_CACHE_KEY);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch (e) {
+        console.log('Error reading cached location:', e);
+      }
+      return null;
+    };
+
+    // Helper to save location to cache
+    const cacheLocation = (latitude: number, longitude: number) => {
+      try {
+        localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({
+          latitude,
+          longitude,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.log('Error caching location:', e);
+      }
+    };
+
+    // Helper to get/set permission state
+    const getPermissionState = (): 'granted' | 'denied' | 'unknown' => {
+      try {
+        return (localStorage.getItem(PERMISSION_STATE_KEY) as 'granted' | 'denied') || 'unknown';
+      } catch (e) {
+        return 'unknown';
+      }
+    };
+
+    const setPermissionState = (state: 'granted' | 'denied') => {
+      try {
+        localStorage.setItem(PERMISSION_STATE_KEY, state);
+      } catch (e) {
+        console.log('Error saving permission state:', e);
+      }
+    };
+
+    // Check if we have a valid cached location
+    const cachedLocation = getCachedLocation();
+    const isCacheValid = cachedLocation && (Date.now() - cachedLocation.timestamp) < CACHE_EXPIRY_MS;
+
+    if (isCacheValid && cachedLocation) {
+      console.log('Using cached location:', cachedLocation);
+      setUserLocation({
+        latitude: cachedLocation.latitude,
+        longitude: cachedLocation.longitude,
+      });
+      setLocationLoading(false);
+      return; // Use cache, don't request new location
+    }
+
+    // Check stored permission state - if user denied before, don't bother asking again
+    const storedPermission = getPermissionState();
+    if (storedPermission === 'denied') {
+      console.log('Location permission was previously denied, not prompting again');
+      setLocationLoading(false);
+      return;
+    }
+
+    // No valid cache, need to request location
+    if (!navigator.geolocation) {
+      console.log('Geolocation not supported');
+      setLocationLoading(false);
+      return;
+    }
+
+    // Function to get fresh location
+    const getLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log('Location obtained:', position.coords);
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+          cacheLocation(latitude, longitude);
+          setPermissionState('granted');
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.log('Geolocation error:', error.code, error.message);
+
+          // Handle permission denied
+          if (error.code === error.PERMISSION_DENIED) {
+            setPermissionState('denied');
             setLocationLoading(false);
-          },
-          (error) => {
-            console.log("Geolocation error:", error.code, error.message);
-
-            // Try with less restrictive options if first attempt fails
-            if (
-              error.code === error.POSITION_UNAVAILABLE ||
-              error.code === error.TIMEOUT
-            ) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  console.log(
-                    "Location obtained with fallback options:",
-                    position.coords
-                  );
-                  setUserLocation({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                  });
-                  setLocationLoading(false);
-                },
-                (fallbackError) => {
-                  console.log(
-                    "Fallback geolocation also failed:",
-                    fallbackError.message
-                  );
-                  setLocationLoading(false);
-                },
-                {
-                  enableHighAccuracy: false,
-                  timeout: 15000,
-                  maximumAge: 600000, // 10 minutes
-                }
-              );
-            } else {
-              setLocationLoading(false);
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000, // 5 minutes
+            return;
           }
-        );
-      };
 
-      // Check if geolocation is available and not blocked
-      if (navigator.permissions) {
-        navigator.permissions
-          .query({ name: "geolocation" })
-          .then((result) => {
-            if (result.state === "granted") {
-              getLocation();
-            } else if (result.state === "prompt") {
-              getLocation(); // Will prompt user
-            } else {
-              console.log("Geolocation permission denied");
-              setLocationLoading(false);
-            }
-          })
-          .catch(() => {
-            // Fallback if permissions API is not supported
+          // Try with less restrictive options if first attempt fails
+          if (
+            error.code === error.POSITION_UNAVAILABLE ||
+            error.code === error.TIMEOUT
+          ) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                console.log(
+                  'Location obtained with fallback options:',
+                  position.coords
+                );
+                const { latitude, longitude } = position.coords;
+                setUserLocation({ latitude, longitude });
+                cacheLocation(latitude, longitude);
+                setPermissionState('granted');
+                setLocationLoading(false);
+              },
+              (fallbackError) => {
+                console.log(
+                  'Fallback geolocation also failed:',
+                  fallbackError.message
+                );
+                if (fallbackError.code === fallbackError.PERMISSION_DENIED) {
+                  setPermissionState('denied');
+                }
+                setLocationLoading(false);
+              },
+              {
+                enableHighAccuracy: false,
+                timeout: 15000,
+                maximumAge: 600000, // 10 minutes
+              }
+            );
+          } else {
+            setLocationLoading(false);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000, // 5 minutes
+        }
+      );
+    };
+
+    // Check permissions API (with Safari fallback)
+    // Safari doesn't fully support navigator.permissions for geolocation
+    const checkPermissionsAndGetLocation = async () => {
+      try {
+        // Try the Permissions API first (Chrome, Firefox)
+        if (navigator.permissions) {
+          const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+
+          if (result.state === 'granted') {
+            // Permission already granted, get location silently
             getLocation();
-          });
-      } else {
-        // Fallback if permissions API is not supported
+          } else if (result.state === 'denied') {
+            // Permission denied, remember this and don't prompt
+            console.log('Geolocation permission denied via Permissions API');
+            setPermissionState('denied');
+            setLocationLoading(false);
+          } else {
+            // 'prompt' state - will prompt user
+            // If we have stale cache, use it while waiting for fresh location
+            if (cachedLocation) {
+              setUserLocation({
+                latitude: cachedLocation.latitude,
+                longitude: cachedLocation.longitude,
+              });
+            }
+            getLocation();
+          }
+        } else {
+          // No Permissions API (Safari) - just try to get location
+          // If user has previously granted in Safari, browser will remember
+          getLocation();
+        }
+      } catch (e) {
+        // Permissions API failed (common in Safari for geolocation)
+        console.log('Permissions API not available, falling back to direct geolocation:', e);
         getLocation();
       }
-    } else {
-      console.log("Geolocation not supported");
-      setLocationLoading(false);
-    }
+    };
+
+    checkPermissionsAndGetLocation();
   }, []);
 
   // Pan to user location when it becomes available
@@ -2853,8 +2953,8 @@ export default function GlobeView() {
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
             className={`p-3 rounded-md border transition-colors ${enableDrawing
-                ? "bg-purple-600 border-purple-500 text-white"
-                : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              ? "bg-purple-600 border-purple-500 text-white"
+              : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
               }`}
             title={
               enableDrawing ? "Disable drawing mode" : "Enable drawing mode"
@@ -2880,8 +2980,8 @@ export default function GlobeView() {
               <button
                 onClick={() => setDrawMode("rectangle")}
                 className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "rectangle"
-                    ? "bg-purple-600 text-white"
-                    : "text-gray-300 hover:bg-gray-700"
+                  ? "bg-purple-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700"
                   }`}
                 title="Rectangle drawing mode"
               >
@@ -2890,8 +2990,8 @@ export default function GlobeView() {
               <button
                 onClick={() => setDrawMode("freehand")}
                 className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "freehand"
-                    ? "bg-purple-600 text-white"
-                    : "text-gray-300 hover:bg-gray-700"
+                  ? "bg-purple-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700"
                   }`}
                 title="Freehand drawing mode"
               >
