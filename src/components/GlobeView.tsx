@@ -2264,6 +2264,35 @@ export default function GlobeView() {
     return 2;
   };
 
+  // Find matching brand from digital reports for search results
+  // When user searches in digital mode, check if search term matches a brand
+  const matchingBrand = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2 || !isDigital) return null;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    // Look through latestReports (which contains DigitalReportResponse when in digital mode)
+    for (const report of latestReports) {
+      // Check if this is a digital report with brand data
+      const digitalReport = report as DigitalReportResponse;
+      if (digitalReport.classification !== 'digital') continue;
+
+      const brandName = digitalReport.brand_name?.toLowerCase() || '';
+      const brandDisplayName = digitalReport.brand_display_name?.toLowerCase() || '';
+      const total = digitalReport.total || 0;
+
+      // Check if search term is contained in brand name or display name
+      if (brandName.includes(searchLower) || brandDisplayName.includes(searchLower)) {
+        return {
+          brand_name: digitalReport.brand_name,
+          brand_display_name: digitalReport.brand_display_name,
+          total: total,
+        };
+      }
+    }
+    return null;
+  }, [searchTerm, latestReports, isDigital]);
+
   // Drawing handlers
   const handleAreaCreated = useCallback(async (area: Area) => {
     console.log("Area created:", area);
@@ -2693,6 +2722,26 @@ export default function GlobeView() {
 
           {searchTerm && (
             <div className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
+              {/* Brand Dashboard Card - appears first when matching brand found */}
+              {matchingBrand && (
+                <button
+                  className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
+                  onClick={() => {
+                    router.push(`/digital/${matchingBrand.brand_name}`);
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-lg">🏢</span>
+                      <div>
+                        <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
+                        <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
+                      </div>
+                    </div>
+                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">→</span>
+                  </div>
+                </button>
+              )}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
@@ -2789,6 +2838,26 @@ export default function GlobeView() {
               ref={listRef}
               className="flex flex-col items-start bg-gray-800 overflow-y-scroll max-h-svh w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-500"
             >
+              {/* Brand Dashboard Card - appears first when matching brand found */}
+              {matchingBrand && (
+                <button
+                  className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
+                  onClick={() => {
+                    router.push(`/digital/${matchingBrand.brand_name}`);
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-lg">🏢</span>
+                      <div>
+                        <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
+                        <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
+                      </div>
+                    </div>
+                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">→</span>
+                  </div>
+                </button>
+              )}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
