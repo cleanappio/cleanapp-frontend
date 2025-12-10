@@ -234,6 +234,27 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     }
   };
 
+  const linkify = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.split(urlRegex).map((part, index) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline break-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   const getGoogleMapsUrl = (lat: number, lng: number) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
   };
@@ -303,10 +324,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
       <div className="p-4">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
           {title ||
-            `${t("report")} ${
-              report.classification === "physical"
-                ? report.seq
-                : report.brand_name
+            `${t("report")} ${report.classification === "physical"
+              ? report.seq
+              : report.brand_name
             }`}
         </h1>
       </div>
@@ -362,11 +382,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     </div>
                   )}
 
-                  {/* Time */}
+                  {/* Time: Original Post */}
                   {fullReport?.report?.timestamp && (
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                        {t("time")}
+                        {t("Original Post") || "Original Post"}
                       </h3>
                       <p
                         className="text-sm relative group"
@@ -384,7 +404,31 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                       </p>
                     </div>
                   )}
+
+                  {/* Latest Escalation */}
+                  {fullReport?.report?.last_email_sent_at && (
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                        {t("Latest Escalation") || "Latest Escalation"}
+                      </h3>
+                      <p
+                        className="text-sm relative group"
+                        aria-describedby="tooltip-escalation"
+                      >
+                        {formatTime(fullReport.report.last_email_sent_at)}
+                        <span
+                          id="tooltip-escalation"
+                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                        >
+                          {new Date(
+                            fullReport.report.last_email_sent_at
+                          ).toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  )}
                 </div>
+
 
                 {!isDigital && (
                   <>
@@ -471,7 +515,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                   {t("description")}
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
-                  {analysis.description}
+                  {linkify(analysis.description)}
                 </p>
               </div>
             )}
@@ -483,7 +527,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                   {t("summary")}
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
-                  {analysis.summary}
+                  {linkify(analysis.summary)}
                 </p>
               </div>
             )}
@@ -520,10 +564,10 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               </div>
             )}
 
-            {/* Time */}
+            {/* Time: Original Post */}
             {fullReport?.report?.timestamp && (
               <div>
-                <h3 className="font-semibold text-sm mb-1">{t("time")}</h3>
+                <h3 className="font-semibold text-sm mb-1">{t("Original Post") || "Original Post"}</h3>
                 <p
                   className="text-sm relative group"
                   aria-describedby="tooltip"
@@ -534,6 +578,25 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
                   >
                     {new Date(fullReport.report.timestamp).toLocaleString()}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Latest Escalation */}
+            {fullReport?.report?.last_email_sent_at && (
+              <div>
+                <h3 className="font-semibold text-sm mb-1">{t("Latest Escalation") || "Latest Escalation"}</h3>
+                <p
+                  className="text-sm relative group"
+                  aria-describedby="tooltip-escalation"
+                >
+                  {formatTime(fullReport.report.last_email_sent_at)}
+                  <span
+                    id="tooltip-escalation"
+                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                  >
+                    {new Date(fullReport.report.last_email_sent_at).toLocaleString()}
                   </span>
                 </p>
               </div>
@@ -619,7 +682,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
           {analysis?.description && analysis.description !== "" && (
             <div>
               <p className="font-semibold text-sm mt-8">Description</p>
-              <p>{analysis?.description}</p>
+              <p>{linkify(analysis?.description)}</p>
             </div>
           )}
         </div>

@@ -44,6 +44,7 @@ export interface Report {
   latitude: number;
   longitude: number;
   image?: number[] | string | null; // Report image as bytes array, URL string, or null
+  last_email_sent_at?: string | null;
 }
 
 // Type for report analysis
