@@ -2298,11 +2298,19 @@ export default function GlobeView() {
         if (data.reports && data.reports.length > 0) {
           const firstReport = data.reports[0];
           const analysis = firstReport.analysis?.[0];
+          const brandName = analysis?.brand_name || searchTerm;
+
+          // Look up the actual total from latestDigitalReportsV2 which has accurate totals
+          // The API response count only reflects the number of reports returned (limited by n=1)
+          const matchingDigitalReport = latestDigitalReportsV2.find(
+            (r) => r.brand_name.toLowerCase() === brandName.toLowerCase()
+          );
+          const actualTotal = matchingDigitalReport?.total || data.count || data.reports.length;
 
           setMatchingBrand({
-            brand_name: analysis?.brand_name || searchTerm,
+            brand_name: brandName,
             brand_display_name: analysis?.brand_display_name || analysis?.brand_name || searchTerm,
-            total: data.count || data.reports.length,
+            total: actualTotal,
           });
         } else {
           setMatchingBrand(null);
@@ -2314,7 +2322,7 @@ export default function GlobeView() {
     }, 300); // Small debounce to avoid too many API calls
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, isDigital]);
+  }, [searchTerm, isDigital, latestDigitalReportsV2]);
 
   // Drawing handlers
   const handleAreaCreated = useCallback(async (area: Area) => {
