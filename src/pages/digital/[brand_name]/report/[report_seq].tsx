@@ -147,38 +147,23 @@ export default function ReportDetailPage() {
             </div>
 
             {/* Report Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-md font-semibold text-gray-900 mb-3">
-                  Location
-                </h3>
-                <div className="space-y-2 text-sm text-gray-600">
+            <div>
+              <h3 className="text-md font-semibold text-gray-900 mb-3">
+                Analysis
+              </h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                {matchingAnalysis?.severity_level && (
                   <p>
-                    <span className="font-medium">Coordinates:</span>{" "}
-                    {reportData?.latitude?.toFixed(6)},{" "}
-                    {reportData?.longitude?.toFixed(6)}
+                    <span className="font-medium">Severity:</span>{" "}
+                    {(matchingAnalysis.severity_level * 100).toFixed(0)}%
                   </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-md font-semibold text-gray-900 mb-3">
-                  Analysis
-                </h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  {matchingAnalysis?.severity_level && (
-                    <p>
-                      <span className="font-medium">Severity:</span>{" "}
-                      {(matchingAnalysis.severity_level * 100).toFixed(0)}%
-                    </p>
-                  )}
-                  {matchingAnalysis?.classification && (
-                    <p>
-                      <span className="font-medium">Type:</span>{" "}
-                      {matchingAnalysis.classification}
-                    </p>
-                  )}
-                </div>
+                )}
+                {matchingAnalysis?.classification && (
+                  <p>
+                    <span className="font-medium">Type:</span>{" "}
+                    {matchingAnalysis.classification}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -196,7 +181,7 @@ export default function ReportDetailPage() {
             onClick={() => router.push(`/digital/${brand_name}`)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
           >
-            View All Reports
+            View All Reports About {brandDisplayName}
           </button>
         </div>
       </div>
