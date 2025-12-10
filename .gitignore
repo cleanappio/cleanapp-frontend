@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+up1.sh
+up2.sh
+down1.sh
+down2.sh
+docker-compose.yml
+docker-compose-face-detector.yml
+deploy.sh
