@@ -234,6 +234,36 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     }
   };
 
+  // Format datetime for escalation message (e.g., "16:50CET, December 10, 2025")
+  const formatEscalationDateTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZoneName: 'short'
+    });
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    return `${timeStr}, ${dateStr}`;
+  };
+
+  // Format original post datetime (e.g., "December 10, 2025 at 14:30 UTC")
+  const formatOriginalPostDateTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+  };
+
   const linkify = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.split(urlRegex).map((part, index) => {
@@ -405,8 +435,21 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     </div>
                   )}
 
-                  {/* Latest Escalation */}
-                  {fullReport?.report?.last_email_sent_at && (
+                  {/* Latest Escalation - formatted message for digital reports */}
+                  {isDigital && fullReport?.report?.last_email_sent_at && (
+                    <div className="col-span-2 mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <p className="text-sm text-orange-800">
+                        <span className="font-semibold">Latest escalation</span> to{" "}
+                        <span className="font-semibold">
+                          {getBrandNameDisplay(analysis).brandDisplayName}
+                        </span>{" "}
+                        on {formatEscalationDateTime(fullReport.report.last_email_sent_at)} via CleanApp
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Latest Escalation - simple format for physical reports */}
+                  {!isDigital && fullReport?.report?.last_email_sent_at && (
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
                         {t("Latest Escalation") || "Latest Escalation"}
@@ -517,6 +560,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                 <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
                   {linkify(analysis.description)}
                 </p>
+                {/* Show original post timestamp for digital reports */}
+                {isDigital && fullReport?.report?.timestamp && (
+                  <p className="text-xs text-gray-500 mt-2 italic">
+                    Original post: {formatOriginalPostDateTime(fullReport.report.timestamp)}
+                  </p>
+                )}
               </div>
             )}
 
@@ -583,8 +632,19 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               </div>
             )}
 
-            {/* Latest Escalation */}
-            {fullReport?.report?.last_email_sent_at && (
+            {/* Latest Escalation - enhanced for digital, simple for physical */}
+            {isDigital && fullReport?.report?.last_email_sent_at && (
+              <div className="col-span-4 mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <p className="text-sm text-orange-800">
+                  <span className="font-semibold">Latest escalation</span> to{" "}
+                  <span className="font-semibold">
+                    {getBrandNameDisplay(analysis).brandDisplayName}
+                  </span>{" "}
+                  on {formatEscalationDateTime(fullReport.report.last_email_sent_at)} via CleanApp
+                </p>
+              </div>
+            )}
+            {!isDigital && fullReport?.report?.last_email_sent_at && (
               <div>
                 <h3 className="font-semibold text-sm mb-1">{t("Latest Escalation") || "Latest Escalation"}</h3>
                 <p
@@ -683,6 +743,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             <div>
               <p className="font-semibold text-sm mt-8">Description</p>
               <p>{linkify(analysis?.description)}</p>
+              {/* Show original post timestamp for digital reports */}
+              {isDigital && fullReport?.report?.timestamp && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  Original post: {formatOriginalPostDateTime(fullReport.report.timestamp)}
+                </p>
+              )}
             </div>
           )}
         </div>
