@@ -186,19 +186,19 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                   <div
                     key={item.report?.seq || idx}
                     onClick={() => onReportClick(item)}
-                    className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${isSelected
-                        ? "border-blue-400 bg-blue-600/20 text-white"
-                        : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
+                    className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer w-full transition-colors text-center ${isSelected
+                      ? "border-blue-400 bg-blue-600/20 text-white"
+                      : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
                       }`}
                   >
-                    <p className="text-xs">
+                    <p className="text-xs font-medium">
                       {title?.title || t("report")}
-                      {item.report?.timestamp
-                        ? `, ${new Date(
-                          item.report.timestamp
-                        ).toLocaleString()}`
-                        : ""}
                     </p>
+                    {item.report?.timestamp && (
+                      <p className="text-xs text-gray-500">
+                        {new Date(item.report.timestamp).toLocaleString()}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-400 line-clamp-2">
                       {Array.isArray(item.analysis)
                         ? item.analysis.find(
@@ -243,19 +243,19 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                       onClick={() => {
                         onReportClick(item);
                       }}
-                      className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${isSelected
-                          ? "border-blue-400 bg-blue-600/20 text-white"
-                          : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
+                      className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer w-full transition-colors text-center ${isSelected
+                        ? "border-blue-400 bg-blue-600/20 text-white"
+                        : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
                         }`}
                     >
-                      <p className="text-xs">
+                      <p className="text-xs font-medium">
                         {title?.title || t("report")}
-                        {item.report?.timestamp
-                          ? `, ${new Date(
-                            item.report.timestamp
-                          ).toLocaleString()}`
-                          : ""}
                       </p>
+                      {item.report?.timestamp && (
+                        <p className="text-xs text-gray-500">
+                          {new Date(item.report.timestamp).toLocaleString()}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400 line-clamp-2">
                         {Array.isArray(item.analysis)
                           ? item.analysis.find(
