@@ -7,7 +7,7 @@ import {
   getCurrentLocale,
   filterAnalysesByLanguage,
 } from "@/lib/i18n";
-import { getBrandNameDisplay } from "@/lib/util";
+import { getBrandNameDisplay, parseBackendDate } from "@/lib/util";
 import Link from "next/link";
 import { useReverseGeocoding } from "@/hooks/useReverseGeocoding";
 import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
@@ -26,7 +26,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   reportItem,
   reportWithAnalysis,
 }) => {
-  const [fullReport, setFullReport] = useState<any>(reportWithAnalysis);
+  const [fullReport, setFullReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
@@ -165,11 +165,21 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     }
   }, [fetchDigitalReport, fetchPhysicalReport, reportItem, reportWithAnalysis]);
 
+  // Always fetch full report data when we have a seq to ensure source_timestamp is available
+  // This is needed because data passed from the modal (reportWithAnalysis) lacks source_timestamp
   useEffect(() => {
-    if (reportItem && !fullReport) {
+    const seq = reportWithAnalysis?.report?.seq || (reportItem?.classification === 'physical' ? reportItem?.seq : null);
+    const brandName = reportItem?.classification === 'digital' ? reportItem?.brand_name : null;
+
+    // If we have a seq and haven't fetched this specific report yet, fetch it
+    if (seq && (!fullReport?.report?.source_timestamp || fullReport?.report?.seq !== seq)) {
+      fetchPhysicalReport(seq);
+    } else if (brandName && !fullReport?.report?.source_timestamp) {
+      fetchDigitalReport(brandName);
+    } else if (reportItem && !fullReport) {
       fetchFullReport();
     }
-  }, [fetchFullReport, fullReport, reportItem, reportWithAnalysis]);
+  }, [reportItem, reportWithAnalysis]);
 
   useEffect(() => {
     if (fullReport) {
@@ -211,7 +221,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   };
 
   const formatTime = (timestamp: string) => {
-    const reportTime = new Date(timestamp);
+    const reportTime = parseBackendDate(timestamp);
     const currentTime = new Date();
     const timeDifference = currentTime.getTime() - reportTime.getTime();
     const timeDifferenceInMinutes = Math.floor(timeDifference / (1000 * 60));
@@ -234,22 +244,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     }
   };
 
-  // Format datetime for escalation message (e.g., "16:50CET, December 10, 2025")
-  const formatEscalationDateTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZoneName: 'short'
-    });
-    const dateStr = date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    return `${timeStr}, ${dateStr}`;
-  };
+
 
   // Format original post datetime (e.g., "December 10, 2025 at 14:30 UTC")
   const formatOriginalPostDateTime = (timestamp: string) => {
@@ -412,83 +407,37 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     </div>
                   )}
 
-                  {/* Time: Originally Posted (source_timestamp - only for digital with external source) */}
-                  {isDigital && fullReport?.report?.source_timestamp && (
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                        {t("Originally Posted") || "Originally Posted"}
-                      </h3>
-                      <p
-                        className="text-sm relative group"
-                        aria-describedby="tooltip-original"
-                      >
-                        {formatTime(fullReport.report.source_timestamp)}
-                        <span
-                          id="tooltip-original"
-                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
-                        >
-                          {new Date(fullReport.report.source_timestamp).toLocaleString()}
-                        </span>
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Time: Reported to CleanApp (timestamp - when ingested) */}
+                  {/* Time: Escalated to CleanApp (timestamp - when ingested) */}
                   {fullReport?.report?.timestamp && (
                     <div className="flex-1">
-                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                        {t("Reported") || "Reported"}
+                      <h3 className="font-semibold text-sm mb-1 text-red-600">
+                        {t("Escalated") || "Escalated"}
                       </h3>
                       <p
-                        className="text-sm relative group"
-                        aria-describedby="tooltip-reported"
+                        className="text-sm font-bold text-red-600 relative group"
+                        aria-describedby="tooltip-escalated"
                       >
                         {formatTime(fullReport.report.timestamp)}
                         <span
-                          id="tooltip-reported"
-                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                          id="tooltip-escalated"
+                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2 font-normal"
                         >
                           {new Date(fullReport.report.timestamp).toLocaleString()}
                         </span>
                       </p>
+                      {/* Originally Posted - shown below Escalated */}
+                      {fullReport?.report?.source_timestamp && (
+                        <p className="text-xs text-black mt-1 font-semibold">
+                          Original post: {parseBackendDate(fullReport.report.source_timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.report.source_timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  {/* Latest Escalation - formatted message for digital reports */}
-                  {isDigital && fullReport?.report?.last_email_sent_at && (
-                    <div className="col-span-2 mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-sm text-orange-800">
-                        <span className="font-semibold">Latest escalation</span> to{" "}
-                        <span className="font-semibold">
-                          {getBrandNameDisplay(analysis).brandDisplayName}
-                        </span>{" "}
-                        on {formatEscalationDateTime(fullReport.report.last_email_sent_at)} via CleanApp
-                      </p>
-                    </div>
-                  )}
 
-                  {/* Latest Escalation - simple format for physical reports */}
-                  {!isDigital && fullReport?.report?.last_email_sent_at && (
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                        {t("Latest Escalation") || "Latest Escalation"}
-                      </h3>
-                      <p
-                        className="text-sm relative group"
-                        aria-describedby="tooltip-escalation"
-                      >
-                        {formatTime(fullReport.report.last_email_sent_at)}
-                        <span
-                          id="tooltip-escalation"
-                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
-                        >
-                          {new Date(
-                            fullReport.report.last_email_sent_at
-                          ).toLocaleString()}
-                        </span>
-                      </p>
-                    </div>
-                  )}
+
+
+
                 </div>
 
 
@@ -632,73 +581,34 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               </div>
             )}
 
-            {/* Time: Originally Posted (source_timestamp - only for digital with external source) */}
-            {isDigital && fullReport?.report?.source_timestamp && (
-              <div>
-                <h3 className="font-semibold text-sm mb-1">{t("Originally Posted") || "Originally Posted"}</h3>
-                <p
-                  className="text-sm relative group"
-                  aria-describedby="tooltip-original"
-                >
-                  {formatTime(fullReport.report.source_timestamp)}
-                  <span
-                    id="tooltip-original"
-                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
-                  >
-                    {new Date(fullReport.report.source_timestamp).toLocaleString()}
-                  </span>
-                </p>
-              </div>
-            )}
-
-            {/* Time: Reported to CleanApp (timestamp - when ingested) */}
+            {/* Time: Escalated to CleanApp (timestamp - when ingested) */}
             {fullReport?.report?.timestamp && (
               <div>
-                <h3 className="font-semibold text-sm mb-1">{t("Reported") || "Reported"}</h3>
+                <h3 className="font-semibold text-sm mb-1 text-red-600">{t("Escalated") || "Escalated"}</h3>
                 <p
-                  className="text-sm relative group"
-                  aria-describedby="tooltip-reported"
+                  className="text-sm font-bold text-red-600 relative group"
+                  aria-describedby="tooltip-escalated-desktop"
                 >
                   {formatTime(fullReport.report.timestamp)}
                   <span
-                    id="tooltip-reported"
-                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                    id="tooltip-escalated-desktop"
+                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2 font-normal"
                   >
                     {new Date(fullReport.report.timestamp).toLocaleString()}
                   </span>
                 </p>
+                {/* Originally Posted - shown below Escalated */}
+                {fullReport?.report?.source_timestamp && (
+                  <p className="text-xs text-black mt-1 font-semibold">
+                    Original post: {parseBackendDate(fullReport.report.source_timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.report.source_timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
               </div>
             )}
 
             {/* Latest Escalation - enhanced for digital, simple for physical */}
-            {isDigital && fullReport?.report?.last_email_sent_at && (
-              <div className="col-span-4 mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p className="text-sm text-orange-800">
-                  <span className="font-semibold">Latest escalation</span> to{" "}
-                  <span className="font-semibold">
-                    {getBrandNameDisplay(analysis).brandDisplayName}
-                  </span>{" "}
-                  on {formatEscalationDateTime(fullReport.report.last_email_sent_at)} via CleanApp
-                </p>
-              </div>
-            )}
-            {!isDigital && fullReport?.report?.last_email_sent_at && (
-              <div>
-                <h3 className="font-semibold text-sm mb-1">{t("Latest Escalation") || "Latest Escalation"}</h3>
-                <p
-                  className="text-sm relative group"
-                  aria-describedby="tooltip-escalation"
-                >
-                  {formatTime(fullReport.report.last_email_sent_at)}
-                  <span
-                    id="tooltip-escalation"
-                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
-                  >
-                    {new Date(fullReport.report.last_email_sent_at).toLocaleString()}
-                  </span>
-                </p>
-              </div>
-            )}
+
+
 
             {isDigital && (
               <>
