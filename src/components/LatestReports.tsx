@@ -90,35 +90,35 @@ const LatestReports: React.FC<LatestReportsProps> = ({
   const finalDigitalReports = disableFetching
     ? digitalReports
     : reportsByTags.filter(
-        (report: ReportWithAnalysis) =>
-          report.analysis?.[0]?.classification === "digital"
-      );
+      (report: ReportWithAnalysis) =>
+        report.analysis?.[0]?.classification === "digital"
+    );
 
   const finalPhysicalReports = disableFetching
     ? reports // In disableFetching mode, 'reports' prop is assumed to be the full combined list
     : (() => {
-        const physicalReportsbyTags = reportsByTags.filter(
-          (report: ReportWithAnalysis) =>
-            report.analysis?.[0]?.classification === "physical"
-        );
+      const physicalReportsbyTags = reportsByTags.filter(
+        (report: ReportWithAnalysis) =>
+          report.analysis?.[0]?.classification === "physical"
+      );
 
-        const combined = [...reports, ...physicalReportsbyTags].filter(
-          (report, index, self) =>
-            index ===
-            self.findIndex((t) => t.report?.seq === report.report?.seq)
-        );
+      const combined = [...reports, ...physicalReportsbyTags].filter(
+        (report, index, self) =>
+          index ===
+          self.findIndex((t) => t.report?.seq === report.report?.seq)
+      );
 
-        combined.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
-          const timeA = a.report?.timestamp
-            ? new Date(a.report.timestamp).getTime()
-            : 0;
-          const timeB = b.report?.timestamp
-            ? new Date(b.report.timestamp).getTime()
-            : 0;
-          return timeB - timeA; // Descending order (newest first)
-        });
-        return combined;
-      })();
+      combined.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
+        const timeA = a.report?.timestamp
+          ? new Date(a.report.timestamp).getTime()
+          : 0;
+        const timeB = b.report?.timestamp
+          ? new Date(b.report.timestamp).getTime()
+          : 0;
+        return timeB - timeA; // Descending order (newest first)
+      });
+      return combined;
+    })();
 
   if (showDigitalReports && !disableFetching) {
     finalDigitalReports.sort((a: ReportWithAnalysis, b: ReportWithAnalysis) => {
@@ -134,9 +134,8 @@ const LatestReports: React.FC<LatestReportsProps> = ({
 
   return (
     <div
-      className={`absolute bottom-8 p-1 sm:p-2 ${
-        isMobile ? "h-[50vh] max-h-[250px] left-0" : "h-[40vh] left-4"
-      } flex flex-col ${isModalActive ? "z-60" : "z-10"}`}
+      className={`absolute bottom-8 p-1 sm:p-2 ${isMobile ? "h-[50vh] max-h-[250px] left-0" : "h-[40vh] left-4"
+        } flex flex-col ${isModalActive ? "z-60" : "z-10"}`}
     >
       {/* Create translucent div with a gradient */}
       <div className="h-full bg-gradient-to-b from-[#14213d] to-black text-white px-3 sm:px-4 py-1 sm:py-2 border border-slate-700 rounded-2xl text-center flex flex-col w-[275px]">
@@ -149,18 +148,16 @@ const LatestReports: React.FC<LatestReportsProps> = ({
         {showDigitalReports && (
           <div className="flex flex-row items-center">
             <p
-              className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${
-                selectedTab === "physical" ? "text-blue-400" : ""
-              }`}
+              className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${selectedTab === "physical" ? "text-blue-400" : ""
+                }`}
               onClick={() => handleTabChange("physical")}
             >
               {t("physical")}
             </p>
 
             <p
-              className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${
-                selectedTab === "digital" ? "text-blue-400" : ""
-              }`}
+              className={`font-semibold text-sm mt-2 mb-1 sm:mb-3 flex-1 cursor-pointer hover:text-blue-200 ${selectedTab === "digital" ? "text-blue-400" : ""
+                }`}
               onClick={() => handleTabChange("digital")}
             >
               {t("digital")}
@@ -169,7 +166,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
         )}
 
         {selectedTab === "physical" ? (
-          <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide items-center">
             {loading ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
             ) : finalPhysicalReports.length === 0 ? (
@@ -181,39 +178,38 @@ const LatestReports: React.FC<LatestReportsProps> = ({
 
                 const title = Array.isArray(item.analysis)
                   ? item.analysis.find(
-                      (analysis) => analysis.language === locale
-                    )
+                    (analysis) => analysis.language === locale
+                  )
                   : item.analysis;
 
                 return (
                   <div
                     key={item.report?.seq || idx}
                     onClick={() => onReportClick(item)}
-                    className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${
-                      isSelected
+                    className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${isSelected
                         ? "border-blue-400 bg-blue-600/20 text-white"
                         : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
-                    }`}
+                      }`}
                   >
                     <p className="text-xs">
                       {title?.title || t("report")}
                       {item.report?.timestamp
                         ? `, ${new Date(
-                            item.report.timestamp
-                          ).toLocaleString()}`
+                          item.report.timestamp
+                        ).toLocaleString()}`
                         : ""}
                     </p>
                     <p className="text-xs text-gray-400 line-clamp-2">
                       {Array.isArray(item.analysis)
                         ? item.analysis.find(
-                            (analysis) => analysis.language === locale
-                          )?.summary ||
-                          item.analysis.find(
-                            (analysis) => analysis.language === locale
-                          )?.description
+                          (analysis) => analysis.language === locale
+                        )?.summary ||
+                        item.analysis.find(
+                          (analysis) => analysis.language === locale
+                        )?.description
                         : title?.summary ||
-                          title?.description ||
-                          t("noSummary")}
+                        title?.description ||
+                        t("noSummary")}
                     </p>
                   </div>
                 );
@@ -221,7 +217,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide items-center">
             {(disableFetching ? loading : reportsByTagsLoading) ? (
               <p className="text-xs text-gray-400">{t("loading")}...</p>
             ) : reportsByTagsError ? (
@@ -236,9 +232,9 @@ const LatestReports: React.FC<LatestReportsProps> = ({
 
                   const title = Array.isArray(item.analysis)
                     ? item.analysis.find(
-                        (analysis: ReportAnalysis) =>
-                          analysis.language === locale
-                      )
+                      (analysis: ReportAnalysis) =>
+                        analysis.language === locale
+                    )
                     : item.analysis;
 
                   return (
@@ -247,33 +243,32 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                       onClick={() => {
                         onReportClick(item);
                       }}
-                      className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${
-                        isSelected
+                      className={`flex flex-col gap-1 text-sm border p-2 sm:p-3 rounded-lg mt-2 items-start cursor-pointer max-w-[275px] transition-colors ${isSelected
                           ? "border-blue-400 bg-blue-600/20 text-white"
                           : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
-                      }`}
+                        }`}
                     >
                       <p className="text-xs">
                         {title?.title || t("report")}
                         {item.report?.timestamp
                           ? `, ${new Date(
-                              item.report.timestamp
-                            ).toLocaleString()}`
+                            item.report.timestamp
+                          ).toLocaleString()}`
                           : ""}
                       </p>
                       <p className="text-xs text-gray-400 line-clamp-2">
                         {Array.isArray(item.analysis)
                           ? item.analysis.find(
-                              (analysis: ReportAnalysis) =>
-                                analysis.language === locale
-                            )?.summary ||
-                            item.analysis.find(
-                              (analysis: ReportAnalysis) =>
-                                analysis.language === locale
-                            )?.description
+                            (analysis: ReportAnalysis) =>
+                              analysis.language === locale
+                          )?.summary ||
+                          item.analysis.find(
+                            (analysis: ReportAnalysis) =>
+                              analysis.language === locale
+                          )?.description
                           : title?.summary ||
-                            title?.description ||
-                            t("noSummary")}
+                          title?.description ||
+                          t("noSummary")}
                       </p>
                     </div>
                   );
