@@ -194,9 +194,9 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                     <p className="text-xs font-medium">
                       {title?.title || t("report")}
                     </p>
-                    {(item.report?.source_timestamp || item.report?.timestamp) && (
+                    {item.report?.timestamp && (
                       <p className="text-xs text-gray-500">
-                        {new Date(item.report.source_timestamp || item.report.timestamp).toLocaleString()}
+                        Reported: {new Date(item.report.timestamp).toLocaleString()}
                       </p>
                     )}
                     <p className="text-xs text-gray-400 line-clamp-2">
@@ -251,9 +251,9 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                       <p className="text-xs font-medium">
                         {title?.title || t("report")}
                       </p>
-                      {(item.report?.source_timestamp || item.report?.timestamp) && (
+                      {item.report?.timestamp && (
                         <p className="text-xs text-gray-500">
-                          {new Date(item.report.source_timestamp || item.report.timestamp).toLocaleString()}
+                          Reported: {new Date(item.report.timestamp).toLocaleString()}
                         </p>
                       )}
                       <p className="text-xs text-gray-400 line-clamp-2">

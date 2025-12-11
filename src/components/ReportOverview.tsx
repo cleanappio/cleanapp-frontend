@@ -412,24 +412,43 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     </div>
                   )}
 
-                  {/* Time: Original Post */}
-                  {(fullReport?.report?.source_timestamp || fullReport?.report?.timestamp) && (
+                  {/* Time: Originally Posted (source_timestamp - only for digital with external source) */}
+                  {isDigital && fullReport?.report?.source_timestamp && (
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
-                        {t("Original Post") || "Original Post"}
+                        {t("Originally Posted") || "Originally Posted"}
                       </h3>
                       <p
                         className="text-sm relative group"
-                        aria-describedby="tooltip"
+                        aria-describedby="tooltip-original"
                       >
-                        {formatTime(fullReport.report.source_timestamp || fullReport.report.timestamp)}
+                        {formatTime(fullReport.report.source_timestamp)}
                         <span
-                          id="tooltip"
+                          id="tooltip-original"
                           className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
                         >
-                          {new Date(
-                            fullReport.report.source_timestamp || fullReport.report.timestamp
-                          ).toLocaleString()}
+                          {new Date(fullReport.report.source_timestamp).toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Time: Reported to CleanApp (timestamp - when ingested) */}
+                  {fullReport?.report?.timestamp && (
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm mb-1 text-gray-800">
+                        {t("Reported") || "Reported"}
+                      </h3>
+                      <p
+                        className="text-sm relative group"
+                        aria-describedby="tooltip-reported"
+                      >
+                        {formatTime(fullReport.report.timestamp)}
+                        <span
+                          id="tooltip-reported"
+                          className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                        >
+                          {new Date(fullReport.report.timestamp).toLocaleString()}
                         </span>
                       </p>
                     </div>
@@ -561,9 +580,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                   {linkify(analysis.description)}
                 </p>
                 {/* Show original post timestamp for digital reports */}
-                {isDigital && fullReport?.report?.timestamp && (
+                {isDigital && fullReport?.report?.source_timestamp && (
                   <p className="text-xs text-gray-500 mt-2 italic">
-                    Original post: {formatOriginalPostDateTime(fullReport.report.timestamp)}
+                    Originally posted: {formatOriginalPostDateTime(fullReport.report.source_timestamp)}
                   </p>
                 )}
               </div>
@@ -613,20 +632,39 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               </div>
             )}
 
-            {/* Time: Original Post */}
-            {(fullReport?.report?.source_timestamp || fullReport?.report?.timestamp) && (
+            {/* Time: Originally Posted (source_timestamp - only for digital with external source) */}
+            {isDigital && fullReport?.report?.source_timestamp && (
               <div>
-                <h3 className="font-semibold text-sm mb-1">{t("Original Post") || "Original Post"}</h3>
+                <h3 className="font-semibold text-sm mb-1">{t("Originally Posted") || "Originally Posted"}</h3>
                 <p
                   className="text-sm relative group"
-                  aria-describedby="tooltip"
+                  aria-describedby="tooltip-original"
                 >
-                  {formatTime(fullReport.report.source_timestamp || fullReport.report.timestamp)}
+                  {formatTime(fullReport.report.source_timestamp)}
                   <span
-                    id="tooltip"
+                    id="tooltip-original"
                     className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
                   >
-                    {new Date(fullReport.report.source_timestamp || fullReport.report.timestamp).toLocaleString()}
+                    {new Date(fullReport.report.source_timestamp).toLocaleString()}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Time: Reported to CleanApp (timestamp - when ingested) */}
+            {fullReport?.report?.timestamp && (
+              <div>
+                <h3 className="font-semibold text-sm mb-1">{t("Reported") || "Reported"}</h3>
+                <p
+                  className="text-sm relative group"
+                  aria-describedby="tooltip-reported"
+                >
+                  {formatTime(fullReport.report.timestamp)}
+                  <span
+                    id="tooltip-reported"
+                    className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
+                  >
+                    {new Date(fullReport.report.timestamp).toLocaleString()}
                   </span>
                 </p>
               </div>
@@ -744,9 +782,9 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               <p className="font-semibold text-sm mt-8">Description</p>
               <p>{linkify(analysis?.description)}</p>
               {/* Show original post timestamp for digital reports */}
-              {isDigital && fullReport?.report?.timestamp && (
+              {isDigital && fullReport?.report?.source_timestamp && (
                 <p className="text-xs text-gray-500 mt-2 italic">
-                  Original post: {formatOriginalPostDateTime(fullReport.report.timestamp)}
+                  Originally posted: {formatOriginalPostDateTime(fullReport.report.source_timestamp)}
                 </p>
               )}
             </div>
