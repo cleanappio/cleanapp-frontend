@@ -1,7 +1,7 @@
 #!/bin/bash
 # Fast Frontend Deploy Script
 # Only builds and deploys the main frontend, skipping embedded and all other services
-# Usage: ./fastFEdeploy.sh -e <dev|prod>
+# Usage: ./fastFEdeploy.sh -e <dev|prod> [--with-embedded]
 
 set -e
 
@@ -83,15 +83,13 @@ case ${OPT} in
       VM_NAME="cleanapp-prod"
       ;;
   *)
-    echo "Usage: $0 -e|--env <dev|prod>"
+    echo "Usage: $0 -e|--env <dev|prod> [--with-embedded]"
     exit 1
     ;;
 esac
 
 CLOUD_REGION="us-central1"
 PROJECT_NAME="cleanup-mysql-v2"
-DOCKER_REPO="us-central1-docker.pkg.dev/${PROJECT_NAME}/cleanapp-docker-repo"
-IMAGE_NAME="cleanapp-frontend-image"
 
 # Ensure we're in the right project
 CURRENT_PROJECT=$(gcloud config get project 2>/dev/null)
@@ -116,45 +114,122 @@ BUILD_VERSION="${VER}.${BUILD}"
 echo "BUILD_VERSION=${BUILD_VERSION}" > .version
 echo "📌 Version: ${BUILD_VERSION}"
 
-# Build the Docker image using Cloud Build
-echo "🔨 Building Docker image (this is the slow part)..."
-gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_IMAGE_NAME=${IMAGE_NAME},_TAG=${BUILD_VERSION},_NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL},_NEXT_PUBLIC_LIVE_API_URL=${NEXT_PUBLIC_LIVE_API_URL},_NEXT_PUBLIC_TAGS_API_URL=${NEXT_PUBLIC_TAGS_API_URL},_NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL=${NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL},_NEXT_PUBLIC_MONTENEGRO_API_URL=${NEXT_PUBLIC_MONTENEGRO_API_URL},_NEXT_PUBLIC_DEVCONNECT2025_API_URL=${NEXT_PUBLIC_DEVCONNECT2025_API_URL},_NEXT_PUBLIC_EDGE_CITY_API_URL=${NEXT_PUBLIC_EDGE_CITY_API_URL},_NEXT_PUBLIC_NEW_YORK_API_URL=${NEXT_PUBLIC_NEW_YORK_API_URL},_NEXT_PUBLIC_REDBULL_API_URL=${NEXT_PUBLIC_REDBULL_API_URL},_NEXT_PUBLIC_AUTH_API_URL=${NEXT_PUBLIC_AUTH_API_URL},_NEXT_PUBLIC_AREAS_API_URL=${NEXT_PUBLIC_AREAS_API_URL},_NEXT_PUBLIC_REF_API_URL=${NEXT_PUBLIC_REF_API_URL},_NEXT_PUBLIC_REPORT_PROCESSING_API_URL=${NEXT_PUBLIC_REPORT_PROCESSING_API_URL},_NEXT_PUBLIC_EMAIL_API_URL=${NEXT_PUBLIC_EMAIL_API_URL},_NEXT_PUBLIC_RENDERER_API_URL=${NEXT_PUBLIC_RENDERER_API_URL},_NEXT_PUBLIC_WEBSITE_URL=${NEXT_PUBLIC_WEBSITE_URL},_NEXT_PUBLIC_REPORT_COUNT_URL=${NEXT_PUBLIC_REPORT_COUNT_URL},_NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN},_NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY},_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY},_NEXT_PUBLIC_PLAYSTORE_URL=${NEXT_PUBLIC_PLAYSTORE_URL},_NEXT_PUBLIC_APPSTORE_URL=${NEXT_PUBLIC_APPSTORE_URL} \
-  --region=${CLOUD_REGION}
+# Escape URLs for sed
+ESCAPED_NEXT_PUBLIC_API_URL=$(echo ${NEXT_PUBLIC_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_LIVE_API_URL=$(echo ${NEXT_PUBLIC_LIVE_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_TAGS_API_URL=$(echo ${NEXT_PUBLIC_TAGS_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL=$(echo ${NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL=$(echo ${NEXT_PUBLIC_MONTENEGRO_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_DEVCONNECT2025_API_URL=$(echo ${NEXT_PUBLIC_DEVCONNECT2025_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_EDGE_CITY_API_URL=$(echo ${NEXT_PUBLIC_EDGE_CITY_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_NEW_YORK_API_URL=$(echo ${NEXT_PUBLIC_NEW_YORK_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_REDBULL_API_URL=$(echo ${NEXT_PUBLIC_REDBULL_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_AUTH_API_URL=$(echo ${NEXT_PUBLIC_AUTH_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_AREAS_API_URL=$(echo ${NEXT_PUBLIC_AREAS_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL=$(echo ${NEXT_PUBLIC_PLAYSTORE_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_APPSTORE_URL=$(echo ${NEXT_PUBLIC_APPSTORE_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_REF_API_URL=$(echo ${NEXT_PUBLIC_REF_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL=$(echo ${NEXT_PUBLIC_REPORT_PROCESSING_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_EMAIL_API_URL=$(echo ${NEXT_PUBLIC_EMAIL_API_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_WEBSITE_URL=$(echo ${NEXT_PUBLIC_WEBSITE_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL=$(echo ${NEXT_PUBLIC_REPORT_COUNT_URL} | sed 's/\//\\\//g')
+ESCAPED_NEXT_PUBLIC_RENDERER_API_URL=$(echo ${NEXT_PUBLIC_RENDERER_API_URL} | sed 's/\//\\\//g')
 
-# Tag image for the environment
-echo "🏷️  Tagging image as ${OPT}..."
-gcloud artifacts docker tags add \
-  "${DOCKER_REPO}/${IMAGE_NAME}:${BUILD_VERSION}" \
-  "${DOCKER_REPO}/${IMAGE_NAME}:${OPT}"
+# Build modes (default: just main, optionally include embedded)
+if [ "$WITH_EMBEDDED" = true ]; then
+  MODES="full embedded"
+  echo "🔧 Building: main + embedded"
+else
+  MODES="full"
+  echo "🔧 Building: main only (use --with-embedded for both)"
+fi
 
-# Deploy to VM - just the frontend container
-echo "🚢 Deploying to ${VM_NAME}..."
-gcloud compute ssh ${VM_NAME} --zone=us-central1-a --command="
-  echo '🔄 Stopping old frontend container...'
-  sudo docker stop cleanapp_frontend 2>/dev/null || true
-  sudo docker rm cleanapp_frontend 2>/dev/null || true
+for MODE in ${MODES}; do
+  if [ "${MODE}" == "full" ]; then
+    DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image"
+    NEXT_PUBLIC_EMBEDDED_MODE="false"
+    CONTAINER_NAME="cleanapp_frontend"
+    PORT="3001"
+  else
+    DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image-embedded"
+    NEXT_PUBLIC_EMBEDDED_MODE="true"
+    CONTAINER_NAME="cleanapp_frontend_embedded"
+    PORT="3002"
+  fi
+  DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
+
+  echo ""
+  echo "🔨 Building ${MODE} image..."
   
-  echo '📥 Pulling new image...'
-  ACCESS_TOKEN=\$(gcloud auth print-access-token)
-  echo \"\${ACCESS_TOKEN}\" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
-  docker pull ${DOCKER_REPO}/${IMAGE_NAME}:${OPT}
-  
-  echo '🚀 Starting new frontend container...'
-  sudo docker run -d --name cleanapp_frontend \
-    --network deployer_default \
-    -p 3001:3000 \
-    -e NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-    -e NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL} \
-    ${DOCKER_REPO}/${IMAGE_NAME}:${OPT}
-  
-  echo '✅ Frontend container started'
-  sudo docker ps | grep cleanapp_frontend
-"
+  # Generate Dockerfile from template
+  cat Dockerfile.template | \
+  sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
+  sed "s/{{NEXT_PUBLIC_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_LIVE_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_TAGS_API_URL}}/${ESCAPED_NEXT_PUBLIC_TAGS_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}/${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}/" | \
+  sed "s/{{NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}}/${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}/" | \
+  sed "s/{{NEXT_PUBLIC_EMBEDDED_MODE}}/${NEXT_PUBLIC_EMBEDDED_MODE}/" | \
+  sed "s/{{NEXT_PUBLIC_MONTENEGRO_API_URL}}/${ESCAPED_NEXT_PUBLIC_MONTENEGRO_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_DEVCONNECT2025_API_URL}}/${ESCAPED_NEXT_PUBLIC_DEVCONNECT2025_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_EDGE_CITY_API_URL}}/${ESCAPED_NEXT_PUBLIC_EDGE_CITY_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_NEW_YORK_API_URL}}/${ESCAPED_NEXT_PUBLIC_NEW_YORK_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REDBULL_API_URL}}/${ESCAPED_NEXT_PUBLIC_REDBULL_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_AUTH_API_URL}}/${ESCAPED_NEXT_PUBLIC_AUTH_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_AREAS_API_URL}}/${ESCAPED_NEXT_PUBLIC_AREAS_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_PLAYSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_PLAYSTORE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_APPSTORE_URL}}/${ESCAPED_NEXT_PUBLIC_APPSTORE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REF_API_URL}}/${ESCAPED_NEXT_PUBLIC_REF_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REPORT_PROCESSING_API_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_PROCESSING_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_EMAIL_API_URL}}/${ESCAPED_NEXT_PUBLIC_EMAIL_API_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_WEBSITE_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSITE_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_REPORT_COUNT_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL}/" | \
+  sed "s/{{NEXT_PUBLIC_RENDERER_API_URL}}/${ESCAPED_NEXT_PUBLIC_RENDERER_API_URL}/" \
+  > Dockerfile
+
+  # Build and push using Cloud Build
+  gcloud builds submit \
+    --region=${CLOUD_REGION} \
+    --tag=${DOCKER_TAG}:${BUILD_VERSION}
+
+  # Tag for environment
+  echo "🏷️  Tagging as ${OPT}..."
+  gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}
+
+  # Cleanup
+  rm -f Dockerfile
+
+  # Deploy to VM
+  echo "🚢 Deploying ${MODE} to ${VM_NAME}..."
+  gcloud compute ssh ${VM_NAME} --zone=us-central1-a --command="
+    echo 'Stopping ${CONTAINER_NAME}...'
+    sudo docker stop ${CONTAINER_NAME} 2>/dev/null || true
+    sudo docker rm ${CONTAINER_NAME} 2>/dev/null || true
+    
+    echo 'Authenticating with Docker registry...'
+    ACCESS_TOKEN=\$(gcloud auth print-access-token)
+    echo \"\${ACCESS_TOKEN}\" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+    
+    echo 'Pulling new image...'
+    docker pull ${DOCKER_TAG}:${OPT}
+    
+    echo 'Starting ${CONTAINER_NAME}...'
+    sudo docker run -d --name ${CONTAINER_NAME} \
+      --network deployer_default \
+      -p ${PORT}:3000 \
+      ${DOCKER_TAG}:${OPT}
+    
+    sudo docker ps | grep ${CONTAINER_NAME}
+  "
+done
 
 END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
+MINUTES=$((ELAPSED / 60))
+SECONDS=$((ELAPSED % 60))
+
 echo ""
-echo "✅ Fast Frontend Deploy completed in ${ELAPSED} seconds!"
+echo "✅ Fast Frontend Deploy completed in ${MINUTES}m ${SECONDS}s"
 echo "   Version: ${BUILD_VERSION}"
 echo "   Environment: ${OPT}"
