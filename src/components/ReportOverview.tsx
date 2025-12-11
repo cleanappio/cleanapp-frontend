@@ -413,7 +413,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                   )}
 
                   {/* Time: Original Post */}
-                  {fullReport?.report?.timestamp && (
+                  {(fullReport?.report?.source_timestamp || fullReport?.report?.timestamp) && (
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm mb-1 text-gray-800">
                         {t("Original Post") || "Original Post"}
@@ -422,13 +422,13 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                         className="text-sm relative group"
                         aria-describedby="tooltip"
                       >
-                        {formatTime(fullReport.report.timestamp)}
+                        {formatTime(fullReport.report.source_timestamp || fullReport.report.timestamp)}
                         <span
                           id="tooltip"
                           className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
                         >
                           {new Date(
-                            fullReport.report.timestamp
+                            fullReport.report.source_timestamp || fullReport.report.timestamp
                           ).toLocaleString()}
                         </span>
                       </p>
@@ -614,19 +614,19 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             )}
 
             {/* Time: Original Post */}
-            {fullReport?.report?.timestamp && (
+            {(fullReport?.report?.source_timestamp || fullReport?.report?.timestamp) && (
               <div>
                 <h3 className="font-semibold text-sm mb-1">{t("Original Post") || "Original Post"}</h3>
                 <p
                   className="text-sm relative group"
                   aria-describedby="tooltip"
                 >
-                  {formatTime(fullReport.report.timestamp)}
+                  {formatTime(fullReport.report.source_timestamp || fullReport.report.timestamp)}
                   <span
                     id="tooltip"
                     className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2"
                   >
-                    {new Date(fullReport.report.timestamp).toLocaleString()}
+                    {new Date(fullReport.report.source_timestamp || fullReport.report.timestamp).toLocaleString()}
                   </span>
                 </p>
               </div>

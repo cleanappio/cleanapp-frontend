@@ -40,6 +40,7 @@ import { useBackendSearch } from "@/hooks/useBackendSearch";
 export interface Report {
   seq: number;
   timestamp: string;
+  source_timestamp?: string | null; // Original post timestamp from external sources (Bluesky, Twitter, etc)
   id: string;
   latitude: number;
   longitude: number;
