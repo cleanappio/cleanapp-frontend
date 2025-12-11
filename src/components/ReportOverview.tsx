@@ -224,26 +224,24 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     const reportTime = parseBackendDate(timestamp);
     const currentTime = new Date();
     const timeDifference = currentTime.getTime() - reportTime.getTime();
-    const timeDifferenceInMinutes = Math.floor(timeDifference / (1000 * 60));
-    const timeDifferenceInHours = Math.floor(timeDifferenceInMinutes / 60);
-    const timeDifferenceInDays = Math.floor(timeDifferenceInHours / 24);
-    const timeDifferenceInMonths = Math.floor(timeDifferenceInDays / 30);
-    const timeDifferenceInYears = Math.floor(timeDifferenceInMonths / 12);
-    if (timeDifferenceInYears > 0) {
-      return `${timeDifferenceInYears} years ago`;
-    } else if (timeDifferenceInMonths > 0) {
-      return `${timeDifferenceInMonths} months ago`;
-    } else if (timeDifferenceInDays > 0) {
-      return `${timeDifferenceInDays} days ago`;
-    } else if (timeDifferenceInHours > 0) {
-      return `${timeDifferenceInHours} hours ago`;
-    } else if (timeDifferenceInMinutes > 0) {
-      return `${timeDifferenceInMinutes} minutes ago`;
-    } else {
-      return `just now`;
-    }
-  };
+    const minutes = Math.floor(timeDifference / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
 
+    if (hours >= 24) {
+      return reportTime.toLocaleDateString(getCurrentLocale(), {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+
+    return `just now`;
+  };
 
 
   // Format original post datetime (e.g., "December 10, 2025 at 14:30 UTC")
@@ -410,14 +408,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                   {/* Time: Escalated to CleanApp (timestamp - when ingested) */}
                   {fullReport?.report?.timestamp && (
                     <div className="flex-1">
-                      <h3 className="font-semibold text-sm mb-1 text-red-600">
-                        {t("Escalated") || "Escalated"}
-                      </h3>
                       <p
-                        className="text-sm font-bold text-red-600 relative group"
+                        className="text-sm text-gray-800 relative group"
                         aria-describedby="tooltip-escalated"
                       >
-                        {formatTime(fullReport.report.timestamp)}
+                        <span className="font-semibold">{t("Escalated") || "Escalated"}:</span> {formatTime(fullReport.report.timestamp)}
                         <span
                           id="tooltip-escalated"
                           className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2 font-normal"
@@ -427,7 +422,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                       </p>
                       {/* Originally Posted - shown below Escalated */}
                       {fullReport?.report?.source_timestamp && (
-                        <p className="text-xs text-black mt-1 font-semibold">
+                        <p className="text-xs text-gray-600 mt-1">
                           Original post: {parseBackendDate(fullReport.report.source_timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.report.source_timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
@@ -528,12 +523,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                 <p className="text-sm text-gray-700 leading-relaxed text-wrap break-words">
                   {linkify(analysis.description)}
                 </p>
-                {/* Show original post timestamp for digital reports */}
-                {isDigital && fullReport?.report?.source_timestamp && (
-                  <p className="text-xs text-gray-500 mt-2 italic">
-                    Originally posted: {formatOriginalPostDateTime(fullReport.report.source_timestamp)}
-                  </p>
-                )}
+
               </div>
             )}
 
@@ -584,12 +574,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             {/* Time: Escalated to CleanApp (timestamp - when ingested) */}
             {fullReport?.report?.timestamp && (
               <div>
-                <h3 className="font-semibold text-sm mb-1 text-red-600">{t("Escalated") || "Escalated"}</h3>
                 <p
-                  className="text-sm font-bold text-red-600 relative group"
+                  className="text-sm text-gray-800 relative group"
                   aria-describedby="tooltip-escalated-desktop"
                 >
-                  {formatTime(fullReport.report.timestamp)}
+                  <span className="font-semibold">{t("Escalated") || "Escalated"}:</span> {formatTime(fullReport.report.timestamp)}
                   <span
                     id="tooltip-escalated-desktop"
                     className="absolute invisible group-hover:visible bg-gray-800 text-white p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mt-2 font-normal"
@@ -599,7 +588,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                 </p>
                 {/* Originally Posted - shown below Escalated */}
                 {fullReport?.report?.source_timestamp && (
-                  <p className="text-xs text-black mt-1 font-semibold">
+                  <p className="text-xs text-gray-600 mt-1">
                     Original post: {parseBackendDate(fullReport.report.source_timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.report.source_timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
@@ -691,12 +680,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             <div>
               <p className="font-semibold text-sm mt-8">Description</p>
               <p>{linkify(analysis?.description)}</p>
-              {/* Show original post timestamp for digital reports */}
-              {isDigital && fullReport?.report?.source_timestamp && (
-                <p className="text-xs text-gray-500 mt-2 italic">
-                  Originally posted: {formatOriginalPostDateTime(fullReport.report.source_timestamp)}
-                </p>
-              )}
+
             </div>
           )}
         </div>

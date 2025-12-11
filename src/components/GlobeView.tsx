@@ -3012,15 +3012,12 @@ export default function GlobeView() {
                 label: t("brandDashboard"),
                 link: "/redbull",
               },
-              {
-                label: t("cleanAppMap"),
-                link: "https://cleanappmap.replit.app",
-              },
+
               {
                 label: t("cleanAppGPT"),
                 link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
               },
-              { label: "STXN", link: "https://www.stxn.io" },
+
             ].map((item) => {
               return (
                 <Link

@@ -186,7 +186,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                   <div
                     key={item.report?.seq || idx}
                     onClick={() => onReportClick(item)}
-                    className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer w-full transition-colors text-center ${isSelected
+                    className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer transition-colors text-center ${isSelected
                       ? "border-blue-400 bg-blue-600/20 text-white"
                       : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
                       }`}
@@ -243,7 +243,7 @@ const LatestReports: React.FC<LatestReportsProps> = ({
                       onClick={() => {
                         onReportClick(item);
                       }}
-                      className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer w-full transition-colors text-center ${isSelected
+                      className={`flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer transition-colors text-center ${isSelected
                         ? "border-blue-400 bg-blue-600/20 text-white"
                         : "border-slate-700 text-slate-300 hover:bg-slate-700/50"
                         }`}
