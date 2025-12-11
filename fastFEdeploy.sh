@@ -161,8 +161,8 @@ for MODE in ${MODES}; do
   echo ""
   echo "🔨 Building ${MODE} image..."
   
-  # Generate Dockerfile from template
-  cat Dockerfile.template | \
+  # Generate Dockerfile from OPTIMIZED template (uses prebuilt base images)
+  cat Dockerfile.template.fast | \
   sed "s/{{NEXT_PUBLIC_API_URL}}/${ESCAPED_NEXT_PUBLIC_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}/${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}/" | \
   sed "s/{{NEXT_PUBLIC_LIVE_API_URL}}/${ESCAPED_NEXT_PUBLIC_LIVE_API_URL}/" | \

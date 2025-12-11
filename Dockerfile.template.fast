@@ -1,0 +1,73 @@
+# Stage 1: Build the application
+# Uses prebuilt base image with canvas build dependencies already installed
+FROM us-central1-docker.pkg.dev/cleanup-mysql-v2/cleanapp-docker-repo/cleanapp-frontend-base-builder:latest AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV NEXT_PUBLIC_API_URL={{NEXT_PUBLIC_API_URL}}
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY={{NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}}
+ENV NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN={{NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}}
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY={{NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}}
+ENV NEXT_PUBLIC_LIVE_API_URL={{NEXT_PUBLIC_LIVE_API_URL}}
+ENV NEXT_PUBLIC_TAGS_API_URL={{NEXT_PUBLIC_TAGS_API_URL}}
+ENV NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL={{NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}}
+ENV NEXT_PUBLIC_EMBEDDED_MODE={{NEXT_PUBLIC_EMBEDDED_MODE}}
+ENV NEXT_PUBLIC_MONTENEGRO_API_URL={{NEXT_PUBLIC_MONTENEGRO_API_URL}}
+ENV NEXT_PUBLIC_DEVCONNECT2025_API_URL={{NEXT_PUBLIC_DEVCONNECT2025_API_URL}}
+ENV NEXT_PUBLIC_EDGE_CITY_API_URL={{NEXT_PUBLIC_EDGE_CITY_API_URL}}
+ENV NEXT_PUBLIC_NEW_YORK_API_URL={{NEXT_PUBLIC_NEW_YORK_API_URL}}
+ENV NEXT_PUBLIC_REDBULL_API_URL={{NEXT_PUBLIC_REDBULL_API_URL}}
+ENV NEXT_PUBLIC_AUTH_API_URL={{NEXT_PUBLIC_AUTH_API_URL}}
+ENV NEXT_PUBLIC_AREAS_API_URL={{NEXT_PUBLIC_AREAS_API_URL}}
+ENV NEXT_PUBLIC_PLAYSTORE_URL={{NEXT_PUBLIC_PLAYSTORE_URL}}
+ENV NEXT_PUBLIC_APPSTORE_URL={{NEXT_PUBLIC_APPSTORE_URL}}
+ENV NEXT_PUBLIC_REF_API_URL={{NEXT_PUBLIC_REF_API_URL}}
+ENV NEXT_PUBLIC_REPORT_PROCESSING_API_URL={{NEXT_PUBLIC_REPORT_PROCESSING_API_URL}}
+ENV NEXT_PUBLIC_EMAIL_API_URL={{NEXT_PUBLIC_EMAIL_API_URL}}
+ENV NEXT_PUBLIC_WEBSITE_URL={{NEXT_PUBLIC_WEBSITE_URL}}
+ENV NEXT_PUBLIC_REPORT_COUNT_URL={{NEXT_PUBLIC_REPORT_COUNT_URL}}
+ENV NEXT_PUBLIC_RENDERER_API_URL={{NEXT_PUBLIC_RENDERER_API_URL}}
+
+# NOTE: System dependencies (python3, make, g++, libcairo2-dev, etc.) 
+# are already installed in the base image - no apt-get needed here!
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy next.config.js first to ensure it's available
+COPY next.config.js ./
+
+# Copy all files and build the app
+COPY . .
+
+# Ensure next.config.js is properly copied and has correct permissions
+RUN ls -la next.config.js || echo "next.config.js not found"
+RUN cat next.config.js
+
+RUN npm run build
+
+# Stage 2: Run the application with minimal footprint
+# Uses prebuilt base image with canvas runtime dependencies already installed
+FROM us-central1-docker.pkg.dev/cleanup-mysql-v2/cleanapp-docker-repo/cleanapp-frontend-base-runner:latest AS runner
+
+# Set working directory
+WORKDIR /app
+
+# NOTE: Runtime dependencies (libcairo2, libpango, etc.)
+# are already installed in the base image - no apt-get needed here!
+
+# Only copy necessary files from the builder stage
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.js ./next.config.js
+
+# Expose the port Next.js will run on
+EXPOSE 3000
+
+# Run the Next.js app
+CMD ["npm", "start"]

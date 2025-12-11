@@ -1,0 +1,22 @@
+# Base image with Node.js and canvas/native module build dependencies
+# This image is built ONCE and reused for all frontend builds
+# Saves ~1-2 minutes per build by pre-installing apt packages
+
+FROM node:24-slim
+
+# Install system dependencies required for canvas and native modules (build-time)
+RUN apt-get update && apt-get install -y \
+  python3 \
+  make \
+  g++ \
+  libcairo2-dev \
+  libpango1.0-dev \
+  libjpeg-dev \
+  libgif-dev \
+  librsvg2-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Labels for documentation
+LABEL maintainer="cleanapp"
+LABEL description="Base image for CleanApp frontend builder stage with canvas dependencies"
+LABEL version="1.0"

@@ -1,0 +1,22 @@
+# Base image with Node.js and canvas runtime dependencies
+# This image is built ONCE and reused for all frontend builds
+# Saves ~30-60 seconds per build by pre-installing apt packages
+
+FROM node:24-slim
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Install runtime dependencies for canvas (runtime only, smaller footprint)
+RUN apt-get update && apt-get install -y \
+  libcairo2 \
+  libpango-1.0-0 \
+  libjpeg62-turbo \
+  libgif7 \
+  librsvg2-2 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Labels for documentation
+LABEL maintainer="cleanapp"
+LABEL description="Base image for CleanApp frontend runner stage with canvas runtime dependencies"
+LABEL version="1.0"
