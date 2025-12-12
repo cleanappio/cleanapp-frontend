@@ -385,22 +385,13 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                         {t("location")}
                       </h3>
                       {location && location.latitude && location.longitude && (
-                        <a
-                          href={getGoogleMapsUrl(
-                            location.latitude,
-                            location.longitude
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-                        >
-                          <ReverseGeocodingDisplay
-                            address={address}
-                            loading={addressLoading}
-                            error={addressError}
-                            onRetry={refetchAddress}
-                          />
-                        </a>
+                        <ReverseGeocodingDisplay
+                          address={address}
+                          loading={addressLoading}
+                          error={addressError}
+                          onRetry={refetchAddress}
+                          textClassName="text-sm text-gray-700"
+                        />
                       )}
                     </div>
                   )}
@@ -551,22 +542,13 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               <div>
                 <h3 className="font-semibold text-sm mb-1">{t("location")}</h3>
                 {location && location.latitude && location.longitude && (
-                  <a
-                    href={getGoogleMapsUrl(
-                      location.latitude,
-                      location.longitude
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 text-sm underline"
-                  >
-                    <ReverseGeocodingDisplay
-                      address={address}
-                      loading={addressLoading}
-                      error={addressError}
-                      onRetry={refetchAddress}
-                    />
-                  </a>
+                  <ReverseGeocodingDisplay
+                    address={address}
+                    loading={addressLoading}
+                    error={addressError}
+                    onRetry={refetchAddress}
+                    textClassName="text-sm text-gray-700"
+                  />
                 )}
               </div>
             )}

@@ -147,3 +147,16 @@ export function getBrandNameDisplay(reportAnalysis: ReportAnalysis): {
     brandDisplayName: reportAnalysis?.brand_display_name ?? brandName,
   };
 }
+
+/**
+ * Safely parses a date string from the backend (which might be in SQL format YYYY-MM-DD HH:MM:SS)
+ * and returns a Date object. This handles Safari's strict ISO parsing requirements.
+ */
+export function parseBackendDate(dateStr: string | null | undefined): Date {
+  if (!dateStr) return new Date(); // Fallback to now if missing
+
+  // Replace space with T for ISO compatibility (fixes Safari Invalid Date issue)
+  // SQL format: 2024-01-25 20:39:25 -> ISO: 2024-01-25T20:39:25
+  const safeStr = dateStr.replace(" ", "T");
+  return new Date(safeStr);
+}
