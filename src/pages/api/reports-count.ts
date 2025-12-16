@@ -19,13 +19,20 @@ export default async function handler(
 
     url = process.env.NEXT_PUBLIC_REPORT_COUNT_URL || "http://localhost:8080";
 
+    // Use AbortController for timeout (30 seconds to handle slow queries)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(
