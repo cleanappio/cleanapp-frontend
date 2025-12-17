@@ -69,13 +69,6 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ reports }) => {
               <div className="text-xs text-gray-500">{t("mediumPriority")}</div>
             </div>
           </div>
-
-          <div className="text-center">
-            <div className="text-base sm:text-lg font-semibold text-green-600">
-              {stats.litterIssues}
-            </div>
-            <div className="text-xs text-gray-500">{t("litterIssues")}</div>
-          </div>
         </div>
       </div>
     </div>

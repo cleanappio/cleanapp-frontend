@@ -568,10 +568,14 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                     {new Date(fullReport.report.timestamp).toLocaleString()}
                   </span>
                 </p>
-                {/* Originally Posted - shown below Escalated */}
-                {fullReport?.report?.source_timestamp && (
+                {/* Original Post - for digital reports from external sources (Bluesky, Twitter, etc.) */}
+                {fullReport?.report?.source_timestamp ? (
                   <p className="text-xs text-gray-600 mt-1">
                     Original post: {parseBackendDate(fullReport.report.source_timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.report.source_timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                ) : (fullReport?.analysis?.[0]?.created_at && isDigital) && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Original post: {parseBackendDate(fullReport.analysis[0].created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} at {parseBackendDate(fullReport.analysis[0].created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
               </div>

@@ -98,7 +98,7 @@ export default function DigitalBrandPage() {
             getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName}
         </h1>
         <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
-          {t("recentReports")} ({brandReports.length})
+          {t("totalReports")} ({brandReports.length})
         </h2>
 
         {isSubscribed && (
