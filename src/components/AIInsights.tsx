@@ -9,8 +9,10 @@ const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 
 export default function AIInsights({
   brandReports,
+  totalCount,
 }: {
   brandReports: ReportWithAnalysis[];
+  totalCount?: number;
 }) {
   const locale = getCurrentLocale();
   const { t } = useTranslations();
@@ -82,7 +84,7 @@ export default function AIInsights({
             <div className="space-y-3 sm:space-y-4">
               <div className="text-center">
                 <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                  {brandReports.length}
+                  {totalCount ?? brandReports.length}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500">
                   {t("totalReports")}
@@ -127,23 +129,6 @@ export default function AIInsights({
                     {t("mediumPriority")}
                   </div>
                 </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-base sm:text-lg font-semibold text-green-600">
-                  {
-                    brandReports.filter((r) => {
-                      const matchingAnalysis =
-                        r.analysis?.find((a) => a.language === locale) ||
-                        r.analysis?.[0];
-                      return (
-                        matchingAnalysis?.litter_probability &&
-                        matchingAnalysis.litter_probability > 0.5
-                      );
-                    }).length
-                  }
-                </div>
-                <div className="text-xs text-gray-500">{t("litterIssues")}</div>
               </div>
             </div>
           </div>

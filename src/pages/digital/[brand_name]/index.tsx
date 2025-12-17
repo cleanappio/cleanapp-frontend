@@ -23,7 +23,7 @@ export default function DigitalBrandPage() {
 
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  const { brandReports, isLoading, error, fetchRecentReportsByBrand } =
+  const { brandReports, totalCount, isLoading, error, fetchRecentReportsByBrand } =
     useReportsByBrand(brand_name as string, locale);
 
   useEffect(() => {
@@ -98,14 +98,14 @@ export default function DigitalBrandPage() {
             getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName}
         </h1>
         <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
-          {t("totalReports")} ({brandReports.length})
+          {t("totalReports")} ({totalCount})
         </h2>
 
         {isSubscribed && (
           <SubscribedBrandDashboard brandReports={brandReports} />
         )}
         {!isSubscribed && <PublicBrandDashboard brandReports={brandReports} />}
-        <AIInsights brandReports={brandReports} />
+        <AIInsights brandReports={brandReports} totalCount={totalCount} />
       </div>
 
       <Footer />

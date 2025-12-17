@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 
 export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [brandReports, setBrandReports] = useState<ReportWithAnalysis[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
@@ -16,6 +17,7 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
       );
       const data = await response.json();
       setBrandReports(data.reports);
+      setTotalCount(data.total_count || data.reports?.length || 0);
     } catch (error) {
       setError(t("failedToFetchReports"));
       console.error(error);
@@ -30,5 +32,5 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
     }
   }, [brand_name]);
 
-  return { brandReports, isLoading, error, fetchRecentReportsByBrand };
+  return { brandReports, totalCount, isLoading, error, fetchRecentReportsByBrand };
 };
