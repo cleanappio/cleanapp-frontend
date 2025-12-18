@@ -2302,12 +2302,9 @@ export default function GlobeView() {
           const analysis = firstReport.analysis?.[0];
           const brandName = analysis?.brand_name || searchTerm;
 
-          // Look up the actual total from latestDigitalReportsV2 which has accurate totals
-          // The API response count only reflects the number of reports returned (limited by n=1)
-          const matchingDigitalReport = latestDigitalReportsV2.find(
-            (r) => r.brand_name.toLowerCase() === brandName.toLowerCase()
-          );
-          const actualTotal = matchingDigitalReport?.total || data.count || data.reports.length;
+          // Use total_count from the API response (accurate database count)
+          // Falls back to the fetched count if total_count not available
+          const actualTotal = data.total_count || data.count || data.reports.length;
 
           setMatchingBrand({
             brand_name: brandName,
