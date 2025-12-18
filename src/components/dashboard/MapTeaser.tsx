@@ -51,7 +51,7 @@ export default function MapTeaser() {
           </div>
           <h3 className="text-xl font-bold text-white mb-2">Live Map Preview</h3>
           <p className="text-gray-300 mb-6">
-            Real-time reports are being tracked worldwide. Explore the map to see what's happening.
+            Real-time reports are being tracked worldwide. Explore the map to see what&apos;s happening.
           </p>
           <button
             onClick={() => router.push('/')}
