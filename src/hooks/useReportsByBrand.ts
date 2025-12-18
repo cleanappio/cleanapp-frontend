@@ -1,6 +1,6 @@
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import { useTranslations } from "@/lib/i18n";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [brandReports, setBrandReports] = useState<ReportWithAnalysis[]>([]);
@@ -12,32 +12,16 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
   const fetchRecentReportsByBrand = async (brand_name: string) => {
     setIsLoading(true);
     try {
-      // Fetch reports (limited to 100 for display)
-      const reportsResponse = await fetch(
+      // Fetch reports - the API now returns total_count for the actual total
+      const response = await fetch(
         `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${locale}`
       );
-      const reportsData = await reportsResponse.json();
-      setBrandReports(reportsData.reports);
+      const data = await response.json();
+      setBrandReports(data.reports);
 
-      // Fetch actual total count from brands/summary endpoint (same as globe search uses)
-      const apiUrl = process.env.NEXT_PUBLIC_RENDERER_API_URL || process.env.NEXT_PUBLIC_LIVE_API_URL;
-      const summaryResponse = await fetch(
-        `${apiUrl}/api/v4/brands/summary?classification=digital&lang=${locale}`
-      );
-      const summaryData = await summaryResponse.json();
-
-      // Find matching brand and get its total
-      const matchingBrand = summaryData?.find(
-        (b: { brand_name: string; total: number }) =>
-          b.brand_name.toLowerCase() === brand_name.toLowerCase()
-      );
-
-      if (matchingBrand?.total) {
-        setTotalCount(matchingBrand.total);
-      } else {
-        // Fallback to API total_count or reports length
-        setTotalCount(reportsData.total_count || reportsData.reports?.length || 0);
-      }
+      // Use total_count from API (actual count from database)
+      // Fallback to reports length if not available
+      setTotalCount(data.total_count || data.reports?.length || 0);
     } catch (error) {
       setError(t("failedToFetchReports"));
       console.error(error);
@@ -54,4 +38,3 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
 
   return { brandReports, totalCount, isLoading, error, fetchRecentReportsByBrand };
 };
-
