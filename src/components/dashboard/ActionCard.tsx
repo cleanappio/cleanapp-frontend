@@ -116,7 +116,7 @@ export default function ActionCard() {
           label="Monitor a location"
           description="Track reports in your area"
           example="e.g. campuses, offices, neighborhoods"
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/?tutorial=location')}
         />
 
         <div className="relative">

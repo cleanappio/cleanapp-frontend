@@ -36,6 +36,7 @@ import AreaCreationModal from "./AreaCreationModal";
 import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
 import { useBackendSearch } from "@/hooks/useBackendSearch";
+import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 // Type for report data
 export interface Report {
   seq: number;
@@ -146,6 +147,9 @@ export default function GlobeView() {
   );
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const [areasLoading, setAreasLoading] = useState(false);
+
+  // Tutorial mode for onboarding
+  const [showLocationTutorial, setShowLocationTutorial] = useState(false);
 
   // Use the refactored report tabs hook with API calls
   const {
@@ -338,6 +342,15 @@ export default function GlobeView() {
   // Handle query parameter for report sharing
   useEffect(() => {
     if (!router.isReady) return;
+
+    // Check for tutorial mode
+    const tutorialParam = router.query.tutorial as string | undefined;
+    if (tutorialParam === "location") {
+      setShowLocationTutorial(true);
+      // Remove the tutorial param from URL after showing
+      const { tutorial, ...restQuery } = router.query;
+      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
+    }
 
     const seqParam = router.query.seq;
     const brandNameParam = router.query.brand_name as string | undefined;
@@ -2727,6 +2740,7 @@ export default function GlobeView() {
       {!isMobile && (
         <div className="absolute top-4 right-20 flex flex-col gap-4 w-48 lg:w-80 xl:w-96  max-w-48 lg:max-w-80 xl:max-w-96">
           <button
+            id="tutorial-search-box"
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
             onClick={() => {
               // setIsMenuOpen(!isMenuOpen)
@@ -3041,6 +3055,7 @@ export default function GlobeView() {
       {/* Drawing mode toggle button */}
       {!isDigital && (
         <div
+          id="tutorial-draw-tools"
           className={`absolute ${isEmbeddedMode ? "top-4" : "top-20"
             } right-4 z-10 flex flex-col gap-2`}
         >
@@ -3281,6 +3296,13 @@ export default function GlobeView() {
       //   // setSelectedReport(report);
       //   // flyToReport(report);
       // }}
+      />
+
+      {/* Location monitoring tutorial overlay */}
+      <MapTutorialOverlay
+        isOpen={showLocationTutorial}
+        onClose={() => setShowLocationTutorial(false)}
+        onComplete={() => setShowLocationTutorial(false)}
       />
     </div>
   );
