@@ -17,7 +17,7 @@ interface ActionButtonProps {
 function ActionButton({ icon: Icon, label, description, example, onClick, isActive, children }: ActionButtonProps) {
   if (isActive) {
     return (
-      <div className="flex flex-col items-center p-6 bg-white/20 rounded-xl transition-all duration-300 shadow-lg border-2 border-white/50 w-full min-h-[180px]">
+      <div className="relative flex flex-col items-center p-6 bg-white/20 rounded-xl transition-all duration-300 shadow-lg border-2 border-white/50 w-full min-h-[180px]">
         {children}
       </div>
     );
@@ -155,47 +155,47 @@ export default function ActionCard() {
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
 
-              {/* Search Results Dropdown-style */}
-              {(searchTerm.length >= 2) && (
-                <div className="absolute top-[70%] left-0 right-0 z-50 bg-gray-900 rounded-xl border border-white/20 shadow-2xl overflow-hidden mt-1 max-h-60 overflow-y-auto">
-                  {matchingBrand && (
-                    <button
-                      className="p-4 bg-gradient-to-r from-green-900/40 to-gray-800 text-left w-full hover:from-green-800/40 hover:to-gray-700 transition-all group flex items-center justify-between border-b border-white/10"
-                      onClick={() => handleBrandClick(matchingBrand.brand_name)}
-                    >
-                      <div>
-                        <p className="text-white font-semibold">{matchingBrand.brand_display_name} Dashboard</p>
-                        <p className="text-green-400 text-xs">{matchingBrand.total.toLocaleString()} reports</p>
-                      </div>
-                      <ArrowRight className="text-gray-400 group-hover:text-green-400 w-5 h-5 transition-colors" />
-                    </button>
-                  )}
-
-                  {searchResults.length > 0 ? (
-                    searchResults.map((result) => (
+                {/* Search Results Dropdown-style */}
+                {(searchTerm.length >= 2) && (
+                  <div className="absolute top-full left-0 right-0 z-50 bg-gray-900 rounded-xl border border-white/20 shadow-2xl overflow-hidden mt-1 max-h-60 overflow-y-auto">
+                    {matchingBrand && (
                       <button
-                        key={result.report.seq}
-                        className="p-3 text-left text-gray-200 hover:bg-white/10 w-full text-sm border-b border-white/5 last:border-none"
-                        onClick={() => handleBrandClick(result.analysis?.[0]?.brand_name || searchTerm)}
+                        className="p-4 bg-gradient-to-r from-green-900/40 to-gray-800 text-left w-full hover:from-green-800/40 hover:to-gray-700 transition-all group flex items-center justify-between border-b border-white/10"
+                        onClick={() => handleBrandClick(matchingBrand.brand_name)}
                       >
-                        <p className="line-clamp-1 opacity-80">{result.analysis?.[0]?.title || `Report #${result.report.seq}`}</p>
+                        <div>
+                          <p className="text-white font-semibold">{matchingBrand.brand_display_name} Dashboard</p>
+                          <p className="text-green-400 text-xs">{matchingBrand.total.toLocaleString()} reports</p>
+                        </div>
+                        <ArrowRight className="text-gray-400 group-hover:text-green-400 w-5 h-5 transition-colors" />
                       </button>
-                    ))
-                  ) : !matchingBrand && !searchLoading && (
-                    <div className="p-4 text-white/50 text-sm text-center italic font-light">
-                      No brands found for &quot;{searchTerm}&quot;
-                    </div>
-                  )}
+                    )}
 
-                  {searchLoading && (
-                    <div className="p-4 text-white/50 text-sm text-center">
-                      Searching...
-                    </div>
-                  )}
-                </div>
-              )}
+                    {searchResults.length > 0 ? (
+                      searchResults.map((result) => (
+                        <button
+                          key={result.report.seq}
+                          className="p-3 text-left text-gray-200 hover:bg-white/10 w-full text-sm border-b border-white/5 last:border-none"
+                          onClick={() => handleBrandClick(result.analysis?.[0]?.brand_name || searchTerm)}
+                        >
+                          <p className="line-clamp-1 opacity-80">{result.analysis?.[0]?.title || `Report #${result.report.seq}`}</p>
+                        </button>
+                      ))
+                    ) : !matchingBrand && !searchLoading && (
+                      <div className="p-4 text-white/50 text-sm text-center italic font-light">
+                        No brands found for &quot;{searchTerm}&quot;
+                      </div>
+                    )}
+
+                    {searchLoading && (
+                      <div className="p-4 text-white/50 text-sm text-center">
+                        Searching...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </ActionButton>
         </div>
