@@ -159,7 +159,7 @@ export default function ActionCard() {
 
               {/* Search Results Dropdown-style */}
               {(searchTerm.length >= 2) && (
-                <div className="absolute top-[85%] left-0 right-0 z-50 bg-gray-900 rounded-xl border border-white/20 shadow-2xl overflow-hidden mt-1 max-h-60 overflow-y-auto">
+                <div className="absolute top-[70%] left-0 right-0 z-50 bg-gray-900 rounded-xl border border-white/20 shadow-2xl overflow-hidden mt-1 max-h-60 overflow-y-auto">
                   {matchingBrand && (
                     <button
                       className="p-4 bg-gradient-to-r from-green-900/40 to-gray-800 text-left w-full hover:from-green-800/40 hover:to-gray-700 transition-all group flex items-center justify-between border-b border-white/10"
