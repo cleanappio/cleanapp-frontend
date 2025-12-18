@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { MapPin, Building2, Globe, Search, X, ArrowRight } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { useBackendSearch } from '@/hooks/useBackendSearch';
+import { useUserActivityStore } from '@/lib/user-activity-store';
 
 interface ActionButtonProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -100,7 +101,12 @@ export default function ActionCard() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  const handleBrandClick = (brandName: string) => {
+  // Track user activity for dashboard personalization
+  const trackBrandSearch = useUserActivityStore((state) => state.trackBrandSearch);
+
+  const handleBrandClick = (brandName: string, displayName?: string) => {
+    console.log('[UserActivity] Tracking brand from ActionCard:', displayName || brandName);
+    trackBrandSearch(displayName || brandName);
     router.push(`/digital/${brandName}`);
   };
 
@@ -162,7 +168,7 @@ export default function ActionCard() {
                     {matchingBrand && (
                       <button
                         className="p-4 bg-gradient-to-r from-green-900/40 to-gray-800 text-left w-full hover:from-green-800/40 hover:to-gray-700 transition-all group flex items-center justify-between border-b border-white/10"
-                        onClick={() => handleBrandClick(matchingBrand.brand_name)}
+                        onClick={() => handleBrandClick(matchingBrand.brand_name, matchingBrand.brand_display_name)}
                       >
                         <div>
                           <p className="text-white font-semibold">{matchingBrand.brand_display_name} Dashboard</p>
@@ -177,7 +183,7 @@ export default function ActionCard() {
                         <button
                           key={result.report.seq}
                           className="p-3 text-left text-gray-200 hover:bg-white/10 w-full text-sm border-b border-white/5 last:border-none"
-                          onClick={() => handleBrandClick(result.analysis?.[0]?.brand_name || searchTerm)}
+                          onClick={() => handleBrandClick(result.analysis?.[0]?.brand_name || searchTerm, result.analysis?.[0]?.brand_display_name || result.analysis?.[0]?.brand_name || searchTerm)}
                         >
                           <p className="line-clamp-1 opacity-80">{result.analysis?.[0]?.title || `Report #${result.report.seq}`}</p>
                         </button>

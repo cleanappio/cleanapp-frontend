@@ -37,6 +37,7 @@ import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
 import { useBackendSearch } from "@/hooks/useBackendSearch";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
+import { useUserActivityStore } from "@/lib/user-activity-store";
 // Type for report data
 export interface Report {
   seq: number;
@@ -176,6 +177,10 @@ export default function GlobeView() {
     loading: searchLoading,
     error: searchError,
   } = useBackendSearch(selectedTab);
+
+  // Track user activity for dashboard personalization
+  const trackBrandSearch = useUserActivityStore((state) => state.trackBrandSearch);
+  const trackLocationView = useUserActivityStore((state) => state.trackLocationView);
 
   const locale = getCurrentLocale();
 
@@ -2070,6 +2075,13 @@ export default function GlobeView() {
           { shallow: true }
         );
       }
+
+      // Track brand for dashboard personalization (only for non-'other' brands)
+      if (brandName && brandName !== 'other') {
+        console.log('[UserActivity] Tracking brand from map marker click:', brandName);
+        trackBrandSearch(brandName);
+      }
+
       setIsCleanAppProOpen(true);
 
       // Reset the flag after a short delay to allow URL to update
@@ -2771,6 +2783,7 @@ export default function GlobeView() {
                 <button
                   className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
                   onClick={() => {
+                    trackBrandSearch(matchingBrand.brand_display_name);
                     router.push(`/digital/${matchingBrand.brand_name}`);
                   }}
                 >
@@ -2797,6 +2810,13 @@ export default function GlobeView() {
                     onClick={() => {
                       setSeq(result.report.seq);
                       setReportWithAnalysis(result);
+
+                      // Track brand search for dashboard personalization
+                      const brandName = result.analysis[0]?.brand_name;
+                      if (brandName && brandName !== 'other') {
+                        console.log('[UserActivity] Tracking brand:', brandName);
+                        trackBrandSearch(brandName);
+                      }
 
                       let latitude = result.report.latitude;
                       let longitude = result.report.longitude;
@@ -2886,6 +2906,7 @@ export default function GlobeView() {
                 <button
                   className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
                   onClick={() => {
+                    trackBrandSearch(matchingBrand.brand_display_name);
                     router.push(`/digital/${matchingBrand.brand_name}`);
                   }}
                 >
@@ -2912,6 +2933,13 @@ export default function GlobeView() {
                     onClick={() => {
                       setSeq(result.report.seq);
                       setReportWithAnalysis(result);
+
+                      // Track brand search for dashboard personalization
+                      const brandName = result.analysis[0]?.brand_name;
+                      if (brandName && brandName !== 'other') {
+                        console.log('[UserActivity] Tracking brand:', brandName);
+                        trackBrandSearch(brandName);
+                      }
 
                       let latitude = result.report.latitude;
                       let longitude = result.report.longitude;
