@@ -18,11 +18,26 @@ interface SignupForm {
 export default function SignupPage() {
   const router = useRouter();
   const signup = useAuthStore((state) => state.signup);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAuthStore((state) => state.isLoading);
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslations();
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>();
   const password = watch('password');
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      const redirectUrl = sessionStorage.getItem('authRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('authRedirect');
+        router.replace(redirectUrl);
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isAuthLoading, router]);
 
   // Handle redirect parameter
   useEffect(() => {

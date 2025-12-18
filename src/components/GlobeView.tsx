@@ -3018,7 +3018,8 @@ export default function GlobeView() {
                 label: t("installIOS"),
                 link: "https://apps.apple.com/ch/app/cleanapp/id6466403301?l=en-GB",
               },
-              { label: t("subscribe"), link: "/pricing" },
+              { label: t("login"), link: "/login" },
+              { label: t("pricing"), link: "/pricing" },
               {
                 label: t("brandDashboard"),
                 link: "/redbull",
@@ -3035,12 +3036,20 @@ export default function GlobeView() {
                   key={item.label}
                   href={item.link}
                   className="text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md"
-                  target="_blank"
+                  target={item.link.startsWith("http") ? "_blank" : undefined}
                 >
                   {item.label.toUpperCase()}
                 </Link>
               );
             })}
+
+            {/* Tutorial button - triggers the map tutorial overlay */}
+            <button
+              onClick={() => setShowLocationTutorial(true)}
+              className="text-gray-300 font-medium text-sm cursor-pointer px-4 py-2 hover:bg-gray-800 rounded-md text-left"
+            >
+              {t("tutorial").toUpperCase()}
+            </button>
           </div>
         </div>
       )}

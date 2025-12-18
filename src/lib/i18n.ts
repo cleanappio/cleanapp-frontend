@@ -472,6 +472,7 @@ export const translations: {
     cleanAppGPT: "CleanAppGPT",
     physical: "PHYSICAL",
     digital: "DIGITAL",
+    tutorial: "Tutorial",
     gettingLocation: "Getting location...",
     useMyLocation: "Use My Location",
 

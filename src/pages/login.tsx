@@ -17,10 +17,25 @@ export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const forgotPassword = useAuthStore((state) => state.forgotPassword);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAuthStore((state) => state.isLoading);
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslations();
 
   const { register, handleSubmit, getValues, formState: { errors } } = useForm<LoginForm>();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      const redirectUrl = sessionStorage.getItem('authRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('authRedirect');
+        router.replace(redirectUrl);
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isAuthLoading, router]);
 
   // Handle redirect parameter
   useEffect(() => {
