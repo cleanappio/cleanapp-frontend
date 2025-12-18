@@ -19,6 +19,8 @@ export default function DigitalBrandPage() {
   // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  const subscription = useAuthStore((state) => state.subscription);
+  const billingLoading = useAuthStore((state) => state.billingLoading);
   const { t } = useTranslations();
 
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -27,14 +29,15 @@ export default function DigitalBrandPage() {
     useReportsByBrand(brand_name as string, locale);
 
   useEffect(() => {
-    if (!isAuthLoading && isAuthenticated) {
+    // Only show subscribed view if user has an active subscription
+    if (!isAuthLoading && !billingLoading && isAuthenticated && subscription?.status === 'active') {
       setIsSubscribed(true);
     } else {
       setIsSubscribed(false);
     }
-  }, [isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading, subscription, billingLoading]);
 
-  if (isLoading || isAuthLoading) {
+  if (isLoading || isAuthLoading || billingLoading) {
     return (
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
         <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
