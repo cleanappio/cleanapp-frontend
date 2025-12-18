@@ -10,9 +10,13 @@ const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
 export default function AIInsights({
   brandReports,
   totalCount,
+  highPriority,
+  mediumPriority,
 }: {
   brandReports: ReportWithAnalysis[];
   totalCount?: number;
+  highPriority?: number;
+  mediumPriority?: number;
 }) {
   const locale = getCurrentLocale();
   const { t } = useTranslations();
@@ -94,17 +98,7 @@ export default function AIInsights({
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-red-600">
-                    {
-                      brandReports.filter((r) => {
-                        const matchingAnalysis =
-                          r.analysis?.find((a) => a.language === locale) ||
-                          r.analysis?.[0];
-                        return (
-                          matchingAnalysis?.severity_level &&
-                          matchingAnalysis.severity_level >= 0.7
-                        );
-                      }).length
-                    }
+                    {highPriority ?? 0}
                   </div>
                   <div className="text-xs text-gray-500">
                     {t("highPriority")}
@@ -112,18 +106,7 @@ export default function AIInsights({
                 </div>
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-yellow-600">
-                    {
-                      brandReports.filter((r) => {
-                        const matchingAnalysis =
-                          r.analysis?.find((a) => a.language === locale) ||
-                          r.analysis?.[0];
-                        return (
-                          matchingAnalysis?.severity_level &&
-                          matchingAnalysis.severity_level >= 0.4 &&
-                          matchingAnalysis.severity_level < 0.7
-                        );
-                      }).length
-                    }
+                    {mediumPriority ?? 0}
                   </div>
                   <div className="text-xs text-gray-500">
                     {t("mediumPriority")}

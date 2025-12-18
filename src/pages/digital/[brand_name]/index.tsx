@@ -23,7 +23,7 @@ export default function DigitalBrandPage() {
 
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  const { brandReports, totalCount, isLoading, error, fetchRecentReportsByBrand } =
+  const { brandReports, totalCount, highPriority, mediumPriority, isLoading, error, fetchRecentReportsByBrand } =
     useReportsByBrand(brand_name as string, locale);
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function DigitalBrandPage() {
           <SubscribedBrandDashboard brandReports={brandReports} />
         )}
         {!isSubscribed && <PublicBrandDashboard brandReports={brandReports} />}
-        <AIInsights brandReports={brandReports} totalCount={totalCount} />
+        <AIInsights brandReports={brandReports} totalCount={totalCount} highPriority={highPriority} mediumPriority={mediumPriority} />
       </div>
 
       <Footer />
