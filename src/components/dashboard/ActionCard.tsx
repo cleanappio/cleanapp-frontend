@@ -130,12 +130,12 @@ export default function ActionCard() {
           >
             <div className="w-full h-full flex flex-col">
               <div className="relative w-full mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Enter brand name..."
-                  className="w-full bg-white/10 border-2 border-white/30 rounded-lg py-2 pl-10 pr-10 text-white placeholder:text-white/40 focus:outline-none focus:border-white/50 transition-all"
+                  className="w-full bg-white border-2 border-white rounded-lg py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all shadow-inner"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => {
@@ -151,7 +151,7 @@ export default function ActionCard() {
                     setIsBrandSearchOpen(false);
                     setSearchTerm("");
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -184,8 +184,8 @@ export default function ActionCard() {
                       </button>
                     ))
                   ) : !matchingBrand && !searchLoading && (
-                    <div className="p-4 text-white/50 text-sm text-center italic">
-                      No brands found for "{searchTerm}"
+                    <div className="p-4 text-white/50 text-sm text-center italic font-light">
+                      No brands found for &quot;{searchTerm}&quot;
                     </div>
                   )}
 
