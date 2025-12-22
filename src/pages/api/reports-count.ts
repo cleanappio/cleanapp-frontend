@@ -9,19 +9,10 @@ export default async function handler(
   }
 
   try {
-    const env = process.env.NODE_ENV;
-    let url = "";
-    // if (env === "development") {
-    //   url = "http://dev.api.cleanapp.io:8080/valid-reports-count";
-    // } else if (env === "production") {
-    //   url = "http://api.cleanapp.io:8080/valid-reports-count";
-    // }
-
-    url = process.env.NEXT_PUBLIC_REPORT_COUNT_URL || "http://localhost:8080";
-
-    // Use AbortController for timeout (30 seconds to handle slow queries)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // Use the NEXT_PUBLIC_REPORT_COUNT_URL from environment, or fallback to localhost
+    const url =
+      process.env.NEXT_PUBLIC_REPORT_COUNT_URL ||
+      "http://localhost:8080/valid-reports-count";
 
     const response = await fetch(url, {
       method: "GET",
@@ -29,10 +20,7 @@ export default async function handler(
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(

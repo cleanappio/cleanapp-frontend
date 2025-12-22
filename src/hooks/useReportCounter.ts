@@ -30,47 +30,22 @@ const useReportCounter = (): UseReportCounterReturn => {
 
   const fetchReportCounter = useCallback(async (showLoading = true) => {
     try {
-      if (showLoading) {
-        setIsLoading(true);
-      }
-      setError(null);
-
-      const response = await fetch(`/api/reports-count`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      });
-
-      // Check if request was successful
+      if (showLoading) setIsLoading(true);
+      const response = await fetch("/api/reports-count");
       if (!response.ok) {
-        throw new Error(
-          `API request failed: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
-
-      // Validate response structure
-      if (typeof data.total_reports !== "number") {
-        throw new Error("Invalid response format from API");
-      }
-
-      setReportCounter({
-        total_reports: data.total_reports,
-        total_physical_reports: data.total_physical_reports,
-        total_digital_reports: data.total_digital_reports,
-      });
+      setReportCounter(data);
+      setError(null);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch report counts";
-      setError(errorMessage);
-      console.error("useReportCounter error:", errorMessage);
-    } finally {
+      console.error("Failed to fetch report counter:", err);
+      // Keep existing data on error if polling, otherwise show error
       if (showLoading) {
-        setIsLoading(false);
+        setError("Failed to load report data");
       }
+    } finally {
+      if (showLoading) setIsLoading(false);
     }
   }, []);
 
