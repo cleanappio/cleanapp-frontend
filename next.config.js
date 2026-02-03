@@ -28,6 +28,15 @@ const nextConfig = {
     defaultLocale: "en",
     localeDetection: false,
   },
+  // Proxy API requests to avoid CORS issues during local development
+  async rewrites() {
+    return [
+      {
+        source: "/api/live/:path*",
+        destination: `${process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"}/api/:path*`,
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Exclude canvas native module from server-side builds
     if (isServer) {
