@@ -150,12 +150,12 @@ export function useReportTabs(): UseReportTabsReturn {
       n: number = 10
     ): Promise<ReportWithAnalysis[]> => {
       const locale = getCurrentLocale();
-      // Use Next.js rewrite proxy to avoid CORS issues
-      // /api/live/* is proxied to live.cleanapp.io/api/* via next.config.js rewrites
+      const apiUrl =
+        process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
       const fullData = "true";
 
       const response = await fetch(
-        `/api/live/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${classification}`
+        `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${classification}`
       );
 
       if (!response.ok) {
