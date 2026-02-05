@@ -38,6 +38,15 @@ import type { Feature, Polygon } from "geojson";
 import { useBackendSearch } from "@/hooks/useBackendSearch";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
+// Type for window.ReactNativeWebView
+declare global {
+  interface Window {
+    ReactNativeWebView?: {
+      postMessage: (message: string) => void;
+    };
+  }
+}
+
 // Type for report data
 export interface Report {
   seq: number;
@@ -140,6 +149,66 @@ export default function GlobeView() {
   const lastFetchedSeqRef = useRef<number | null>(null);
   const lastFetchedBrandRef = useRef<string | null>(null);
   const openingFromClickRef = useRef(false);
+
+  // Detect React Native WebView environment
+  const [isReactNativeWebView, setIsReactNativeWebView] = useState(false);
+
+  // Check for WebView environment on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ReactNativeWebView) {
+      setIsReactNativeWebView(true);
+      console.log("Detected React Native WebView environment");
+    }
+  }, []);
+
+  // Listen for native location messages
+  useEffect(() => {
+    if (!isReactNativeWebView) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        // event.data might be a string (JSON) or an object depending on how it's sent
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        if (data && data.type === "NATIVE_LOCATION") {
+          console.log("Received native location:", data);
+          const { lat, lng, accuracy } = data;
+
+          if (lat && lng) {
+            const newLocation = {
+              latitude: Number(lat),
+              longitude: Number(lng),
+              accuracy: accuracy ? Number(accuracy) : undefined
+            };
+
+            setUserLocation(newLocation);
+            setLocationLoading(false);
+
+            // Cache it just like we do for web location
+            try {
+              localStorage.setItem('cleanapp_user_location', JSON.stringify({
+                ...newLocation,
+                timestamp: Date.now()
+              }));
+              localStorage.setItem('cleanapp_location_permission', 'granted');
+            } catch (e) {
+              // ignore cache errors
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing native message:", e);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    // document.addEventListener("message", handleMessage); // Sometimes needed for Android
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      // document.removeEventListener("message", handleMessage);
+    };
+  }, [isReactNativeWebView]);
 
   // Drawing state
   const [enableDrawing, setEnableDrawing] = useState(false);
@@ -1104,6 +1173,7 @@ export default function GlobeView() {
     const cachedLocation = getCachedLocation();
     const isCacheValid = cachedLocation && (Date.now() - cachedLocation.timestamp) < CACHE_EXPIRY_MS;
 
+    // Use cache if valid
     if (isCacheValid && cachedLocation) {
       console.log('Using cached location:', cachedLocation);
       setUserLocation({
@@ -1112,6 +1182,23 @@ export default function GlobeView() {
       });
       setLocationLoading(false);
       return; // Use cache, don't request new location
+    }
+
+    // IF IN REACT NATIVE WEBVIEW: Do NOT use navigator.geolocation
+    if (typeof window !== "undefined" && window.ReactNativeWebView) {
+      console.log("In RN WebView: Skipping navigator.geolocation. Waiting for NATIVE_LOCATION message.");
+
+      // If no valid cache, we are waiting for the native app to send location.
+      // We can log a warning if it takes too long, or just leave it.
+      // The native app should ideally send location on startup or when webview loads.
+
+      // Optional: We could set a timeout to show a "Location unavailable" state if we don't get anything
+      if (!isCacheValid) {
+        console.warn("No cached location in WebView. Waiting for native app...");
+        // Ensure loading state is true while we wait
+        setLocationLoading(true);
+      }
+      return;
     }
 
     // Check stored permission state - if user denied before, don't bother asking again
@@ -2704,8 +2791,8 @@ export default function GlobeView() {
           attributionControl={false}
           logoPosition="bottom-right"
         >
-          {/* Mapbox Geolocate Control - Only show in physical reports */}
-          {selectedTab === "physical" && (
+          {/* Mapbox Geolocate Control - Only show in physical reports AND NOT in WebView */}
+          {selectedTab === "physical" && !isReactNativeWebView && (
             <GeolocateControl
               position="right"
               positionOptions={{
@@ -2718,6 +2805,37 @@ export default function GlobeView() {
                 setLocationLoading(false);
               }}
             />
+          )}
+
+          {/* Custom Location Button for WebView */}
+          {selectedTab === "physical" && isReactNativeWebView && (
+            <div className="mapboxgl-ctrl-top-right" style={{ top: 0, right: 0 }}>
+              <div className="mapboxgl-ctrl mapboxgl-ctrl-group">
+                <button
+                  className="mapboxgl-ctrl-icon mapboxgl-ctrl-geolocate"
+                  type="button"
+                  title="Find my location"
+                  aria-label="Find my location"
+                  onClick={() => {
+                    if (userLocation) {
+                      flyToReport({ lon: userLocation.longitude, lat: userLocation.latitude, zoom: 14 });
+                    } else {
+                      console.warn("User location not yet available via native bridge");
+                      // Optionally trigger a request to native
+                      // window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "REQUEST_LOCATION" }));
+                    }
+                  }}
+                >
+                  <span className="mapboxgl-ctrl-icon" aria-hidden="true" style={{
+                    backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg width=\'29\' height=\'29\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23333\'%3E%3Cpath d=\'M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9V15s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z\'/%3E%3Ccircle cx=\'10\' cy=\'10\' r=\'2\'/%3E%3C/svg%3E")',
+                    backgroundSize: '100% 100%',
+                    display: 'block',
+                    width: '100%',
+                    height: '100%'
+                  }}></span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* User Location Marker - Only show in physical reports */}

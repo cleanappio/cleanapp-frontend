@@ -100,7 +100,7 @@ fi
 
 # Get secrets
 echo "🔐 Fetching secrets..."
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=$(gcloud secrets versions access 1 --secret="MAPBOX_ACCESS_TOKEN")
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=$(gcloud secrets versions access latest --secret="MAPBOX_ACCESS_TOKEN")
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$(gcloud secrets versions access latest --secret="GOOGLE_MAPS_API_KEY")
 NEXT_PUBLIC_PLAYSTORE_URL="https://play.google.com/store/apps/details?id=com.cleanapp"
 NEXT_PUBLIC_APPSTORE_URL="https://apps.apple.com/us/app/cleanapp/id6466403301"
