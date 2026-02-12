@@ -8,12 +8,22 @@ type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   ts: number;
+  evidence?: IntelligenceEvidenceItem[];
+};
+
+type IntelligenceEvidenceItem = {
+  seq: number;
+  title: string;
+  permalink: string;
 };
 
 type IntelligenceResponse = {
   answer: string;
   reports_analyzed: number;
   paywall_triggered: boolean;
+  evidence?: IntelligenceEvidenceItem[];
+  evidence_count?: number;
+  suggested_prompts?: string[];
 };
 
 const PROMPT_SUGGESTIONS = [
@@ -115,6 +125,7 @@ export default function CleanIntelligencePanel({
   const [limitReached, setLimitReached] = useState(false);
   const [reportsAnalyzed, setReportsAnalyzed] = useState(totalReports);
   const [sessionId, setSessionId] = useState("");
+  const [promptSuggestions, setPromptSuggestions] = useState(PROMPT_SUGGESTIONS);
 
   const storageKey = useMemo(() => `cleanai_chat:${orgId}`, [orgId]);
   const placeholder = `Ask anything about issues affecting ${orgId}…`;
@@ -202,8 +213,14 @@ export default function CleanIntelligencePanel({
         role: "assistant",
         text: data.answer || "No response available.",
         ts: Date.now(),
+        evidence: Array.isArray(data.evidence) ? data.evidence : [],
       };
       setMessages((prev) => [...prev, assistantMessage]);
+      if (Array.isArray(data.suggested_prompts) && data.suggested_prompts.length > 0) {
+        setPromptSuggestions(data.suggested_prompts.slice(0, 5));
+      } else {
+        setPromptSuggestions(PROMPT_SUGGESTIONS);
+      }
       if (typeof data.reports_analyzed === "number" && data.reports_analyzed > 0) {
         setReportsAnalyzed(data.reports_analyzed);
       }
@@ -241,7 +258,7 @@ export default function CleanIntelligencePanel({
 
       <div className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap gap-2">
-          {PROMPT_SUGGESTIONS.map((prompt) => (
+          {promptSuggestions.map((prompt) => (
             <button
               key={prompt}
               type="button"
@@ -260,15 +277,31 @@ export default function CleanIntelligencePanel({
           ) : (
             <div className="space-y-3">
               {messages.map((msg, idx) => (
-                <div
-                  key={`${msg.ts}-${idx}`}
-                  className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                    msg.role === "user"
-                      ? "bg-blue-600 text-white ml-8"
-                      : "bg-white border border-gray-200 text-gray-900 mr-8"
-                  }`}
-                >
-                  {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
+                <div key={`${msg.ts}-${idx}`}>
+                  <div
+                    className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                      msg.role === "user"
+                        ? "bg-blue-600 text-white ml-8"
+                        : "bg-white border border-gray-200 text-gray-900 mr-8"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
+                  </div>
+                  {msg.role === "assistant" && Array.isArray(msg.evidence) && msg.evidence.length > 0 && (
+                    <div className="mr-8 mt-2 flex flex-wrap gap-2">
+                      {msg.evidence.slice(0, 3).map((ev) => (
+                        <a
+                          key={`${msg.ts}-${ev.seq}`}
+                          href={ev.permalink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
+                        >
+                          Report #{ev.seq}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {isLoading && (
