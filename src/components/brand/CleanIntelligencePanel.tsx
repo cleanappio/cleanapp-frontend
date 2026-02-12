@@ -4,14 +4,8 @@ import { useAuthStore } from "@/lib/auth-store";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  text: string;
-  ts: number;
-  evidence?: IntelligenceEvidenceItem[];
-};
-
 type QualityMode = "fast" | "deep";
+type IntelligenceMode = "full" | "partial_free" | "blocked";
 
 type IntelligenceEvidenceItem = {
   seq: number;
@@ -19,13 +13,63 @@ type IntelligenceEvidenceItem = {
   permalink: string;
 };
 
+type IntelligenceExample = {
+  id: number;
+  created_at: string;
+  channel: string;
+  severity: number;
+  category: string;
+  title: string;
+  snippet: string;
+  url?: string;
+};
+
+type IntelligenceCitation = {
+  label: string;
+  value: string;
+};
+
+type IntelligenceAggregates = {
+  total_reports: number;
+  reports_this_month: number;
+  reports_last_30_days: number;
+  reports_last_7_days: number;
+  reports_prev_7_days: number;
+  growth_last_7_vs_prev_7: number;
+};
+
+type IntelligenceResponseData = {
+  aggregates?: IntelligenceAggregates;
+  examples?: IntelligenceExample[];
+  citations?: IntelligenceCitation[];
+};
+
+type IntelligenceUpsell = {
+  text: string;
+  cta: string;
+};
+
 type IntelligenceResponse = {
-  answer: string;
-  reports_analyzed: number;
-  paywall_triggered: boolean;
+  mode?: IntelligenceMode;
+  answer_markdown?: string;
+  data?: IntelligenceResponseData;
+  upsell?: IntelligenceUpsell | null;
+
+  // Backward compatibility
+  answer?: string;
+  reports_analyzed?: number;
+  paywall_triggered?: boolean;
   evidence?: IntelligenceEvidenceItem[];
-  evidence_count?: number;
-  suggested_prompts?: string[];
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  text: string;
+  ts: number;
+  mode?: IntelligenceMode;
+  evidence?: IntelligenceEvidenceItem[];
+  examples?: IntelligenceExample[];
+  upsell?: IntelligenceUpsell | null;
 };
 
 const UPGRADE_COPY = `You’ve reached the free intelligence limit.
@@ -69,6 +113,16 @@ function getOrCreateSessionId(orgId: string): string {
   return created;
 }
 
+function toEvidenceItemsFromExamples(examples: IntelligenceExample[] = []): IntelligenceEvidenceItem[] {
+  return examples
+    .filter((ex) => ex.id > 0)
+    .map((ex) => ({
+      seq: ex.id,
+      title: ex.title || `Report #${ex.id}`,
+      permalink: ex.url || "",
+    }));
+}
+
 function renderMessageWithLinks(
   text: string,
   evidence: IntelligenceEvidenceItem[] = [],
@@ -77,8 +131,11 @@ function renderMessageWithLinks(
   const lines = text.split("\n");
   const evidenceBySeq = new Map<number, string>();
   for (const item of evidence) {
-    evidenceBySeq.set(item.seq, item.permalink);
+    if (item.seq > 0 && item.permalink) {
+      evidenceBySeq.set(item.seq, item.permalink);
+    }
   }
+
   return lines.map((line, lineIdx) => {
     const parts = line.split(INLINE_TOKEN_REGEX);
     return (
@@ -167,6 +224,7 @@ export default function CleanIntelligencePanel({
     if (typeof window === "undefined" || !orgId) return;
     const sid = getOrCreateSessionId(orgId);
     setSessionId(sid);
+
     const modeRaw = sessionStorage.getItem(qualityStorageKey);
     if (modeRaw === "fast" || modeRaw === "deep") {
       setQualityMode(modeRaw);
@@ -222,6 +280,7 @@ export default function CleanIntelligencePanel({
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+
     trackCleanAIEvent("cleanai_prompt_sent", {
       org_id: orgId,
       subscription_tier: subscriptionTier,
@@ -252,13 +311,21 @@ export default function CleanIntelligencePanel({
       }
 
       const data: IntelligenceResponse = await response.json();
+      const examples = Array.isArray(data.data?.examples) ? data.data?.examples : [];
+      const legacyEvidence = Array.isArray(data.evidence) ? data.evidence : [];
+      const mergedEvidence = examples.length > 0 ? toEvidenceItemsFromExamples(examples) : legacyEvidence;
+
       const assistantMessage: ChatMessage = {
         role: "assistant",
-        text: data.answer || "No response available.",
+        text: data.answer_markdown || data.answer || "No response available.",
         ts: Date.now(),
-        evidence: Array.isArray(data.evidence) ? data.evidence : [],
+        mode: data.mode,
+        evidence: mergedEvidence,
+        examples,
+        upsell: data.upsell || null,
       };
       setMessages((prev) => [...prev, assistantMessage]);
+
       if (typeof data.reports_analyzed === "number" && data.reports_analyzed > 0) {
         setReportsAnalyzed(data.reports_analyzed);
       }
@@ -293,7 +360,7 @@ export default function CleanIntelligencePanel({
 
       <div className="p-4 sm:p-5 space-y-4">
         {(messages.length > 0 || isLoading) && (
-          <div className="max-h-[52vh] overflow-y-auto space-y-3 pr-1">
+          <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
             {messages.map((msg, idx) => (
               <div key={`${msg.ts}-${idx}`}>
                 <div
@@ -307,8 +374,38 @@ export default function CleanIntelligencePanel({
                     ? renderMessageWithLinks(msg.text, msg.evidence || [], orgId)
                     : msg.text}
                 </div>
+
+                {msg.role === "assistant" && Array.isArray(msg.examples) && msg.examples.length > 0 && (
+                  <div className="mr-8 mt-2 grid gap-2 sm:grid-cols-2">
+                    {msg.examples.slice(0, 5).map((ex) => (
+                      <a
+                        key={`${msg.ts}-${ex.id}`}
+                        href={ex.url || `/digital/${orgId}/report/${ex.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-lg border border-green-200 bg-green-50 p-2 hover:bg-green-100"
+                      >
+                        <div className="text-xs font-semibold text-green-800">
+                          Report #{ex.id} • {ex.channel} • sev {Number(ex.severity || 0).toFixed(2)}
+                        </div>
+                        <div className="mt-1 text-sm font-medium text-gray-900">{ex.title}</div>
+                        <div className="mt-1 text-xs text-gray-600 line-clamp-3">{ex.snippet}</div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {msg.role === "assistant" && msg.upsell && (
+                  <div className="mr-8 mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-gray-800">
+                    <span>{msg.upsell.text} </span>
+                    <Link href="/pricing" className="font-semibold text-green-700 underline hover:text-green-600">
+                      {msg.upsell.cta || "Upgrade to Pro"}
+                    </Link>
+                  </div>
+                )}
               </div>
             ))}
+
             {isLoading && (
               <div className="rounded-lg px-3 py-2 text-sm bg-white border border-gray-200 text-gray-500 mr-8">
                 Analyzing…
@@ -387,7 +484,6 @@ export default function CleanIntelligencePanel({
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );
