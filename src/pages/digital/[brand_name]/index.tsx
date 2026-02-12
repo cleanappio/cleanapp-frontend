@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import SubscribedBrandDashboard from "@/components/brand/SubscribedBrandDashboard";
 import AIInsights from "@/components/AIInsights";
 import { useAuthStore } from "@/lib/auth-store";
+import CleanIntelligencePanel from "@/components/brand/CleanIntelligencePanel";
 
 export default function DigitalBrandPage() {
   const router = useRouter();
@@ -103,6 +104,11 @@ export default function DigitalBrandPage() {
         <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
           {t("totalReports")} ({totalCount})
         </h2>
+
+        <CleanIntelligencePanel
+          orgId={(brand_name as string) || ""}
+          totalReports={totalCount || brandReports.length}
+        />
 
         {isSubscribed && (
           <SubscribedBrandDashboard brandReports={brandReports} />
