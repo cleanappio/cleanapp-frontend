@@ -271,7 +271,7 @@ export default function CleanIntelligencePanel({
           ))}
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 min-h-[220px] max-h-[360px] overflow-y-auto p-3">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 h-[320px] min-h-[180px] max-h-[70vh] resize-y overflow-y-auto p-3">
           {messages.length === 0 ? (
             <p className="text-sm text-gray-500">{placeholder}</p>
           ) : (
@@ -312,6 +312,9 @@ export default function CleanIntelligencePanel({
             </div>
           )}
         </div>
+        <p className="text-[11px] text-gray-400 -mt-2">
+          Tip: drag the bottom-right corner of the conversation box to resize.
+        </p>
 
         {limitReached && (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4">
