@@ -32,6 +32,8 @@ Upgrade to access:
 • Raw data & exports
 • Trend analysis and alerts`;
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
 function trackCleanAIEvent(event: string, payload: Record<string, unknown> = {}) {
   if (typeof window === "undefined") {
     return;
@@ -60,6 +62,40 @@ function getOrCreateSessionId(orgId: string): string {
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   sessionStorage.setItem(key, created);
   return created;
+}
+
+function renderMessageWithLinks(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, lineIdx) => {
+    const parts = line.split(URL_REGEX);
+    return (
+      <span key={`line-${lineIdx}`}>
+        {parts.map((part, partIdx) => {
+          if (!part) return null;
+          if (!/^https?:\/\//i.test(part)) {
+            return <span key={`txt-${lineIdx}-${partIdx}`}>{part}</span>;
+          }
+
+          const cleaned = part.replace(/[),.;!?]+$/, "");
+          const suffix = part.slice(cleaned.length);
+          return (
+            <span key={`lnk-${lineIdx}-${partIdx}`}>
+              <a
+                href={cleaned}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-green-700 hover:text-green-600 break-all"
+              >
+                {cleaned}
+              </a>
+              {suffix}
+            </span>
+          );
+        })}
+        {lineIdx < lines.length - 1 ? <br /> : null}
+      </span>
+    );
+  });
 }
 
 export default function CleanIntelligencePanel({
@@ -232,7 +268,7 @@ export default function CleanIntelligencePanel({
                       : "bg-white border border-gray-200 text-gray-900 mr-8"
                   }`}
                 >
-                  {msg.text}
+                  {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
                 </div>
               ))}
               {isLoading && (
@@ -295,4 +331,3 @@ export default function CleanIntelligencePanel({
     </section>
   );
 }
-
