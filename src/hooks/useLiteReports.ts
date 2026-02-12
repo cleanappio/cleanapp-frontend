@@ -35,10 +35,11 @@ export function useLiteReports(
       try {
         const locale = getCurrentLocale();
         const apiUrl =
-          process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
+          process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
         const fullData = c === "digital" ? "true" : "false";
         const response = await fetch(
-          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${c}`
+          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${c}`,
+          { cache: "no-store" }
         );
         if (!response.ok) {
           throw new Error(
@@ -104,7 +105,7 @@ export function useLiteReportsByTab(
   const fetchAll = useCallback(async () => {
     const locale = getCurrentLocale();
     const apiUrl =
-      process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
+      process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
 
     setLoading({ physical: true, digital: true });
     setErrors({ physical: null, digital: null });
@@ -112,10 +113,12 @@ export function useLiteReportsByTab(
     try {
       const [physRes, digiRes] = await Promise.all([
         fetch(
-          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=false&classification=physical`
+          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=false&classification=physical`,
+          { cache: "no-store" }
         ),
         fetch(
-          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=true&classification=digital`
+          `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=true&classification=digital`,
+          { cache: "no-store" }
         ),
       ]);
 

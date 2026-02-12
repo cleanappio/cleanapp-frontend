@@ -155,7 +155,8 @@ export function useReportTabs(): UseReportTabsReturn {
       const fullData = "true";
 
       const response = await fetch(
-        `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${classification}`
+        `${apiUrl}/api/v3/reports/last?n=${n}&lang=${locale}&full_data=${fullData}&classification=${classification}`,
+        { cache: "no-store" }
       );
 
       if (!response.ok) {

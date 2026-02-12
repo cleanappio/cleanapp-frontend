@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ReportWithAnalysis } from "@/components/GlobeView";
 
 export const useBackendSearch = (classification: "digital" | "physical") => {
@@ -6,6 +6,7 @@ export const useBackendSearch = (classification: "digital" | "physical") => {
   const [searchResults, setSearchResults] = useState<ReportWithAnalysis[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const latestRequestIdRef = useRef(0);
 
   const [debouncedQuery, setDebouncedQuery] = useState(searchTerm);
 
@@ -22,38 +23,56 @@ export const useBackendSearch = (classification: "digital" | "physical") => {
 
   // Fetch when debouncedQuery changes
   useEffect(() => {
-    if (!debouncedQuery) {
+    const trimmedQuery = debouncedQuery.trim();
+    if (!trimmedQuery) {
       setSearchResults([]);
+      setError(null);
+      setLoading(false);
       return;
     }
 
-    const search = async (
-      term: string,
-      classification: "digital" | "physical"
-    ) => {
+    const controller = new AbortController();
+    const requestId = ++latestRequestIdRef.current;
+    const apiUrl =
+      process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
+
+    const search = async (term: string, cls: "digital" | "physical") => {
       try {
         setLoading(true);
         setError(null);
-        setSearchTerm(term);
-        console.log("Searching for:", term, loading, error);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/search?q=${term}&classification=${classification}`
+          `${apiUrl}/api/v3/reports/search?q=${encodeURIComponent(term)}&classification=${cls}`,
+          {
+            signal: controller.signal,
+            cache: "no-store",
+          }
         );
         if (!response.ok) {
           throw new Error(`Failed to search: ${response.status}`);
         }
-        console.log("Search response:", response);
         const data = await response.json();
-        console.log("Search data:", data);
-        setSearchResults(data.reports);
+        if (latestRequestIdRef.current !== requestId) {
+          return;
+        }
+        setSearchResults(data.reports || []);
       } catch (error) {
-        console.log("Error searching:", error);
-        setError(error instanceof Error ? error.message : "Unknown error");
+        if (controller.signal.aborted || latestRequestIdRef.current !== requestId) {
+          return;
+        }
+        setSearchResults([]);
+        setError(error instanceof Error ? error.message : "Load failed");
       } finally {
-        setLoading(false);
+        if (latestRequestIdRef.current === requestId) {
+          setLoading(false);
+        }
       }
     };
-    search(debouncedQuery, classification);
+
+    search(trimmedQuery, classification);
+
+    return () => {
+      controller.abort();
+    };
   }, [debouncedQuery, classification]);
 
   return {
