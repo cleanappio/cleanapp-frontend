@@ -12,6 +12,22 @@
   }
 }
 
+@keyframes cleanaiHaloPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.42);
+    opacity: 0.45;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.08);
+    opacity: 1;
+  }
+}
+
+.cleanai-halo {
+  animation: cleanaiHaloPulse 2.2s ease-in-out infinite;
+}
+
 /* Overrides the original padding of the Popup component in the Map */
 .mapboxgl-popup-content {
   padding: 0 !important;

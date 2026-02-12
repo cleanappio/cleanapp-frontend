@@ -11,6 +11,8 @@ type ChatMessage = {
   evidence?: IntelligenceEvidenceItem[];
 };
 
+type QualityMode = "fast" | "deep";
+
 type IntelligenceEvidenceItem = {
   seq: number;
   title: string;
@@ -126,14 +128,20 @@ export default function CleanIntelligencePanel({
   const [reportsAnalyzed, setReportsAnalyzed] = useState(totalReports);
   const [sessionId, setSessionId] = useState("");
   const [promptSuggestions, setPromptSuggestions] = useState(PROMPT_SUGGESTIONS);
+  const [qualityMode, setQualityMode] = useState<QualityMode>("deep");
 
   const storageKey = useMemo(() => `cleanai_chat:${orgId}`, [orgId]);
+  const qualityStorageKey = useMemo(() => `cleanai_quality_mode:${orgId}`, [orgId]);
   const placeholder = `Ask anything about issues affecting ${orgId}…`;
 
   useEffect(() => {
     if (typeof window === "undefined" || !orgId) return;
     const sid = getOrCreateSessionId(orgId);
     setSessionId(sid);
+    const modeRaw = sessionStorage.getItem(qualityStorageKey);
+    if (modeRaw === "fast" || modeRaw === "deep") {
+      setQualityMode(modeRaw);
+    }
 
     const raw = sessionStorage.getItem(storageKey);
     if (!raw) return;
@@ -145,7 +153,7 @@ export default function CleanIntelligencePanel({
     } catch (e) {
       console.error("Failed to restore CleanAI session state:", e);
     }
-  }, [orgId, storageKey]);
+  }, [orgId, storageKey, qualityStorageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !orgId) return;
@@ -156,6 +164,11 @@ export default function CleanIntelligencePanel({
     };
     sessionStorage.setItem(storageKey, JSON.stringify(payload));
   }, [orgId, storageKey, messages, limitReached, reportsAnalyzed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !orgId) return;
+    sessionStorage.setItem(qualityStorageKey, qualityMode);
+  }, [orgId, qualityStorageKey, qualityMode]);
 
   useEffect(() => {
     if (!orgId) return;
@@ -200,6 +213,7 @@ export default function CleanIntelligencePanel({
             session_id: sessionId,
             user_id: user?.id ?? null,
             subscription_tier: subscriptionTier,
+            quality_mode: qualityMode,
           }),
         }
       );
@@ -257,64 +271,83 @@ export default function CleanIntelligencePanel({
       </div>
 
       <div className="p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {promptSuggestions.map((prompt) => (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {promptSuggestions.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                disabled={limitReached || isLoading}
+                onClick={() => sendPrompt(prompt)}
+                className="rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm text-green-800 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white p-1">
             <button
-              key={prompt}
               type="button"
-              disabled={limitReached || isLoading}
-              onClick={() => sendPrompt(prompt)}
-              className="rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm text-green-800 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setQualityMode("fast")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                qualityMode === "fast"
+                  ? "bg-green-600 text-white"
+                  : "text-green-700 hover:bg-green-50"
+              }`}
             >
-              {prompt}
+              Fast
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setQualityMode("deep")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                qualityMode === "deep"
+                  ? "bg-green-600 text-white"
+                  : "text-green-700 hover:bg-green-50"
+              }`}
+            >
+              Deep
+            </button>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 h-[320px] min-h-[180px] max-h-[70vh] resize-y overflow-y-auto p-3">
-          {messages.length === 0 ? (
-            <p className="text-sm text-gray-500">{placeholder}</p>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((msg, idx) => (
-                <div key={`${msg.ts}-${idx}`}>
-                  <div
-                    className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white ml-8"
-                        : "bg-white border border-gray-200 text-gray-900 mr-8"
-                    }`}
-                  >
-                    {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
+        {(messages.length > 0 || isLoading) && (
+          <div className="max-h-[52vh] overflow-y-auto space-y-3 pr-1">
+            {messages.map((msg, idx) => (
+              <div key={`${msg.ts}-${idx}`}>
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                    msg.role === "user"
+                      ? "bg-blue-600 text-white ml-8"
+                      : "bg-white border border-gray-200 text-gray-900 mr-8"
+                  }`}
+                >
+                  {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
+                </div>
+                {msg.role === "assistant" && Array.isArray(msg.evidence) && msg.evidence.length > 0 && (
+                  <div className="mr-8 mt-2 flex flex-wrap gap-2">
+                    {msg.evidence.slice(0, 3).map((ev) => (
+                      <a
+                        key={`${msg.ts}-${ev.seq}`}
+                        href={ev.permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
+                      >
+                        Report #{ev.seq}
+                      </a>
+                    ))}
                   </div>
-                  {msg.role === "assistant" && Array.isArray(msg.evidence) && msg.evidence.length > 0 && (
-                    <div className="mr-8 mt-2 flex flex-wrap gap-2">
-                      {msg.evidence.slice(0, 3).map((ev) => (
-                        <a
-                          key={`${msg.ts}-${ev.seq}`}
-                          href={ev.permalink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
-                        >
-                          Report #{ev.seq}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {isLoading && (
-                <div className="rounded-lg px-3 py-2 text-sm bg-white border border-gray-200 text-gray-500 mr-8">
-                  Analyzing…
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        <p className="text-[11px] text-gray-400 -mt-2">
-          Tip: drag the bottom-right corner of the conversation box to resize.
-        </p>
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="rounded-lg px-3 py-2 text-sm bg-white border border-gray-200 text-gray-500 mr-8">
+                Analyzing…
+              </div>
+            )}
+          </div>
+        )}
 
         {limitReached && (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4">
@@ -334,34 +367,37 @@ export default function CleanIntelligencePanel({
           </div>
         )}
 
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendPrompt(input);
-              }
-            }}
-            disabled={limitReached || isLoading}
-            placeholder={placeholder}
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          />
-          <button
-            type="button"
-            disabled={limitReached || isLoading || !input.trim()}
-            onClick={() => sendPrompt(input)}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+        <div className="relative">
+          {!limitReached && !isLoading && (
+            <div className="cleanai-halo pointer-events-none absolute -inset-1 rounded-xl border border-green-300/70" />
+          )}
+          <div className="relative flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendPrompt(input);
+                }
+              }}
+              disabled={limitReached || isLoading}
+              placeholder={placeholder}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+            <button
+              type="button"
+              disabled={limitReached || isLoading || !input.trim()}
+              onClick={() => sendPrompt(input)}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-gray-500">
-          {messages.length === 0
-            ? "Analyzing live CleanApp reports"
-            : `Based on ${reportsAnalyzed || totalReports} reports • Updated recently`}
+          Based on {reportsAnalyzed || totalReports} reports • Updated recently
         </p>
       </div>
     </section>
