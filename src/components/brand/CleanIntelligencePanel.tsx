@@ -265,26 +265,10 @@ export default function CleanIntelligencePanel({
     <section className="mb-8 rounded-2xl border border-green-200 bg-white shadow-sm overflow-hidden">
       <div className="bg-gradient-to-r from-green-700 to-green-500 px-5 py-4 text-white">
         <h3 className="text-xl font-bold">CleanApp Intelligence</h3>
-        <p className="text-sm text-green-100 mt-1">
-          {reportsAnalyzed || totalReports} issues detected. Ask what matters to you.
-        </p>
       </div>
 
       <div className="p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            {promptSuggestions.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                disabled={limitReached || isLoading}
-                onClick={() => sendPrompt(prompt)}
-                className="rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm text-green-800 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+        <div className="flex justify-start">
           <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white p-1">
             <button
               type="button"
@@ -396,9 +380,6 @@ export default function CleanIntelligencePanel({
           </div>
         </div>
 
-        <p className="text-xs text-gray-500">
-          Based on {reportsAnalyzed || totalReports} reports • Updated recently
-        </p>
       </div>
     </section>
   );
