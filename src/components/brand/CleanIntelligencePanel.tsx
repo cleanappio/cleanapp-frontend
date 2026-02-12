@@ -28,14 +28,6 @@ type IntelligenceResponse = {
   suggested_prompts?: string[];
 };
 
-const PROMPT_SUGGESTIONS = [
-  "What are the biggest issues reported this month?",
-  "What problems are increasing fastest?",
-  "Are there any security risks?",
-  "What do users complain about most?",
-  "What should we fix first?",
-];
-
 const UPGRADE_COPY = `You’ve reached the free intelligence limit.
 
 Upgrade to access:
@@ -44,7 +36,8 @@ Upgrade to access:
 • Raw data & exports
 • Trend analysis and alerts`;
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+const INLINE_TOKEN_REGEX = /(https?:\/\/[^\s]+|Report\s+#\d+|Upgrade to Pro)/g;
+const REPORT_REF_REGEX = /^Report\s+#(\d+)$/i;
 
 function trackCleanAIEvent(event: string, payload: Record<string, unknown> = {}) {
   if (typeof window === "undefined") {
@@ -76,14 +69,51 @@ function getOrCreateSessionId(orgId: string): string {
   return created;
 }
 
-function renderMessageWithLinks(text: string) {
+function renderMessageWithLinks(
+  text: string,
+  evidence: IntelligenceEvidenceItem[] = [],
+  orgId: string
+) {
   const lines = text.split("\n");
+  const evidenceBySeq = new Map<number, string>();
+  for (const item of evidence) {
+    evidenceBySeq.set(item.seq, item.permalink);
+  }
   return lines.map((line, lineIdx) => {
-    const parts = line.split(URL_REGEX);
+    const parts = line.split(INLINE_TOKEN_REGEX);
     return (
       <span key={`line-${lineIdx}`}>
         {parts.map((part, partIdx) => {
           if (!part) return null;
+          if (part === "Upgrade to Pro") {
+            return (
+              <Link
+                key={`pro-${lineIdx}-${partIdx}`}
+                href="/pricing"
+                className="underline text-green-700 hover:text-green-600 font-semibold"
+              >
+                Upgrade to Pro
+              </Link>
+            );
+          }
+
+          const reportRef = part.match(REPORT_REF_REGEX);
+          if (reportRef) {
+            const seq = Number(reportRef[1]);
+            const href = evidenceBySeq.get(seq) ?? `/digital/${orgId}/report/${seq}`;
+            return (
+              <a
+                key={`rep-${lineIdx}-${partIdx}`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-800 hover:bg-green-100 align-middle"
+              >
+                Report #{seq}
+              </a>
+            );
+          }
+
           if (!/^https?:\/\//i.test(part)) {
             return <span key={`txt-${lineIdx}-${partIdx}`}>{part}</span>;
           }
@@ -127,7 +157,6 @@ export default function CleanIntelligencePanel({
   const [limitReached, setLimitReached] = useState(false);
   const [reportsAnalyzed, setReportsAnalyzed] = useState(totalReports);
   const [sessionId, setSessionId] = useState("");
-  const [promptSuggestions, setPromptSuggestions] = useState(PROMPT_SUGGESTIONS);
   const [qualityMode, setQualityMode] = useState<QualityMode>("deep");
 
   const storageKey = useMemo(() => `cleanai_chat:${orgId}`, [orgId]);
@@ -230,11 +259,6 @@ export default function CleanIntelligencePanel({
         evidence: Array.isArray(data.evidence) ? data.evidence : [],
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      if (Array.isArray(data.suggested_prompts) && data.suggested_prompts.length > 0) {
-        setPromptSuggestions(data.suggested_prompts.slice(0, 5));
-      } else {
-        setPromptSuggestions(PROMPT_SUGGESTIONS);
-      }
       if (typeof data.reports_analyzed === "number" && data.reports_analyzed > 0) {
         setReportsAnalyzed(data.reports_analyzed);
       }
@@ -264,37 +288,10 @@ export default function CleanIntelligencePanel({
   return (
     <section className="mb-8 rounded-2xl border border-green-200 bg-white shadow-sm overflow-hidden">
       <div className="bg-gradient-to-r from-green-700 to-green-500 px-5 py-4 text-white">
-        <h3 className="text-xl font-bold">CleanApp Intelligence</h3>
+        <h3 className="text-xl font-bold">Live CleanApp Intelligence</h3>
       </div>
 
       <div className="p-4 sm:p-5 space-y-4">
-        <div className="flex justify-start">
-          <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white p-1">
-            <button
-              type="button"
-              onClick={() => setQualityMode("fast")}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                qualityMode === "fast"
-                  ? "bg-green-600 text-white"
-                  : "text-green-700 hover:bg-green-50"
-              }`}
-            >
-              Fast
-            </button>
-            <button
-              type="button"
-              onClick={() => setQualityMode("deep")}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                qualityMode === "deep"
-                  ? "bg-green-600 text-white"
-                  : "text-green-700 hover:bg-green-50"
-              }`}
-            >
-              Deep
-            </button>
-          </div>
-        </div>
-
         {(messages.length > 0 || isLoading) && (
           <div className="max-h-[52vh] overflow-y-auto space-y-3 pr-1">
             {messages.map((msg, idx) => (
@@ -306,23 +303,10 @@ export default function CleanIntelligencePanel({
                       : "bg-white border border-gray-200 text-gray-900 mr-8"
                   }`}
                 >
-                  {msg.role === "assistant" ? renderMessageWithLinks(msg.text) : msg.text}
+                  {msg.role === "assistant"
+                    ? renderMessageWithLinks(msg.text, msg.evidence || [], orgId)
+                    : msg.text}
                 </div>
-                {msg.role === "assistant" && Array.isArray(msg.evidence) && msg.evidence.length > 0 && (
-                  <div className="mr-8 mt-2 flex flex-wrap gap-2">
-                    {msg.evidence.slice(0, 3).map((ev) => (
-                      <a
-                        key={`${msg.ts}-${ev.seq}`}
-                        href={ev.permalink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
-                      >
-                        Report #{ev.seq}
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
             {isLoading && (
@@ -377,6 +361,30 @@ export default function CleanIntelligencePanel({
             >
               Send
             </button>
+            <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setQualityMode("fast")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  qualityMode === "fast"
+                    ? "bg-green-600 text-white"
+                    : "text-green-700 hover:bg-green-50"
+                }`}
+              >
+                Fast
+              </button>
+              <button
+                type="button"
+                onClick={() => setQualityMode("deep")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  qualityMode === "deep"
+                    ? "bg-green-600 text-white"
+                    : "text-green-700 hover:bg-green-50"
+                }`}
+              >
+                Deep
+              </button>
+            </div>
           </div>
         </div>
 
