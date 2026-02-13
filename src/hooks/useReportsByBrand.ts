@@ -1,6 +1,7 @@
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import { useTranslations } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { getPreferredReportLanguage } from "@/lib/report-language";
+import { useCallback, useEffect, useState } from "react";
 
 export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [brandReports, setBrandReports] = useState<ReportWithAnalysis[]>([]);
@@ -11,12 +12,13 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
 
-  const fetchRecentReportsByBrand = async (brand_name: string) => {
+  const fetchRecentReportsByBrand = useCallback(async (brand_name: string) => {
     setIsLoading(true);
     try {
+      const lang = getPreferredReportLanguage(brand_name, locale);
       // Fetch reports - the API now returns total_count, high_priority_count, medium_priority_count
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${locale}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${lang}`
       );
       const data = await response.json();
       setBrandReports(data.reports);
@@ -31,13 +33,13 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale, t]);
 
   useEffect(() => {
     if (brand_name) {
       fetchRecentReportsByBrand(brand_name);
     }
-  }, [brand_name]);
+  }, [brand_name, fetchRecentReportsByBrand]);
 
   return { brandReports, totalCount, highPriority, mediumPriority, isLoading, error, fetchRecentReportsByBrand };
 };

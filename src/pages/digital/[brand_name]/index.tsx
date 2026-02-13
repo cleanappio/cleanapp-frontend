@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import { useReportsByBrand } from "@/hooks/useReportsByBrand";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
+import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
 import { useRouter } from "next/router";
 import { getBrandNameDisplay } from "@/lib/util";
 import { ReportAnalysis, ReportWithAnalysis } from "@/components/GlobeView";
@@ -87,9 +88,14 @@ export default function DigitalBrandPage() {
     if (brandReports.length === 0) {
       return undefined;
     }
-    return (
-      brandReports[0].analysis.find((a) => a.language === locale) ||
-      brandReports[0].analysis[0]
+    const preferredLanguage = getPreferredReportLanguage(
+      brand_name as string,
+      locale
+    );
+    return pickPreferredAnalysis(
+      brandReports[0].analysis,
+      preferredLanguage,
+      locale
     );
   };
 

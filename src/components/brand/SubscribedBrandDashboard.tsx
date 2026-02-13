@@ -2,6 +2,7 @@
 
 import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
+import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
 import Image from "next/image";
 import { ReportWithAnalysis } from "../../components/GlobeView";
 import Link from "next/link";
@@ -19,6 +20,9 @@ export default function SubscribedBrandDashboard({
   const { t } = useTranslations();
   const [urlCopied, setUrlCopied] = useState(false);
   const [currentSeq, setCurrentSeq] = useState<number | null>(null);
+  const brandName =
+    typeof router.query.brand_name === "string" ? router.query.brand_name : "";
+  const preferredLanguage = getPreferredReportLanguage(brandName, locale);
 
   const handleCopyUrl = async (seq?: number) => {
     if (!seq) {
@@ -61,8 +65,11 @@ export default function SubscribedBrandDashboard({
         {brandReports.map((item, index) => {
           const report = item.report;
           const analysis = item.analysis;
-          const matchingAnalysis =
-            analysis?.find((a) => a.language === locale) || analysis?.[0];
+          const matchingAnalysis = pickPreferredAnalysis(
+            analysis,
+            preferredLanguage,
+            locale
+          );
           const imageUrl = getDisplayableImage(report?.image || null);
           const text =
             matchingAnalysis?.summary || matchingAnalysis?.description || "";

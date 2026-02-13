@@ -2,6 +2,7 @@
 
 import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
+import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
 import { useRouter } from "next/router";
 import { FaLock } from "react-icons/fa";
 import { ReportWithAnalysis } from "../../components/GlobeView";
@@ -21,6 +22,9 @@ export default function PublicBrandDashboard({
   const locale = getCurrentLocale();
   const { t } = useTranslations();
   const router = useRouter();
+  const brandName =
+    typeof router.query.brand_name === "string" ? router.query.brand_name : "";
+  const preferredLanguage = getPreferredReportLanguage(brandName, locale);
 
   const [urlCopied, setUrlCopied] = useState(false);
   const [currentSeq, setCurrentSeq] = useState<number | null>(null);
@@ -71,8 +75,11 @@ export default function PublicBrandDashboard({
         {firstRow.map((item, index) => {
           const report = item.report;
           const analysis = item.analysis;
-          const matchingAnalysis =
-            analysis?.find((a) => a.language === locale) || analysis?.[0];
+          const matchingAnalysis = pickPreferredAnalysis(
+            analysis,
+            preferredLanguage,
+            locale
+          );
           const imageUrl = getDisplayableImage(report?.image || null);
           const text =
             matchingAnalysis?.summary || matchingAnalysis?.description || "";
@@ -163,8 +170,11 @@ export default function PublicBrandDashboard({
         {secondRow.map((item, index) => {
           const report = item.report;
           const analysis = item.analysis;
-          const matchingAnalysis =
-            analysis?.find((a) => a.language === locale) || analysis?.[0];
+          const matchingAnalysis = pickPreferredAnalysis(
+            analysis,
+            preferredLanguage,
+            locale
+          );
           const imageUrl = getDisplayableImage(report?.image || null);
           const text =
             matchingAnalysis?.summary || matchingAnalysis?.description || "";
