@@ -10,12 +10,14 @@ import ImageDisplay from "../ImageDisplay";
 import TextToImage from "../TextToImage";
 import { Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/router";
 
 export default function SubscribedBrandDashboard({
   brandReports,
 }: {
   brandReports: ReportWithAnalysis[];
 }) {
+  const router = useRouter();
   const locale = getCurrentLocale();
   const { t } = useTranslations();
   const [urlCopied, setUrlCopied] = useState(false);
