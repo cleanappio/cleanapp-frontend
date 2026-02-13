@@ -261,7 +261,7 @@ export default function PublicBrandDashboard({
               <span className="bg-gray-500 rounded-full w-2 h-2"></span>
             </div>
             <p className="text-gray-500 text-xs sm:text-sm">
-              {brandReports.length - 6} {t("moreReports")}
+              {t("moreReports")}
             </p>
           </div>
         </div>

@@ -54,6 +54,7 @@ type IntelligenceResponse = {
   answer_markdown?: string;
   data?: IntelligenceResponseData;
   upsell?: IntelligenceUpsell | null;
+  suggested_prompts?: string[];
 
   // Backward compatibility
   answer?: string;
@@ -79,6 +80,12 @@ Upgrade to access:
 • Full report details
 • Raw data & exports
 • Trend analysis and alerts`;
+
+const PROMPT_SUGGESTIONS = [
+  "What are the biggest issues reported this month?",
+  "What problems are increasing fastest?",
+  "What do users complain about most?",
+];
 
 const INLINE_TOKEN_REGEX = /(https?:\/\/[^\s]+|Report\s+#\d+|Upgrade to Pro)/g;
 const REPORT_REF_REGEX = /^Report\s+#(\d+)$/i;
@@ -215,6 +222,7 @@ export default function CleanIntelligencePanel({
   const [reportsAnalyzed, setReportsAnalyzed] = useState(totalReports);
   const [sessionId, setSessionId] = useState("");
   const [qualityMode, setQualityMode] = useState<QualityMode>("deep");
+  const [promptSuggestions, setPromptSuggestions] = useState<string[]>(PROMPT_SUGGESTIONS);
 
   const storageKey = useMemo(() => `cleanai_chat:${orgId}`, [orgId]);
   const qualityStorageKey = useMemo(() => `cleanai_quality_mode:${orgId}`, [orgId]);
@@ -325,6 +333,11 @@ export default function CleanIntelligencePanel({
         upsell: data.upsell || null,
       };
       setMessages((prev) => [...prev, assistantMessage]);
+      if (Array.isArray(data.suggested_prompts) && data.suggested_prompts.length > 0) {
+        setPromptSuggestions(data.suggested_prompts.slice(0, 3));
+      } else {
+        setPromptSuggestions(PROMPT_SUGGESTIONS);
+      }
 
       if (typeof data.reports_analyzed === "number" && data.reports_analyzed > 0) {
         setReportsAnalyzed(data.reports_analyzed);
@@ -359,6 +372,22 @@ export default function CleanIntelligencePanel({
       </div>
 
       <div className="p-4 sm:p-5 space-y-4">
+        {!limitReached && (
+          <div className="flex flex-wrap gap-2">
+            {promptSuggestions.slice(0, 3).map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => sendPrompt(prompt)}
+                disabled={isLoading}
+                className="rounded-full border border-green-200 bg-green-50 px-4 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
         {(messages.length > 0 || isLoading) && (
           <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
             {messages.map((msg, idx) => (
