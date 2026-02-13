@@ -1,7 +1,7 @@
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import { useTranslations } from "@/lib/i18n";
 import { getPreferredReportLanguage } from "@/lib/report-language";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [brandReports, setBrandReports] = useState<ReportWithAnalysis[]>([]);
@@ -12,7 +12,7 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
 
-  const fetchRecentReportsByBrand = useCallback(async (brand_name: string) => {
+  const fetchRecentReportsByBrand = async (brand_name: string) => {
     setIsLoading(true);
     try {
       const lang = getPreferredReportLanguage(brand_name, locale);
@@ -33,13 +33,16 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [locale, t]);
+  };
 
   useEffect(() => {
     if (brand_name) {
       fetchRecentReportsByBrand(brand_name);
     }
-  }, [brand_name, fetchRecentReportsByBrand]);
+    // Intentionally not depending on t(): the translation function is recreated
+    // per render in i18n hook and would retrigger fetch loops/flicker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brand_name, locale]);
 
   return { brandReports, totalCount, highPriority, mediumPriority, isLoading, error, fetchRecentReportsByBrand };
 };
