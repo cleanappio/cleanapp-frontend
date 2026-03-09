@@ -137,6 +137,13 @@ function shouldFetchRelated(query: string, primary?: PlaceSearchResult): boolean
   );
 }
 
+function isInstitutionLike(primary: PlaceSearchResult): boolean {
+  const haystack = `${primary.name} ${primary.address} ${primary.category || ""} ${primary.subtype || ""}`.toLowerCase();
+  return /(university|college|school|campus|hospital|medical|clinic|extension|institute)/.test(
+    haystack
+  );
+}
+
 function relatedSearchRadiusMeters(primary: PlaceSearchResult): number {
   const [west, south, east, north] = primary.bbox;
   const latMeters = Math.abs(north - south) * 111_000;
@@ -200,6 +207,10 @@ async function fetchRelatedPlaces(
 ): Promise<PlaceSearchResult[]> {
   if (!shouldFetchRelated(query, primary)) {
     return [];
+  }
+
+  if (isInstitutionLike(primary)) {
+    return fetchRelatedInstitutionPlaces(query, primary);
   }
 
   const regex = buildRelatedRegex(query, primary);
@@ -270,6 +281,95 @@ out center tags;
     })
     .filter((item): item is PlaceSearchResult => item !== null)
     .slice(0, 6);
+}
+
+function relatedInstitutionQueries(
+  query: string,
+  primary: PlaceSearchResult
+): string[] {
+  const baseTerms = new Set<string>();
+  const trimmed = query.trim();
+  if (trimmed) {
+    baseTerms.add(trimmed);
+  }
+  if (primary.name) {
+    baseTerms.add(primary.name);
+  }
+
+  const nameTerms = primary.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  if (nameTerms.length >= 2 && nameTerms.length <= 8) {
+    baseTerms.add(nameTerms);
+  }
+
+  const suffixes = [
+    "Medical Center",
+    "Hospital",
+    "Extension",
+    "Clinic",
+    "Campus",
+  ];
+
+  const out: string[] = [];
+  for (const base of baseTerms) {
+    for (const suffix of suffixes) {
+      out.push(`${base} ${suffix}`);
+    }
+  }
+  return Array.from(new Set(out)).slice(0, 8);
+}
+
+async function fetchRelatedInstitutionPlaces(
+  query: string,
+  primary: PlaceSearchResult
+): Promise<PlaceSearchResult[]> {
+  const searches = relatedInstitutionQueries(query, primary);
+  if (searches.length === 0) {
+    return [];
+  }
+
+  const relatedResults = await Promise.all(
+    searches.map(async (searchTerm) => {
+      try {
+        const items = await fetchNominatim(searchTerm);
+        return items;
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  const [west, south, east, north] = primary.bbox;
+  const margin = 0.2;
+  const expanded = [
+    west - (east - west) * margin,
+    south - (north - south) * margin,
+    east + (east - west) * margin,
+    north + (north - south) * margin,
+  ] as [number, number, number, number];
+
+  return dedupePlaces(
+    relatedResults
+      .flat()
+      .filter((item) => item.id !== primary.id)
+      .filter((item) => {
+        const [lng, lat] = [item.lng, item.lat];
+        return (
+          lng >= expanded[0] &&
+          lng <= expanded[2] &&
+          lat >= expanded[1] &&
+          lat <= expanded[3]
+        );
+      })
+      .map((item) => ({
+        ...item,
+        result_type: "related" as const,
+      }))
+  ).slice(0, 6);
 }
 
 function dedupePlaces(places: PlaceSearchResult[]): PlaceSearchResult[] {
