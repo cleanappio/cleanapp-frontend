@@ -36,6 +36,10 @@ import AreaCreationModal from "./AreaCreationModal";
 import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
 import { useBackendSearch } from "@/hooks/useBackendSearch";
+import {
+  computeFeatureBBox,
+  PlaceSearchResult,
+} from "@/lib/place-search";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 // Type for window.ReactNativeWebView
@@ -130,6 +134,16 @@ export default function GlobeView() {
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
   >([]);
+  const [selectedSearchPlace, setSelectedSearchPlace] =
+    useState<PlaceSearchResult | null>(null);
+  const [selectedPlaceReports, setSelectedPlaceReports] = useState<
+    ReportWithAnalysis[] | null
+  >(null);
+  const [selectedPlaceReportsLoading, setSelectedPlaceReportsLoading] =
+    useState(false);
+  const [selectedPlaceReportsError, setSelectedPlaceReportsError] = useState<
+    string | null
+  >(null);
 
   const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
     GeoJSON.Feature[]
@@ -243,6 +257,7 @@ export default function GlobeView() {
     searchTerm,
     setSearchTerm,
     searchResults,
+    placeResults,
     loading: searchLoading,
     error: searchError,
   } = useBackendSearch(selectedTab);
@@ -402,6 +417,116 @@ export default function GlobeView() {
     },
     [getSafeMap, retryMapOperation]
   );
+
+  const fitMapToBBox = useCallback(
+    (bbox: [number, number, number, number]) => {
+      retryMapOperation(
+        () => {
+          const map = getSafeMap();
+          if (map) {
+            map.fitBounds(
+              [
+                [bbox[0], bbox[1]],
+                [bbox[2], bbox[3]],
+              ],
+              {
+                padding: isMobile ? 36 : 72,
+                duration: 1800,
+                essential: true,
+                maxZoom: 15,
+              }
+            );
+            return true;
+          }
+          return false;
+        },
+        3,
+        200
+      );
+    },
+    [getSafeMap, isMobile, retryMapOperation]
+  );
+
+  const clearSelectedPlace = useCallback(() => {
+    setSelectedSearchPlace(null);
+    setSelectedPlaceReports(null);
+    setSelectedPlaceReportsError(null);
+    setSelectedPlaceReportsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (selectedTab !== "physical") {
+      clearSelectedPlace();
+    }
+  }, [selectedTab, clearSelectedPlace]);
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      clearSelectedPlace();
+    }
+  }, [searchTerm, clearSelectedPlace]);
+
+  const handlePlaceResultSelect = useCallback(
+    async (place: PlaceSearchResult) => {
+      const apiUrl =
+        process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
+      const bbox = computeFeatureBBox(place.geometry) || place.bbox;
+
+      clearSelectedPlace();
+      setSelectedSearchPlace(place);
+      setSelectedPlaceReportsLoading(true);
+      setSelectedPlaceReportsError(null);
+      setSeq(null);
+      setReportWithAnalysis(null);
+      setSelectedReport(null);
+      setIsCleanAppProOpen(false);
+      trackLocationView(place.name);
+      fitMapToBBox(bbox);
+
+      try {
+        const response = await fetch(`${apiUrl}/api/v3/reports/by-geometry`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            geometry: place.geometry,
+            classification: "physical",
+            n: 100,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load place reports (${response.status})`);
+        }
+
+        const data = await response.json();
+        setSelectedPlaceReports(data.reports || []);
+      } catch (error) {
+        console.error("Failed to load place reports:", error);
+        setSelectedPlaceReports([]);
+        setSelectedPlaceReportsError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load reports for this place"
+        );
+      } finally {
+        setSelectedPlaceReportsLoading(false);
+      }
+    },
+    [clearSelectedPlace, fitMapToBBox, trackLocationView]
+  );
+
+  const displayedReportsWithAnalysis = useMemo(() => {
+    if (selectedSearchPlace) {
+      return selectedPlaceReports || [];
+    }
+    return latestReportsWithAnalysis;
+  }, [selectedSearchPlace, selectedPlaceReports, latestReportsWithAnalysis]);
+
+  const displayedReportsLoading = selectedSearchPlace
+    ? selectedPlaceReportsLoading
+    : reportTabsLoading.current && latestReportsWithAnalysis.length === 0;
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -2435,6 +2560,40 @@ export default function GlobeView() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, isDigital, latestDigitalReportsV2]);
 
+  const renderPlaceSearchHit = useCallback(
+    (place: PlaceSearchResult, onAfterSelect?: () => void) => (
+      <button
+        key={place.id}
+        className={`p-3 border text-left w-full transition-colors ${
+          selectedSearchPlace?.id === place.id
+            ? "bg-blue-900/40 border-blue-500"
+            : "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-900"
+        }`}
+        onClick={() => {
+          handlePlaceResultSelect(place);
+          onAfterSelect?.();
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-medium text-white line-clamp-1">{place.name}</p>
+            <p className="text-xs text-blue-300 mt-1">
+              {place.result_type === "primary" ? "Campus / landmark" : "Related place"}
+              {place.category ? ` · ${place.category}` : ""}
+            </p>
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+              {place.address}
+            </p>
+          </div>
+          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {place.result_type === "primary" ? "Area" : "Nearby"}
+          </span>
+        </div>
+      </button>
+    ),
+    [handlePlaceResultSelect, selectedSearchPlace?.id]
+  );
+
   // Drawing handlers
   const handleAreaCreated = useCallback(async (area: Area) => {
     console.log("Area created:", area);
@@ -2713,6 +2872,87 @@ export default function GlobeView() {
     };
   }, [mapInstance, mapLoaded, mapStyleLoaded, drawnAreas]);
 
+  useEffect(() => {
+    if (!mapInstance || !mapLoaded || !mapStyleLoaded) return;
+
+    const map = mapInstance;
+    const sourceId = "search-place-area";
+    const fillLayerId = "search-place-area-fill";
+    const outlineLayerId = "search-place-area-outline";
+
+    if (!selectedSearchPlace) {
+      try {
+        if (map.getLayer(outlineLayerId)) {
+          map.removeLayer(outlineLayerId);
+        }
+        if (map.getLayer(fillLayerId)) {
+          map.removeLayer(fillLayerId);
+        }
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+      return;
+    }
+
+    const geoJSON: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: [selectedSearchPlace.geometry],
+    };
+
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: geoJSON,
+      });
+    } else {
+      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+      source.setData(geoJSON);
+    }
+
+    if (!map.getLayer(fillLayerId)) {
+      map.addLayer({
+        id: fillLayerId,
+        type: "fill",
+        source: sourceId,
+        paint: {
+          "fill-color": "#38bdf8",
+          "fill-opacity": 0.16,
+        },
+      });
+    }
+
+    if (!map.getLayer(outlineLayerId)) {
+      map.addLayer({
+        id: outlineLayerId,
+        type: "line",
+        source: sourceId,
+        paint: {
+          "line-color": "#38bdf8",
+          "line-width": 3,
+        },
+      });
+    }
+
+    return () => {
+      try {
+        if (map.getLayer(outlineLayerId)) {
+          map.removeLayer(outlineLayerId);
+        }
+        if (map.getLayer(fillLayerId)) {
+          map.removeLayer(fillLayerId);
+        }
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    };
+  }, [mapInstance, mapLoaded, mapStyleLoaded, selectedSearchPlace]);
+
   return (
     <div className="flex flex-col h-svh relative">
       {/* Map Loading Indicator */}
@@ -2901,6 +3141,7 @@ export default function GlobeView() {
                 <button
                   className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
                   onClick={() => {
+                    clearSelectedPlace();
                     trackBrandSearch(matchingBrand.brand_display_name);
                     router.push(`/digital/${matchingBrand.brand_name}`);
                   }}
@@ -2916,6 +3157,9 @@ export default function GlobeView() {
                   </div>
                 </button>
               )}
+              {placeResults.map((place) =>
+                renderPlaceSearchHit(place)
+              )}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
@@ -2926,6 +3170,7 @@ export default function GlobeView() {
                     key={result.report.seq}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
+                      clearSelectedPlace();
                       setSeq(result.report.seq);
                       setReportWithAnalysis(result);
 
@@ -2983,9 +3228,17 @@ export default function GlobeView() {
                   {searchError}
                 </div>
               )}
-              {searchResults.length == 0 && !searchLoading && !searchError && (
+              {selectedPlaceReportsError && selectedSearchPlace && (
+                <div className="p-2 text-sm text-red-300 rounded-sm w-full">
+                  {selectedPlaceReportsError}
+                </div>
+              )}
+              {searchResults.length == 0 &&
+                placeResults.length == 0 &&
+                !searchLoading &&
+                !searchError && (
                 <div className="p-2 text-white rounded-sm w-full">
-                  No reports found
+                  No matching places or reports found
                 </div>
               )}
             </div>
@@ -3024,6 +3277,7 @@ export default function GlobeView() {
                 <button
                   className="p-3 bg-gradient-to-r from-green-900/50 to-gray-800 border border-green-700/50 text-left w-full hover:from-green-800/50 hover:to-gray-700 transition-all group"
                   onClick={() => {
+                    clearSelectedPlace();
                     trackBrandSearch(matchingBrand.brand_display_name);
                     router.push(`/digital/${matchingBrand.brand_name}`);
                   }}
@@ -3039,6 +3293,9 @@ export default function GlobeView() {
                   </div>
                 </button>
               )}
+              {placeResults.map((place) =>
+                renderPlaceSearchHit(place, () => setIsMobileSearchOpen(false))
+              )}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
@@ -3049,6 +3306,7 @@ export default function GlobeView() {
                     key={result.report.seq}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
+                      clearSelectedPlace();
                       setSeq(result.report.seq);
                       setReportWithAnalysis(result);
 
@@ -3110,9 +3368,17 @@ export default function GlobeView() {
                   {searchError}
                 </div>
               )}
-              {searchResults.length == 0 && !searchLoading && !searchError && (
+              {selectedPlaceReportsError && selectedSearchPlace && (
+                <div className="p-2 text-sm text-red-300 rounded-sm w-full">
+                  {selectedPlaceReportsError}
+                </div>
+              )}
+              {searchResults.length == 0 &&
+                placeResults.length == 0 &&
+                !searchLoading &&
+                !searchError && (
                 <div className="p-2 text-white rounded-sm w-full">
-                  No reports found
+                  No matching places or reports found
                 </div>
               )}
             </div>
@@ -3278,10 +3544,8 @@ export default function GlobeView() {
 
       {/* Latest Reports - only show when modal is not open and not on mobile */}
       <CollapsibleLatestReports
-        reports={latestReportsWithAnalysis}
-        loading={
-          reportTabsLoading.current && latestReportsWithAnalysis.length === 0
-        }
+        reports={displayedReportsWithAnalysis}
+        loading={displayedReportsLoading}
         onReportClick={(report) => {
           // Set flag to indicate we're opening from a click
           openingFromClickRef.current = true;
