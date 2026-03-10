@@ -42,6 +42,7 @@ import {
 } from "@/lib/place-search";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
+import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 // Type for window.ReactNativeWebView
 declare global {
   interface Window {
@@ -527,6 +528,27 @@ export default function GlobeView() {
   const displayedReportsLoading = selectedSearchPlace
     ? selectedPlaceReportsLoading
     : reportTabsLoading.current && latestReportsWithAnalysis.length === 0;
+
+  const activeCaseScope = useMemo(() => {
+    if (selectedSearchPlace) {
+      return {
+        label: selectedSearchPlace.name,
+        scopeType: "place" as const,
+        geometry: selectedSearchPlace.geometry,
+      };
+    }
+
+    const latestArea = drawnAreas[drawnAreas.length - 1];
+    if (latestArea?.coordinates) {
+      return {
+        label: latestArea.name || "Selected area",
+        scopeType: "area" as const,
+        geometry: latestArea.coordinates,
+      };
+    }
+
+    return null;
+  }, [drawnAreas, selectedSearchPlace]);
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -3539,6 +3561,14 @@ export default function GlobeView() {
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
           initialArea={pendingArea}
+        />
+      )}
+
+      {!isDigital && activeCaseScope && (
+        <CaseWorkspacePanel
+          scopeLabel={activeCaseScope.label}
+          scopeType={activeCaseScope.scopeType}
+          geometry={activeCaseScope.geometry}
         />
       )}
 
