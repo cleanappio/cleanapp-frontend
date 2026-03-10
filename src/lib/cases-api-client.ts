@@ -183,6 +183,23 @@ export interface CaseEscalationSendResponse {
   deliveries: CaseEmailDelivery[];
 }
 
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeCaseDetail(data: CaseDetail): CaseDetail {
+  return {
+    ...data,
+    linked_reports: asArray(data?.linked_reports),
+    clusters: asArray(data?.clusters),
+    escalation_targets: asArray(data?.escalation_targets),
+    escalation_actions: asArray(data?.escalation_actions),
+    email_deliveries: asArray(data?.email_deliveries),
+    resolution_signals: asArray(data?.resolution_signals),
+    audit_events: asArray(data?.audit_events),
+  };
+}
+
 class CasesApiClient {
   private axios: AxiosInstance;
 
@@ -239,7 +256,7 @@ class CasesApiClient {
 
   async getCase(caseId: string): Promise<CaseDetail> {
     const { data } = await this.axios.get<CaseDetail>(`/api/v3/cases/${caseId}`);
-    return data;
+    return normalizeCaseDetail(data);
   }
 
   async getCaseEscalations(caseId: string): Promise<{

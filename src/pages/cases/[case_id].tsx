@@ -103,7 +103,7 @@ export default function CaseDetailPage() {
 
   const selectedTargets = useMemo(() => {
     if (!detail) return [];
-    return detail.escalation_targets.filter((target) =>
+    return (detail.escalation_targets ?? []).filter((target) =>
       selectedTargetIds.includes(target.id)
     );
   }, [detail, selectedTargetIds]);
@@ -111,8 +111,13 @@ export default function CaseDetailPage() {
   const timelineItems = useMemo(() => {
     if (!detail) return [];
 
+    const auditEvents = detail.audit_events ?? [];
+    const escalationActions = detail.escalation_actions ?? [];
+    const emailDeliveries = detail.email_deliveries ?? [];
+    const resolutionSignals = detail.resolution_signals ?? [];
+
     const items = [
-      ...detail.audit_events.map((event: any) => ({
+      ...auditEvents.map((event: any) => ({
         key: `audit-${event.id || event.created_at || Math.random()}`,
         ts: event.created_at,
         title: humanizeAuditEvent(event.event_type || "case_updated"),
@@ -122,15 +127,15 @@ export default function CaseDetailPage() {
             ? `Action by ${event.actor_user_id}`
             : "Case event recorded."),
         kind: "audit" as const,
-      })),
-      ...detail.escalation_actions.map((action) => ({
+        })),
+      ...escalationActions.map((action) => ({
         key: `action-${action.id}`,
         ts: action.sent_at || action.created_at,
         title: action.sent_at ? "Escalation email sent" : "Escalation drafted",
         description: action.subject || "Escalation action recorded.",
         kind: "action" as const,
       })),
-      ...detail.email_deliveries.map((delivery) => ({
+      ...emailDeliveries.map((delivery) => ({
         key: `delivery-${delivery.id}`,
         ts: delivery.sent_at || delivery.created_at,
         title:
@@ -143,7 +148,7 @@ export default function CaseDetailPage() {
             : delivery.provider || "email",
         kind: "delivery" as const,
       })),
-      ...detail.resolution_signals.map((signal: any, index) => ({
+      ...resolutionSignals.map((signal: any, index) => ({
         key: `resolution-${index}`,
         ts: signal.created_at,
         title: signal.source_type
@@ -240,6 +245,9 @@ export default function CaseDetailPage() {
   }
 
   const { case: caseRecord } = detail;
+  const linkedReports = detail.linked_reports ?? [];
+  const emailDeliveries = detail.email_deliveries ?? [];
+  const escalationTargets = detail.escalation_targets ?? [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -260,7 +268,7 @@ export default function CaseDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 min-w-[260px]">
               <MetricCard label="Status" value={caseRecord.status} />
-              <MetricCard label="Reports" value={String(detail.linked_reports.length)} />
+              <MetricCard label="Reports" value={String(linkedReports.length)} />
               <MetricCard
                 label="Severity"
                 value={`${Math.round(caseRecord.severity_score * 100)}%`}
@@ -280,7 +288,7 @@ export default function CaseDetailPage() {
                 Linked reports
               </h2>
               <div className="space-y-3">
-                {detail.linked_reports.map((report) => (
+                {linkedReports.map((report) => (
                   <div
                     key={`${report.case_id}-${report.seq}`}
                     className="rounded-xl border border-slate-200 px-4 py-3"
@@ -352,10 +360,10 @@ export default function CaseDetailPage() {
                 Escalation activity
               </h2>
               <div className="space-y-3">
-                {detail.email_deliveries.length === 0 ? (
+                {emailDeliveries.length === 0 ? (
                   <p className="text-slate-600">No escalation deliveries yet.</p>
                 ) : (
-                  detail.email_deliveries.map((delivery) => (
+                  emailDeliveries.map((delivery) => (
                     <div
                       key={delivery.id}
                       className="rounded-xl border border-slate-200 px-4 py-3"
@@ -388,12 +396,12 @@ export default function CaseDetailPage() {
                 Escalation targets
               </h2>
               <div className="space-y-3">
-                {detail.escalation_targets.length === 0 ? (
+                {escalationTargets.length === 0 ? (
                   <p className="text-slate-600">
                     No escalation targets suggested yet.
                   </p>
                 ) : (
-                  detail.escalation_targets.map((target) => (
+                  escalationTargets.map((target) => (
                     <label
                       key={target.id}
                       className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 cursor-pointer"
