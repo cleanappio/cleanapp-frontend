@@ -223,41 +223,13 @@ export default function CaseDetailPage() {
     setSending(true);
     setError(null);
     try {
-      const sent = await casesApiClient.sendCaseEscalation(caseId, {
+      await casesApiClient.sendCaseEscalation(caseId, {
         target_ids: selectedTargetIds,
         subject,
         body,
       });
-      setDetail((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          escalation_actions: [
-            ...(current.escalation_actions ?? []),
-            ...(sent.actions ?? []),
-          ],
-          email_deliveries: [
-            ...(current.email_deliveries ?? []),
-            ...(sent.deliveries ?? []),
-          ],
-          audit_events: [
-            ...(current.audit_events ?? []),
-            {
-              id: `client-send-${Date.now()}`,
-              event_type: "case_escalation_sent",
-              actor_user_id: "",
-              payload_json: {
-                recipient_count: Array.isArray(sent.deliveries)
-                  ? sent.deliveries.length
-                  : 0,
-                subject: sent.subject,
-              },
-              created_at: new Date().toISOString(),
-            },
-          ],
-        };
-      });
       setDraft(null);
+      await loadCase();
     } catch (err) {
       console.error("Failed to send escalation", err);
       setError("Failed to send escalation");
@@ -678,11 +650,17 @@ function summarizePayload(payload: unknown) {
     if (typeof map.summary === "string") return map.summary;
     if (typeof map.subject === "string") return map.subject;
     if (typeof map.retry_reason === "string") return map.retry_reason;
+    if (typeof map.to_status === "string") {
+      return `Status set to ${map.to_status}`;
+    }
     if (typeof map.target_count === "number") {
       return `Targets: ${map.target_count}`;
     }
     if (typeof map.delivery_count === "number") {
       return `Deliveries: ${map.delivery_count}`;
+    }
+    if (Array.isArray(map.report_seqs) && map.report_seqs.length > 0) {
+      return `Reports linked: ${map.report_seqs.length}`;
     }
   }
   return "";
