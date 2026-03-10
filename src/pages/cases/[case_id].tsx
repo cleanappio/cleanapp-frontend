@@ -179,6 +179,7 @@ export default function CaseDetailPage() {
 
       return items.map((item) => ({
         ...item,
+        ts: typeof item.ts === "string" ? item.ts : "",
         title: typeof item.title === "string" ? item.title : String(item.title),
         description:
           typeof item.description === "string" ? item.description : "",
