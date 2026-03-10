@@ -13,9 +13,32 @@ import {
 } from "@/lib/cases-api-client";
 import { authApiClient } from "@/lib/auth-api-client";
 
+function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
+  const queryCaseId = router.query.case_id;
+  if (typeof queryCaseId === "string" && queryCaseId.trim()) {
+    return queryCaseId.trim();
+  }
+
+  const pathname =
+    typeof window !== "undefined"
+      ? window.location.pathname
+      : router.asPath?.split("?")[0] || "";
+
+  const match = pathname.match(/\/cases\/([^/?#]+)/);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
 export default function CaseDetailPage() {
   const router = useRouter();
-  const { case_id } = router.query;
+  const caseId = useMemo(() => resolveCaseId(router), [router]);
 
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [draft, setDraft] = useState<CaseEscalationDraftResponse | null>(null);
@@ -28,14 +51,20 @@ export default function CaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadCase = useCallback(async () => {
-    if (!case_id || typeof case_id !== "string") {
+    if (!caseId) {
       return;
     }
     setLoading(true);
     setError(null);
     try {
       authApiClient.loadTokenFromStorage();
-      const data = await casesApiClient.getCase(case_id);
+      const token = authApiClient.getAuthToken();
+      if (!token) {
+        router.replace(`/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`);
+        return;
+      }
+
+      const data = await casesApiClient.getCase(caseId);
       setDetail(data);
       const ids = data.escalation_targets
         .filter((target) => !!target.email)
@@ -43,15 +72,34 @@ export default function CaseDetailPage() {
       setSelectedTargetIds(ids);
     } catch (err) {
       console.error("Failed to load case", err);
+      const status = (err as any)?.response?.status;
+      if (status === 401) {
+        router.replace(`/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`);
+        return;
+      }
+      if (status === 404) {
+        setError("Case not found");
+        return;
+      }
       setError("Failed to load case");
     } finally {
       setLoading(false);
     }
-  }, [case_id]);
+  }, [caseId, router]);
 
   useEffect(() => {
     loadCase();
   }, [loadCase]);
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+    if (!caseId) {
+      setLoading(false);
+      setError("Case not found");
+    }
+  }, [caseId, router.isReady]);
 
   const selectedTargets = useMemo(() => {
     if (!detail) return [];
@@ -120,11 +168,11 @@ export default function CaseDetailPage() {
   };
 
   const handleDraft = async () => {
-    if (!case_id || typeof case_id !== "string") return;
+    if (!caseId) return;
     setDrafting(true);
     setError(null);
     try {
-      const nextDraft = await casesApiClient.draftCaseEscalation(case_id, {
+      const nextDraft = await casesApiClient.draftCaseEscalation(caseId, {
         target_ids: selectedTargetIds,
         subject,
         body,
@@ -141,11 +189,11 @@ export default function CaseDetailPage() {
   };
 
   const handleSend = async () => {
-    if (!case_id || typeof case_id !== "string") return;
+    if (!caseId) return;
     setSending(true);
     setError(null);
     try {
-      await casesApiClient.sendCaseEscalation(case_id, {
+      await casesApiClient.sendCaseEscalation(caseId, {
         target_ids: selectedTargetIds,
         subject,
         body,

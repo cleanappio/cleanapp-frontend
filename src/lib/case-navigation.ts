@@ -10,12 +10,10 @@ export async function navigateToCase(
   }
 
   const encodedCaseId = encodeURIComponent(trimmedCaseId);
+  const destination = `/cases/${encodedCaseId}`;
 
   try {
-    const navigated = await router.push({
-      pathname: "/cases/[case_id]",
-      query: { case_id: trimmedCaseId },
-    });
+    const navigated = await router.push(destination);
 
     if (navigated) {
       return;
@@ -25,7 +23,7 @@ export async function navigateToCase(
   }
 
   if (typeof window !== "undefined") {
-    window.location.assign(`/cases/${encodedCaseId}`);
+    window.location.assign(destination);
     return;
   }
 
