@@ -11,9 +11,14 @@ export async function navigateToCase(
 
   const encodedCaseId = encodeURIComponent(trimmedCaseId);
   const destination = `/cases/${encodedCaseId}`;
+  const absoluteDestination =
+    typeof window !== "undefined" &&
+    window.location.hostname.toLowerCase() === "cleanapp.io"
+      ? `https://www.cleanapp.io${destination}`
+      : destination;
 
   try {
-    const navigated = await router.push(destination);
+    const navigated = await router.push(absoluteDestination);
 
     if (navigated) {
       return;
@@ -23,7 +28,7 @@ export async function navigateToCase(
   }
 
   if (typeof window !== "undefined") {
-    window.location.assign(destination);
+    window.location.assign(absoluteDestination);
     return;
   }
 

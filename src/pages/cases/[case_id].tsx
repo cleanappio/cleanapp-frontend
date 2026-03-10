@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import PageHeader from "@/components/PageHeader";
@@ -39,6 +39,20 @@ function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
 export default function CaseDetailPage() {
   const router = useRouter();
   const caseId = useMemo(() => resolveCaseId(router), [router]);
+  const canonicalizedRef = useRef(false);
+
+  useEffect(() => {
+    if (canonicalizedRef.current || !caseId || typeof window === "undefined") {
+      return;
+    }
+    const host = window.location.hostname.toLowerCase();
+    if (host !== "cleanapp.io") {
+      return;
+    }
+    canonicalizedRef.current = true;
+    const nextUrl = `https://www.cleanapp.io/cases/${encodeURIComponent(caseId)}${window.location.search}${window.location.hash}`;
+    window.location.replace(nextUrl);
+  }, [caseId]);
 
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [draft, setDraft] = useState<CaseEscalationDraftResponse | null>(null);
@@ -60,7 +74,9 @@ export default function CaseDetailPage() {
       authApiClient.loadTokenFromStorage();
       const token = authApiClient.getAuthToken();
       if (!token) {
-        router.replace(`/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`);
+        router.replace(
+          `/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`,
+        );
         return;
       }
 
@@ -74,7 +90,9 @@ export default function CaseDetailPage() {
       console.error("Failed to load case", err);
       const status = (err as any)?.response?.status;
       if (status === 401) {
-        router.replace(`/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`);
+        router.replace(
+          `/login?redirect=${encodeURIComponent(`/cases/${caseId}`)}`,
+        );
         return;
       }
       if (status === 404) {
@@ -104,7 +122,7 @@ export default function CaseDetailPage() {
   const selectedTargets = useMemo(() => {
     if (!detail) return [];
     return (detail.escalation_targets ?? []).filter((target) =>
-      selectedTargetIds.includes(target.id)
+      selectedTargetIds.includes(target.id),
     );
   }, [detail, selectedTargetIds]);
 
@@ -121,13 +139,9 @@ export default function CaseDetailPage() {
         key: `audit-${event.id || event.created_at || Math.random()}`,
         ts: event.created_at,
         title: humanizeAuditEvent(event.event_type || "case_updated"),
-        description:
-          summarizePayload(event.payload_json) ||
-          (event.actor_user_id
-            ? `Action by ${event.actor_user_id}`
-            : "Case event recorded."),
+        description: describeAuditEvent(event),
         kind: "audit" as const,
-        })),
+      })),
       ...escalationActions.map((action) => ({
         key: `action-${action.id}`,
         ts: action.sent_at || action.created_at,
@@ -142,10 +156,9 @@ export default function CaseDetailPage() {
           delivery.delivery_status === "sent"
             ? `Delivered to ${delivery.recipient_email}`
             : `Delivery ${delivery.delivery_status}`,
-        description:
-          delivery.delivery_source
-            ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
-            : delivery.provider || "email",
+        description: delivery.delivery_source
+          ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
+          : delivery.provider || "email",
         kind: "delivery" as const,
       })),
       ...resolutionSignals.map((signal: any, index) => ({
@@ -168,7 +181,7 @@ export default function CaseDetailPage() {
     setSelectedTargetIds((current) =>
       current.includes(target.id)
         ? current.filter((id) => id !== target.id)
-        : [...current, target.id]
+        : [...current, target.id],
     );
   };
 
@@ -268,7 +281,10 @@ export default function CaseDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 min-w-[260px]">
               <MetricCard label="Status" value={caseRecord.status} />
-              <MetricCard label="Reports" value={String(linkedReports.length)} />
+              <MetricCard
+                label="Reports"
+                value={String(linkedReports.length)}
+              />
               <MetricCard
                 label="Severity"
                 value={`${Math.round(caseRecord.severity_score * 100)}%`}
@@ -338,7 +354,9 @@ export default function CaseDetailPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-medium text-slate-900">{item.title}</p>
+                          <p className="font-medium text-slate-900">
+                            {item.title}
+                          </p>
                           {item.description && (
                             <p className="mt-1 text-sm text-slate-600">
                               {item.description}
@@ -361,7 +379,9 @@ export default function CaseDetailPage() {
               </h2>
               <div className="space-y-3">
                 {emailDeliveries.length === 0 ? (
-                  <p className="text-slate-600">No escalation deliveries yet.</p>
+                  <p className="text-slate-600">
+                    No escalation deliveries yet.
+                  </p>
                 ) : (
                   emailDeliveries.map((delivery) => (
                     <div
@@ -374,7 +394,8 @@ export default function CaseDetailPage() {
                             {delivery.recipient_email}
                           </p>
                           <p className="text-sm text-slate-600">
-                            {delivery.delivery_status} · {delivery.delivery_source}
+                            {delivery.delivery_status} ·{" "}
+                            {delivery.delivery_source}
                           </p>
                         </div>
                         <p className="text-xs text-slate-500">
@@ -414,7 +435,9 @@ export default function CaseDetailPage() {
                       />
                       <div>
                         <p className="font-medium text-slate-900">
-                          {target.display_name || target.organization || target.email}
+                          {target.display_name ||
+                            target.organization ||
+                            target.email}
                         </p>
                         <p className="text-sm text-slate-600">{target.email}</p>
                         <p className="text-xs text-slate-500 mt-1">
@@ -477,7 +500,9 @@ export default function CaseDetailPage() {
 
               <button
                 onClick={handleSend}
-                disabled={sending || selectedTargets.length === 0 || !subject || !body}
+                disabled={
+                  sending || selectedTargets.length === 0 || !subject || !body
+                }
                 className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-4 py-3 font-medium"
               >
                 {sending ? "Sending..." : "Send escalation"}
@@ -494,7 +519,9 @@ export default function CaseDetailPage() {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
@@ -517,6 +544,65 @@ function humanizeAuditEvent(eventType: string) {
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
+  }
+}
+
+function describeAuditEvent(event: any) {
+  const payload =
+    event && typeof event.payload_json === "object" && event.payload_json !== null
+      ? (event.payload_json as Record<string, unknown>)
+      : null;
+
+  switch (event?.event_type) {
+    case "case_created": {
+      const reportCount = Array.isArray(payload?.report_seqs)
+        ? payload?.report_seqs.length
+        : 0;
+      const targetCount =
+        typeof payload?.target_count === "number" ? payload.target_count : 0;
+      if (reportCount > 0 || targetCount > 0) {
+        return `Created from ${reportCount} linked report${reportCount === 1 ? "" : "s"} and ${targetCount} suggested target${targetCount === 1 ? "" : "s"}.`;
+      }
+      return "Case workspace created.";
+    }
+    case "reports_added": {
+      const reportCount = Array.isArray(payload?.report_seqs)
+        ? payload?.report_seqs.length
+        : 0;
+      if (reportCount > 0) {
+        return `Added ${reportCount} report${reportCount === 1 ? "" : "s"} to the case.`;
+      }
+      return "Reports linked to the case.";
+    }
+    case "status_changed": {
+      const from = typeof payload?.from_status === "string" ? payload.from_status : "";
+      const to = typeof payload?.to_status === "string" ? payload.to_status : "";
+      if (from && to) {
+        return `Status changed from ${from} to ${to}.`;
+      }
+      if (to) {
+        return `Status changed to ${to}.`;
+      }
+      return "Case status updated.";
+    }
+    case "case_escalation_drafted": {
+      const targetCount =
+        typeof payload?.target_count === "number" ? payload.target_count : 0;
+      if (targetCount > 0) {
+        return `Prepared an escalation draft for ${targetCount} target${targetCount === 1 ? "" : "s"}.`;
+      }
+      return "Prepared an escalation draft.";
+    }
+    case "case_escalation_sent": {
+      const recipientCount =
+        typeof payload?.recipient_count === "number" ? payload.recipient_count : 0;
+      if (recipientCount > 0) {
+        return `Sent escalation to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}.`;
+      }
+      return "Sent escalation email.";
+    }
+    default:
+      return "";
   }
 }
 
