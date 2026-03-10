@@ -97,10 +97,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     autoFetch: location?.latitude && location?.longitude ? true : false,
   });
 
-  const fetchPhysicalReport = useCallback(async (seq: number) => {
+  const fetchReportByPublicId = useCallback(async (publicId: string) => {
     setLoading(true);
     setError(null);
-    const response = await fetch(`/api/reports/by-seq?seq=${seq}`);
+    const response = await fetch(
+      `/api/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`
+    );
 
     try {
       if (response.ok) {
@@ -115,14 +117,14 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
         setTitle(
           data.analysis.find((analysis: any) => analysis.language === locale)
-            ?.title || data.report.analysis[0].title
+            ?.title || data.analysis[0]?.title
         );
       } else {
         console.error("Failed to fetch physical report:", response.status);
         setError(t("failedToFetchReport"));
       }
     } catch (error) {
-      console.error("Error fetching physical report:", error);
+      console.error("Error fetching report by public id:", error);
       setError(t("failedToFetchReport"));
     } finally {
       setLoading(false);
@@ -136,7 +138,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${brand_name}&n=${n}`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=${n}&full_data=true`
         );
 
         if (response.ok) {
@@ -168,24 +170,34 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   );
 
   const fetchFullReport = useCallback(async () => {
+    const publicId = reportWithAnalysis?.report?.public_id || reportItem?.public_id;
+    if (publicId) {
+      fetchReportByPublicId(publicId);
+      return;
+    }
     if (!reportItem?.classification) return;
 
     if (reportItem.classification === "physical") {
-      fetchPhysicalReport(reportItem.seq);
+      if (reportItem.seq) {
+        const response = await fetch(`/api/reports/by-seq?seq=${reportItem.seq}`);
+        if (response.ok) {
+          setFullReport(await response.json());
+        }
+      }
     } else {
       fetchDigitalReport(reportItem.brand_name || "");
     }
-  }, [fetchDigitalReport, fetchPhysicalReport, reportItem, reportWithAnalysis]);
+  }, [fetchDigitalReport, fetchReportByPublicId, reportItem, reportWithAnalysis]);
 
   // Always fetch full report data when we have a seq to ensure source_timestamp is available
   // This is needed because data passed from the modal (reportWithAnalysis) lacks source_timestamp
   useEffect(() => {
-    const seq = reportWithAnalysis?.report?.seq || (reportItem?.classification === 'physical' ? reportItem?.seq : null);
+    const publicId = reportWithAnalysis?.report?.public_id || reportItem?.public_id || null;
     const brandName = reportItem?.classification === 'digital' ? reportItem?.brand_name : null;
 
-    // If we have a seq and haven't fetched this specific report yet, fetch it
-    if (seq && (!fullReport?.report?.source_timestamp || fullReport?.report?.seq !== seq)) {
-      fetchPhysicalReport(seq);
+    // If we have a public id and haven't fetched this specific report yet, fetch it
+    if (publicId && (!fullReport?.report?.source_timestamp || fullReport?.report?.public_id !== publicId)) {
+      fetchReportByPublicId(publicId);
     } else if (brandName && !fullReport?.report?.source_timestamp) {
       fetchDigitalReport(brandName);
     } else if (reportItem && !fullReport) {
@@ -195,9 +207,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
   useEffect(() => {
     if (fullReport) {
-      setImageUrl(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${fullReport.report.seq}`
-      );
+      setImageUrl(getDisplayableImage(fullReport.report.image || null));
 
       setTitle(
         fullReport.analysis.find(
@@ -205,7 +215,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
         )?.title || fullReport.analysis[0].title
       );
     } else if (reportItem) {
-      if (reportItem.classification === "physical" && reportItem?.seq) {
+      if (reportItem.classification === "physical" && reportItem?.seq && !reportItem.public_id) {
         setImageUrl(
           `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.seq}`
         );

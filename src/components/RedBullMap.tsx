@@ -27,6 +27,7 @@ import LatestReports from "./LatestReports";
 import CustomDashboardReport from "./CustomDashboardReport";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 import { ReportWithAnalysis } from "./GlobeView";
+import { getCanonicalReportPath } from "@/lib/report-links";
 
 // Custom hook to handle map center changes
 function MapController({ center }: { center: [number, number] }) {
@@ -97,31 +98,43 @@ export default function RedBullMap({
       setAuthError(t("authenticationRequired"));
       return;
     }
+    const classification =
+      report.analysis?.[0]?.classification === "digital"
+        ? "digital"
+        : "physical";
+    const target = getCanonicalReportPath(
+      classification,
+      report.report.public_id || null,
+    );
+    if (target) {
+      void router.push(target);
+      return;
+    }
     setSelectedReport(report);
     setIsCleanAppProOpen(true);
     // Update URL with seq or brand_name parameter if on home page
     if (router.pathname === "/") {
       const currentTab = (router.query.tab as string) || "physical";
       const query: any = { ...router.query, tab: currentTab };
-      
+
       // Check if it's a physical report with seq
       if (report.report.seq) {
         query.seq = report.report.seq;
         delete query.brand_name; // Remove brand_name if switching to physical
-      } 
+      }
       // Check if it's a digital report with brand_name
       else if (report.analysis && report.analysis[0]?.brand_name) {
         query.brand_name = report.analysis[0].brand_name;
         delete query.seq; // Remove seq if switching to digital
       }
-      
+
       router.push(
         {
           pathname: "/",
           query,
         },
         undefined,
-        { shallow: true }
+        { shallow: true },
       );
     }
   };
@@ -129,7 +142,7 @@ export default function RedBullMap({
   const handleReportFixed = (reportSeq: number) => {
     // Remove the fixed report from the reports list
     setReports((prevReports) =>
-      prevReports.filter((report) => report.report.seq !== reportSeq)
+      prevReports.filter((report) => report.report.seq !== reportSeq),
     );
 
     // If the fixed report was the selected report, clear the selection
@@ -253,7 +266,7 @@ export default function RedBullMap({
               <div className="mt-3">
                 <Link
                   href={`/login?redirect=${encodeURIComponent(
-                    window.location.pathname
+                    window.location.pathname,
                   )}`}
                   className="text-sm font-medium text-red-800 hover:text-red-600 underline"
                 >
@@ -334,12 +347,15 @@ export default function RedBullMap({
           reportItem={selectedReport}
           onClose={() => {
             setIsCleanAppProOpen(false);
-            // Remove seq and brand_name from URL when modal closes if on home page
+            // Remove report selection params from URL when modal closes if on home page
             if (router.pathname === "/") {
               const query = { ...router.query };
+              delete query.public_id;
               delete query.seq;
               delete query.brand_name;
-              router.push({ pathname: "/", query }, undefined, { shallow: true });
+              router.push({ pathname: "/", query }, undefined, {
+                shallow: true,
+              });
             }
           }}
           onReportFixed={handleReportFixed}

@@ -8,6 +8,7 @@ import { useTranslations } from "@/lib/i18n";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
 import { ReportResponse } from "@/types/reports/api";
 import { useRouter } from "next/router";
+import { getCanonicalReportPath } from "@/lib/report-links";
 
 interface CleanAppProModalV2Props {
   isOpen: boolean;
@@ -54,9 +55,21 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
   };
 
   const handleCopyUrl = async () => {
+    const publicId =
+      report?.public_id || propReportWithAnalysis?.report?.public_id || null;
+    const classification =
+      report?.classification ||
+      propReportWithAnalysis?.analysis?.[0]?.classification ||
+      null;
+    const target =
+      classification && publicId
+        ? getCanonicalReportPath(classification, publicId)
+        : null;
+    const shareUrl = target
+      ? `${window.location.origin}${target}`
+      : window.location.href;
     try {
-      const currentUrl = window.location.href;
-      await navigator.clipboard.writeText(currentUrl);
+      await navigator.clipboard.writeText(shareUrl);
       setUrlCopied(true);
       setTimeout(() => {
         setUrlCopied(false);
@@ -65,7 +78,7 @@ const CleanAppProModalV2: React.FC<CleanAppProModalV2Props> = ({
       console.error("Failed to copy URL:", error);
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
-      textArea.value = window.location.href;
+      textArea.value = shareUrl;
       textArea.style.position = "fixed";
       textArea.style.opacity = "0";
       document.body.appendChild(textArea);

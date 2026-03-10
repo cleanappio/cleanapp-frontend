@@ -26,22 +26,12 @@ const ReportImage: React.FC<ReportImageProps> = ({
 
   // Memoize image URL calculation to prevent repeated calls
   const imageUrl = useMemo(() => {
-    let url = getDisplayableImage(image);
-
-    // Fallback to raw image API for physical reports if no image URL
-    if (classification === "physical" && !url && reportSeq) {
-      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportSeq}`;
-    }
-
-    return url;
-  }, [image, classification, reportSeq]);
+    return getDisplayableImage(image);
+  }, [image]);
 
   const handleImageError = () => {
     setImageError(true);
   };
-
-  // Check if URL is from the rawimage API - use unoptimized for these
-  const isRawImageApi = imageUrl?.includes("/api/v3/reports/rawimage");
 
   if (imageUrl && !imageError) {
     return (
@@ -56,7 +46,6 @@ const ReportImage: React.FC<ReportImageProps> = ({
           priority={priority}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           onError={handleImageError}
-          unoptimized={isRawImageApi} // Bypass Next.js optimization for raw image API
         />
       </div>
     );

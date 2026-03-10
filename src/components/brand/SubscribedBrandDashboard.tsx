@@ -2,10 +2,14 @@
 
 import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
-import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
+import {
+  getPreferredReportLanguage,
+  pickPreferredAnalysis,
+} from "@/lib/report-language";
 import Image from "next/image";
 import { ReportWithAnalysis } from "../../components/GlobeView";
 import Link from "next/link";
+import { getCanonicalReportPath } from "@/lib/report-links";
 import ImageDisplay from "../ImageDisplay";
 import TextToImage from "../TextToImage";
 import { Copy, Check } from "lucide-react";
@@ -21,20 +25,20 @@ export default function SubscribedBrandDashboard({
   const locale = getCurrentLocale();
   const { t } = useTranslations();
   const [urlCopied, setUrlCopied] = useState(false);
-  const [currentSeq, setCurrentSeq] = useState<number | null>(null);
+  const [currentPublicId, setCurrentPublicId] = useState<string | null>(null);
   const brandName =
     typeof router.query.brand_name === "string" ? router.query.brand_name : "";
   const preferredLanguage = getPreferredReportLanguage(brandName, locale);
 
-  const handleCopyUrl = async (seq?: number) => {
-    if (!seq) {
-      console.error("No seq provided");
+  const handleCopyUrl = async (publicId?: string | null) => {
+    const target = getCanonicalReportPath("digital", publicId);
+    if (!target) {
+      console.error("No public id provided");
       return;
     }
 
     try {
-      const currentUrl = window.location.href;
-      await navigator.clipboard.writeText(`${currentUrl}/report/${seq}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${target}`);
       setUrlCopied(true);
       setTimeout(() => {
         setUrlCopied(false);
@@ -43,7 +47,7 @@ export default function SubscribedBrandDashboard({
       console.error("Failed to copy URL:", error);
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
-      textArea.value = `${window.location.href}/report/${seq}`;
+      textArea.value = `${window.location.origin}${target}`;
       textArea.style.position = "fixed";
       textArea.style.opacity = "0";
       document.body.appendChild(textArea);
@@ -70,7 +74,7 @@ export default function SubscribedBrandDashboard({
           const matchingAnalysis = pickPreferredAnalysis(
             analysis,
             preferredLanguage,
-            locale
+            locale,
           );
           const imageUrl = getDisplayableImage(report?.image || null);
           const text =
@@ -98,17 +102,17 @@ export default function SubscribedBrandDashboard({
                 <div className="absolute top-2 right-2">
                   <button
                     onClick={() => {
-                      handleCopyUrl(report?.seq);
-                      setCurrentSeq(report?.seq || null);
+                      handleCopyUrl(report?.public_id);
+                      setCurrentPublicId(report?.public_id || null);
                     }}
                     className="p-2 text-white hover:text-gray-200 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm bg-black/50"
                     aria-label={
-                      urlCopied && currentSeq === report?.seq
+                      urlCopied && currentPublicId === report?.public_id
                         ? t("urlCopied") || "URL Copied"
                         : t("copyUrl") || "Copy URL"
                     }
                   >
-                    {urlCopied && currentSeq === report?.seq ? (
+                    {urlCopied && currentPublicId === report?.public_id ? (
                       <Check className="w-6 h-6" />
                     ) : (
                       <Copy className="w-6 h-6" />
@@ -150,7 +154,10 @@ export default function SubscribedBrandDashboard({
 
                 <div className="mt-4">
                   <Link
-                    href={`/digital/${matchingAnalysis?.brand_name}/report/${report?.seq}`}
+                    href={
+                      getCanonicalReportPath("digital", report?.public_id) ||
+                      `/digital/${matchingAnalysis?.brand_name}`
+                    }
                   >
                     <button className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium w-full">
                       {t("viewReport")}

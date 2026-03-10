@@ -90,7 +90,10 @@ const PROMPT_SUGGESTIONS = [
 const INLINE_TOKEN_REGEX = /(https?:\/\/[^\s]+|Report\s+#\d+|Upgrade to Pro)/g;
 const REPORT_REF_REGEX = /^Report\s+#(\d+)$/i;
 
-function trackCleanAIEvent(event: string, payload: Record<string, unknown> = {}) {
+function trackCleanAIEvent(
+  event: string,
+  payload: Record<string, unknown> = {},
+) {
   if (typeof window === "undefined") {
     return;
   }
@@ -120,7 +123,9 @@ function getOrCreateSessionId(orgId: string): string {
   return created;
 }
 
-function toEvidenceItemsFromExamples(examples: IntelligenceExample[] = []): IntelligenceEvidenceItem[] {
+function toEvidenceItemsFromExamples(
+  examples: IntelligenceExample[] = [],
+): IntelligenceEvidenceItem[] {
   return examples
     .filter((ex) => ex.id > 0)
     .map((ex) => ({
@@ -133,7 +138,7 @@ function toEvidenceItemsFromExamples(examples: IntelligenceExample[] = []): Inte
 function renderMessageWithLinks(
   text: string,
   evidence: IntelligenceEvidenceItem[] = [],
-  orgId: string
+  orgId: string,
 ) {
   const lines = text.split("\n");
   const evidenceBySeq = new Map<number, string>();
@@ -164,7 +169,17 @@ function renderMessageWithLinks(
           const reportRef = part.match(REPORT_REF_REGEX);
           if (reportRef) {
             const seq = Number(reportRef[1]);
-            const href = evidenceBySeq.get(seq) ?? `/digital/${orgId}/report/${seq}`;
+            const href = evidenceBySeq.get(seq);
+            if (!href) {
+              return (
+                <span
+                  key={`rep-${lineIdx}-${partIdx}`}
+                  className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-800 align-middle"
+                >
+                  Report #{seq}
+                </span>
+              );
+            }
             return (
               <a
                 key={`rep-${lineIdx}-${partIdx}`}
@@ -222,10 +237,14 @@ export default function CleanIntelligencePanel({
   const [reportsAnalyzed, setReportsAnalyzed] = useState(totalReports);
   const [sessionId, setSessionId] = useState("");
   const [qualityMode, setQualityMode] = useState<QualityMode>("deep");
-  const [promptSuggestions, setPromptSuggestions] = useState<string[]>(PROMPT_SUGGESTIONS);
+  const [promptSuggestions, setPromptSuggestions] =
+    useState<string[]>(PROMPT_SUGGESTIONS);
 
   const storageKey = useMemo(() => `cleanai_chat:${orgId}`, [orgId]);
-  const qualityStorageKey = useMemo(() => `cleanai_quality_mode:${orgId}`, [orgId]);
+  const qualityStorageKey = useMemo(
+    () => `cleanai_quality_mode:${orgId}`,
+    [orgId],
+  );
   const placeholder = `Ask anything about issues affecting ${orgId}…`;
 
   useEffect(() => {
@@ -243,8 +262,10 @@ export default function CleanIntelligencePanel({
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.messages)) setMessages(parsed.messages);
-      if (typeof parsed.limitReached === "boolean") setLimitReached(parsed.limitReached);
-      if (typeof parsed.reportsAnalyzed === "number") setReportsAnalyzed(parsed.reportsAnalyzed);
+      if (typeof parsed.limitReached === "boolean")
+        setLimitReached(parsed.limitReached);
+      if (typeof parsed.reportsAnalyzed === "number")
+        setReportsAnalyzed(parsed.reportsAnalyzed);
     } catch (e) {
       console.error("Failed to restore CleanAI session state:", e);
     }
@@ -311,7 +332,7 @@ export default function CleanIntelligencePanel({
             subscription_tier: subscriptionTier,
             quality_mode: qualityMode,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -319,9 +340,14 @@ export default function CleanIntelligencePanel({
       }
 
       const data: IntelligenceResponse = await response.json();
-      const examples = Array.isArray(data.data?.examples) ? data.data?.examples : [];
+      const examples = Array.isArray(data.data?.examples)
+        ? data.data?.examples
+        : [];
       const legacyEvidence = Array.isArray(data.evidence) ? data.evidence : [];
-      const mergedEvidence = examples.length > 0 ? toEvidenceItemsFromExamples(examples) : legacyEvidence;
+      const mergedEvidence =
+        examples.length > 0
+          ? toEvidenceItemsFromExamples(examples)
+          : legacyEvidence;
 
       const assistantMessage: ChatMessage = {
         role: "assistant",
@@ -333,13 +359,19 @@ export default function CleanIntelligencePanel({
         upsell: data.upsell || null,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      if (Array.isArray(data.suggested_prompts) && data.suggested_prompts.length > 0) {
+      if (
+        Array.isArray(data.suggested_prompts) &&
+        data.suggested_prompts.length > 0
+      ) {
         setPromptSuggestions(data.suggested_prompts.slice(0, 3));
       } else {
         setPromptSuggestions(PROMPT_SUGGESTIONS);
       }
 
-      if (typeof data.reports_analyzed === "number" && data.reports_analyzed > 0) {
+      if (
+        typeof data.reports_analyzed === "number" &&
+        data.reports_analyzed > 0
+      ) {
         setReportsAnalyzed(data.reports_analyzed);
       }
 
@@ -400,34 +432,48 @@ export default function CleanIntelligencePanel({
                   }`}
                 >
                   {msg.role === "assistant"
-                    ? renderMessageWithLinks(msg.text, msg.evidence || [], orgId)
+                    ? renderMessageWithLinks(
+                        msg.text,
+                        msg.evidence || [],
+                        orgId,
+                      )
                     : msg.text}
                 </div>
 
-                {msg.role === "assistant" && Array.isArray(msg.examples) && msg.examples.length > 0 && (
-                  <div className="mr-8 mt-2 grid gap-2 sm:grid-cols-2">
-                    {msg.examples.slice(0, 5).map((ex) => (
-                      <a
-                        key={`${msg.ts}-${ex.id}`}
-                        href={ex.url || `/digital/${orgId}/report/${ex.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-lg border border-green-200 bg-green-50 p-2 hover:bg-green-100"
-                      >
-                        <div className="text-xs font-semibold text-green-800">
-                          Report #{ex.id} • {ex.channel} • sev {Number(ex.severity || 0).toFixed(2)}
-                        </div>
-                        <div className="mt-1 text-sm font-medium text-gray-900">{ex.title}</div>
-                        <div className="mt-1 text-xs text-gray-600 line-clamp-3">{ex.snippet}</div>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {msg.role === "assistant" &&
+                  Array.isArray(msg.examples) &&
+                  msg.examples.length > 0 && (
+                    <div className="mr-8 mt-2 grid gap-2 sm:grid-cols-2">
+                      {msg.examples.slice(0, 5).map((ex) => (
+                        <a
+                          key={`${msg.ts}-${ex.id}`}
+                          href={ex.url || `/digital/${orgId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-lg border border-green-200 bg-green-50 p-2 hover:bg-green-100"
+                        >
+                          <div className="text-xs font-semibold text-green-800">
+                            Report #{ex.id} • {ex.channel} • sev{" "}
+                            {Number(ex.severity || 0).toFixed(2)}
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">
+                            {ex.title}
+                          </div>
+                          <div className="mt-1 text-xs text-gray-600 line-clamp-3">
+                            {ex.snippet}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
 
                 {msg.role === "assistant" && msg.upsell && (
                   <div className="mr-8 mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-gray-800">
                     <span>{msg.upsell.text} </span>
-                    <Link href="/pricing" className="font-semibold text-green-700 underline hover:text-green-600">
+                    <Link
+                      href="/pricing"
+                      className="font-semibold text-green-700 underline hover:text-green-600"
+                    >
                       {msg.upsell.cta || "Upgrade to Pro"}
                     </Link>
                   </div>
@@ -445,7 +491,9 @@ export default function CleanIntelligencePanel({
 
         {limitReached && (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{UPGRADE_COPY}</p>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap">
+              {UPGRADE_COPY}
+            </p>
             <Link
               href="/pricing"
               onClick={() => {

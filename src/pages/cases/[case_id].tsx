@@ -12,6 +12,7 @@ import {
   CaseEscalationTarget,
 } from "@/lib/cases-api-client";
 import { authApiClient } from "@/lib/auth-api-client";
+import { getCanonicalReportPath } from "@/lib/report-links";
 
 function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
   const queryCaseId = router.query.case_id;
@@ -341,7 +342,15 @@ export default function CaseDetailPage() {
                           Severity {Math.round(report.severity_level * 100)}%
                         </p>
                         <Link
-                          href={`/?tab=${report.classification}&seq=${report.seq}`}
+                          href={
+                            getCanonicalReportPath(
+                              report.classification === "digital"
+                                ? "digital"
+                                : "physical",
+                              report.public_id,
+                            ) ||
+                            `/?tab=${report.classification}&seq=${report.seq}`
+                          }
                           className="text-sm text-blue-600 hover:text-blue-500"
                         >
                           Open report
@@ -590,8 +599,10 @@ function describeAuditEvent(event: any) {
       return "Reports linked to the case.";
     }
     case "status_changed": {
-      const from = typeof payload?.from_status === "string" ? payload.from_status : "";
-      const to = typeof payload?.to_status === "string" ? payload.to_status : "";
+      const from =
+        typeof payload?.from_status === "string" ? payload.from_status : "";
+      const to =
+        typeof payload?.to_status === "string" ? payload.to_status : "";
       if (from && to) {
         return `Status changed from ${from} to ${to}.`;
       }
@@ -610,7 +621,9 @@ function describeAuditEvent(event: any) {
     }
     case "case_escalation_sent": {
       const recipientCount =
-        typeof payload?.recipient_count === "number" ? payload.recipient_count : 0;
+        typeof payload?.recipient_count === "number"
+          ? payload.recipient_count
+          : 0;
       if (recipientCount > 0) {
         return `Sent escalation to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}.`;
       }
@@ -626,7 +639,9 @@ function describeAuditEvent(event: any) {
     }
     case "case_escalation_recorded": {
       const deliveryCount =
-        typeof payload?.delivery_count === "number" ? payload.delivery_count : 0;
+        typeof payload?.delivery_count === "number"
+          ? payload.delivery_count
+          : 0;
       if (deliveryCount > 0) {
         return `Recorded ${deliveryCount} email deliver${deliveryCount === 1 ? "y" : "ies"}.`;
       }

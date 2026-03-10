@@ -36,13 +36,11 @@ import AreaCreationModal from "./AreaCreationModal";
 import { Area, areasApiClient, ViewPort } from "@/lib/areas-api-client";
 import type { Feature, Polygon } from "geojson";
 import { useBackendSearch } from "@/hooks/useBackendSearch";
-import {
-  computeFeatureBBox,
-  PlaceSearchResult,
-} from "@/lib/place-search";
+import { computeFeatureBBox, PlaceSearchResult } from "@/lib/place-search";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
+import { getCanonicalReportPath } from "@/lib/report-links";
 
 type ActiveCaseScope = {
   label: string;
@@ -61,6 +59,7 @@ declare global {
 // Type for report data
 export interface Report {
   seq: number;
+  public_id?: string | null;
   timestamp: string;
   source_timestamp?: string | null; // Original post timestamp from external sources (Bluesky, Twitter, etc)
   id: string;
@@ -123,7 +122,7 @@ export default function GlobeView() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportResponse | null>(
-    null
+    null,
   );
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -164,7 +163,7 @@ export default function GlobeView() {
 
   const [seq, setSeq] = useState<number | null>(null);
   const [selectedBrandName, setSelectedBrandName] = useState<string | null>(
-    null
+    null,
   );
   const [reportWithAnalysis, setReportWithAnalysis] =
     useState<ReportWithAnalysis | null>(null);
@@ -191,7 +190,8 @@ export default function GlobeView() {
     const handleMessage = (event: MessageEvent) => {
       try {
         // event.data might be a string (JSON) or an object depending on how it's sent
-        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        const data =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
         if (data && data.type === "NATIVE_LOCATION") {
           console.log("Received native location:", data);
@@ -201,7 +201,7 @@ export default function GlobeView() {
             const newLocation = {
               latitude: Number(lat),
               longitude: Number(lng),
-              accuracy: accuracy ? Number(accuracy) : undefined
+              accuracy: accuracy ? Number(accuracy) : undefined,
             };
 
             setUserLocation(newLocation);
@@ -209,11 +209,14 @@ export default function GlobeView() {
 
             // Cache it just like we do for web location
             try {
-              localStorage.setItem('cleanapp_user_location', JSON.stringify({
-                ...newLocation,
-                timestamp: Date.now()
-              }));
-              localStorage.setItem('cleanapp_location_permission', 'granted');
+              localStorage.setItem(
+                "cleanapp_user_location",
+                JSON.stringify({
+                  ...newLocation,
+                  timestamp: Date.now(),
+                }),
+              );
+              localStorage.setItem("cleanapp_location_permission", "granted");
             } catch (e) {
               // ignore cache errors
             }
@@ -236,7 +239,7 @@ export default function GlobeView() {
   // Drawing state
   const [enableDrawing, setEnableDrawing] = useState(false);
   const [drawMode, setDrawMode] = useState<"rectangle" | "freehand">(
-    "freehand"
+    "freehand",
   );
   const [drawnAreas, setDrawnAreas] = useState<Area[]>([]);
   const [areasLoading, setAreasLoading] = useState(false);
@@ -272,10 +275,24 @@ export default function GlobeView() {
   } = useBackendSearch(selectedTab);
 
   // Track user activity for dashboard personalization
-  const trackBrandSearch = useUserActivityStore((state) => state.trackBrandSearch);
-  const trackLocationView = useUserActivityStore((state) => state.trackLocationView);
+  const trackBrandSearch = useUserActivityStore(
+    (state) => state.trackBrandSearch,
+  );
+  const trackLocationView = useUserActivityStore(
+    (state) => state.trackLocationView,
+  );
 
   const locale = getCurrentLocale();
+
+  // Helper function to check if we should use seq instead of brand_name for digital reports
+  const shouldUseSeqForDigital = useCallback(
+    (brandName: string | null | undefined): boolean => {
+      return (
+        brandName === "other" || brandName === null || brandName === undefined
+      );
+    },
+    [],
+  );
 
   // Wrapper for setSelectedTab that ensures seq and brand_name="other" are preserved
   // The useReportTabs hook now preserves all query parameters, but we still need to ensure
@@ -292,7 +309,7 @@ export default function GlobeView() {
       if (currentSeq && currentBrandName === "other" && router.isReady) {
         // Ensure both parameters are in URL when changing tab
         console.log(
-          "setSelectedTab wrapper: ensuring seq and brand_name='other' are in URL"
+          "setSelectedTab wrapper: ensuring seq and brand_name='other' are in URL",
         );
         router.push(
           {
@@ -305,14 +322,14 @@ export default function GlobeView() {
             },
           },
           undefined,
-          { shallow: true }
+          { shallow: true },
         );
       } else {
         // Normal case: use the original setSelectedTab (which now preserves all params)
         setSelectedTabOriginal(tab);
       }
     },
-    [router, setSelectedTabOriginal, seq, selectedBrandName]
+    [router, setSelectedTabOriginal, seq, selectedBrandName],
   );
 
   const {
@@ -322,6 +339,147 @@ export default function GlobeView() {
     appendPhysicalLite: appendPhysicalLiteV2,
     appendDigitalLite: appendDigitalLiteV2,
   } = useLiteReportsByTabV2();
+
+  const openCanonicalReport = useCallback(
+    (classification: "physical" | "digital", publicId?: string | null) => {
+      const target = getCanonicalReportPath(classification, publicId);
+      if (!target) {
+        return false;
+      }
+      void router.push(target);
+      return true;
+    },
+    [router],
+  );
+
+  const openReportFromSummary = useCallback(
+    (report: ReportResponse) => {
+      if (
+        openCanonicalReport(report.classification, report.public_id ?? null)
+      ) {
+        return true;
+      }
+
+      if (report.classification === "physical") {
+        void router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: "physical",
+              seq: report.seq,
+            },
+          },
+          undefined,
+          { shallow: true },
+        );
+        return true;
+      }
+
+      if (!report.brand_name) {
+        return false;
+      }
+
+      if (shouldUseSeqForDigital(report.brand_name)) {
+        const reportSeq = report.seq;
+        if (!reportSeq) {
+          return false;
+        }
+        void router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: "digital",
+              seq: reportSeq,
+            },
+          },
+          undefined,
+          { shallow: true },
+        );
+        return true;
+      }
+
+      void router.push(
+        {
+          pathname: "/",
+          query: {
+            ...router.query,
+            tab: "digital",
+            brand_name: report.brand_name,
+          },
+        },
+        undefined,
+        { shallow: true },
+      );
+      return true;
+    },
+    [openCanonicalReport, router, shouldUseSeqForDigital],
+  );
+
+  const openReportFromAnalysis = useCallback(
+    (item: ReportWithAnalysis) => {
+      const classification =
+        item.analysis?.[0]?.classification === "digital"
+          ? "digital"
+          : "physical";
+      if (openCanonicalReport(classification, item.report.public_id ?? null)) {
+        return true;
+      }
+
+      if (classification === "physical") {
+        void router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: "physical",
+              seq: item.report.seq,
+            },
+          },
+          undefined,
+          { shallow: true },
+        );
+        return true;
+      }
+
+      const brandName = item.analysis?.[0]?.brand_name;
+      if (!brandName) {
+        return false;
+      }
+
+      if (shouldUseSeqForDigital(brandName)) {
+        void router.push(
+          {
+            pathname: "/",
+            query: {
+              ...router.query,
+              tab: "digital",
+              seq: item.report.seq,
+            },
+          },
+          undefined,
+          { shallow: true },
+        );
+        return true;
+      }
+
+      void router.push(
+        {
+          pathname: "/",
+          query: {
+            ...router.query,
+            tab: "digital",
+            brand_name: brandName,
+          },
+        },
+        undefined,
+        { shallow: true },
+      );
+      return true;
+    },
+    [openCanonicalReport, router, shouldUseSeqForDigital],
+  );
 
   useEffect(() => {
     console.log("Setting useEffect");
@@ -372,7 +530,7 @@ export default function GlobeView() {
     async <T,>(
       operation: () => T,
       maxRetries: number = 3,
-      delay: number = 100
+      delay: number = 100,
     ): Promise<T | null> => {
       for (let i = 0; i < maxRetries; i++) {
         try {
@@ -393,7 +551,7 @@ export default function GlobeView() {
       }
       return null;
     },
-    [getSafeMap]
+    [getSafeMap],
   );
 
   // Fly to a lon/lat with retries
@@ -421,10 +579,10 @@ export default function GlobeView() {
           return false;
         },
         3,
-        200
+        200,
       );
     },
-    [getSafeMap, retryMapOperation]
+    [getSafeMap, retryMapOperation],
   );
 
   const fitMapToBBox = useCallback(
@@ -443,17 +601,17 @@ export default function GlobeView() {
                 duration: 1800,
                 essential: true,
                 maxZoom: 15,
-              }
+              },
             );
             return true;
           }
           return false;
         },
         3,
-        200
+        200,
       );
     },
-    [getSafeMap, isMobile, retryMapOperation]
+    [getSafeMap, isMobile, retryMapOperation],
   );
 
   const clearSelectedPlace = useCallback(() => {
@@ -462,7 +620,7 @@ export default function GlobeView() {
     setSelectedPlaceReportsError(null);
     setSelectedPlaceReportsLoading(false);
     setActiveCaseScope((current) =>
-      current?.scopeType === "place" ? null : current
+      current?.scopeType === "place" ? null : current,
     );
   }, []);
 
@@ -486,7 +644,7 @@ export default function GlobeView() {
         geometry,
       });
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -545,13 +703,13 @@ export default function GlobeView() {
         setSelectedPlaceReportsError(
           error instanceof Error
             ? error.message
-            : "Failed to load reports for this place"
+            : "Failed to load reports for this place",
         );
       } finally {
         setSelectedPlaceReportsLoading(false);
       }
     },
-    [clearSelectedPlace, fitMapToBBox, trackLocationView]
+    [clearSelectedPlace, fitMapToBBox, trackLocationView],
   );
 
   const displayedReportsWithAnalysis = useMemo(() => {
@@ -565,16 +723,6 @@ export default function GlobeView() {
     ? selectedPlaceReportsLoading
     : reportTabsLoading.current && latestReportsWithAnalysis.length === 0;
 
-  // Helper function to check if we should use seq instead of brand_name for digital reports
-  const shouldUseSeqForDigital = useCallback(
-    (brandName: string | null | undefined): boolean => {
-      return (
-        brandName === "other" || brandName === null || brandName === undefined
-      );
-    },
-    []
-  );
-
   // Handle query parameter for report sharing
   useEffect(() => {
     if (!router.isReady) return;
@@ -585,7 +733,11 @@ export default function GlobeView() {
       setShowLocationTutorial(true);
       // Remove the tutorial param from URL after showing
       const { tutorial, ...restQuery } = router.query;
-      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
+      router.replace(
+        { pathname: router.pathname, query: restQuery },
+        undefined,
+        { shallow: true },
+      );
     }
 
     const seqParam = router.query.seq;
@@ -627,7 +779,7 @@ export default function GlobeView() {
                   },
                 },
                 undefined,
-                { shallow: true }
+                { shallow: true },
               );
               // Update state directly without calling setSelectedTab to avoid overwriting URL
               // The useEffect in useReportTabs will sync the state from the URL
@@ -767,14 +919,14 @@ export default function GlobeView() {
           const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
           console.log(
             "Fetching digital report with 'other' brand_name from URL:",
-            apiUrl
+            apiUrl,
           );
 
           fetch(apiUrl)
             .then((response) => {
               if (!response.ok) {
                 throw new Error(
-                  `Failed to fetch digital report: ${response.status}`
+                  `Failed to fetch digital report: ${response.status}`,
                 );
               }
               return response.json();
@@ -783,7 +935,7 @@ export default function GlobeView() {
               if (data.reports && data.reports.length > 0) {
                 const filteredData = filterAnalysesByLanguage(
                   data.reports,
-                  locale
+                  locale,
                 );
                 const reportData = filteredData[0] || data.reports[0];
                 const reportSeq = reportData.report.seq;
@@ -854,7 +1006,7 @@ export default function GlobeView() {
                   ) {
                     // URL was overwritten, restore it with all parameters
                     console.log(
-                      "URL was overwritten, restoring with seq and brand_name"
+                      "URL was overwritten, restoring with seq and brand_name",
                     );
                     router.push(
                       {
@@ -866,7 +1018,7 @@ export default function GlobeView() {
                         },
                       },
                       undefined,
-                      { shallow: true }
+                      { shallow: true },
                     );
                   }
                 }, 150);
@@ -915,7 +1067,7 @@ export default function GlobeView() {
                 },
               },
               undefined,
-              { shallow: true }
+              { shallow: true },
             );
             // Update state directly without calling setSelectedTab to avoid overwriting URL
             // The useEffect in useReportTabs will sync the state from the URL
@@ -930,11 +1082,11 @@ export default function GlobeView() {
             .then((response) => {
               console.log(
                 "Digital report fetch response status:",
-                response.status
+                response.status,
               );
               if (!response.ok) {
                 throw new Error(
-                  `Failed to fetch digital report: ${response.status}`
+                  `Failed to fetch digital report: ${response.status}`,
                 );
               }
               return response.json();
@@ -944,7 +1096,7 @@ export default function GlobeView() {
               if (data.reports && data.reports.length > 0) {
                 const filteredData = filterAnalysesByLanguage(
                   data.reports,
-                  locale
+                  locale,
                 );
                 const reportData = filteredData[0] || data.reports[0];
                 console.log("Setting digital report data:", reportData);
@@ -1171,7 +1323,7 @@ export default function GlobeView() {
                   zoom,
                   "center:",
                   center,
-                  ")"
+                  ")",
                 );
                 setMapStyleLoaded(true);
                 return;
@@ -1195,7 +1347,7 @@ export default function GlobeView() {
       const timeout = setTimeout(() => {
         if (!mapStyleLoaded) {
           console.warn(
-            "Style loading timeout reached, forcing map to be ready"
+            "Style loading timeout reached, forcing map to be ready",
           );
           setMapStyleLoaded(true);
         }
@@ -1240,7 +1392,7 @@ export default function GlobeView() {
                     zoom,
                     "center:",
                     center,
-                    ")"
+                    ")",
                   );
                   setMapStyleLoaded(true);
                   return;
@@ -1284,19 +1436,23 @@ export default function GlobeView() {
   // Get user's current location on component mount with localStorage caching
   useEffect(() => {
     // Constants for location caching
-    const LOCATION_CACHE_KEY = 'cleanapp_user_location';
-    const PERMISSION_STATE_KEY = 'cleanapp_location_permission';
+    const LOCATION_CACHE_KEY = "cleanapp_user_location";
+    const PERMISSION_STATE_KEY = "cleanapp_location_permission";
     const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
     // Helper to get cached location
-    const getCachedLocation = (): { latitude: number; longitude: number; timestamp: number } | null => {
+    const getCachedLocation = (): {
+      latitude: number;
+      longitude: number;
+      timestamp: number;
+    } | null => {
       try {
         const cached = localStorage.getItem(LOCATION_CACHE_KEY);
         if (cached) {
           return JSON.parse(cached);
         }
       } catch (e) {
-        console.log('Error reading cached location:', e);
+        console.log("Error reading cached location:", e);
       }
       return null;
     };
@@ -1304,40 +1460,48 @@ export default function GlobeView() {
     // Helper to save location to cache
     const cacheLocation = (latitude: number, longitude: number) => {
       try {
-        localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({
-          latitude,
-          longitude,
-          timestamp: Date.now()
-        }));
+        localStorage.setItem(
+          LOCATION_CACHE_KEY,
+          JSON.stringify({
+            latitude,
+            longitude,
+            timestamp: Date.now(),
+          }),
+        );
       } catch (e) {
-        console.log('Error caching location:', e);
+        console.log("Error caching location:", e);
       }
     };
 
     // Helper to get/set permission state
-    const getPermissionState = (): 'granted' | 'denied' | 'unknown' => {
+    const getPermissionState = (): "granted" | "denied" | "unknown" => {
       try {
-        return (localStorage.getItem(PERMISSION_STATE_KEY) as 'granted' | 'denied') || 'unknown';
+        return (
+          (localStorage.getItem(PERMISSION_STATE_KEY) as
+            | "granted"
+            | "denied") || "unknown"
+        );
       } catch (e) {
-        return 'unknown';
+        return "unknown";
       }
     };
 
-    const setPermissionState = (state: 'granted' | 'denied') => {
+    const setPermissionState = (state: "granted" | "denied") => {
       try {
         localStorage.setItem(PERMISSION_STATE_KEY, state);
       } catch (e) {
-        console.log('Error saving permission state:', e);
+        console.log("Error saving permission state:", e);
       }
     };
 
     // Check if we have a valid cached location
     const cachedLocation = getCachedLocation();
-    const isCacheValid = cachedLocation && (Date.now() - cachedLocation.timestamp) < CACHE_EXPIRY_MS;
+    const isCacheValid =
+      cachedLocation && Date.now() - cachedLocation.timestamp < CACHE_EXPIRY_MS;
 
     // Use cache if valid
     if (isCacheValid && cachedLocation) {
-      console.log('Using cached location:', cachedLocation);
+      console.log("Using cached location:", cachedLocation);
       setUserLocation({
         latitude: cachedLocation.latitude,
         longitude: cachedLocation.longitude,
@@ -1348,7 +1512,9 @@ export default function GlobeView() {
 
     // IF IN REACT NATIVE WEBVIEW: Do NOT use navigator.geolocation
     if (typeof window !== "undefined" && window.ReactNativeWebView) {
-      console.log("In RN WebView: Skipping navigator.geolocation. Waiting for NATIVE_LOCATION message.");
+      console.log(
+        "In RN WebView: Skipping navigator.geolocation. Waiting for NATIVE_LOCATION message.",
+      );
 
       // If no valid cache, we are waiting for the native app to send location.
       // We can log a warning if it takes too long, or just leave it.
@@ -1356,7 +1522,9 @@ export default function GlobeView() {
 
       // Optional: We could set a timeout to show a "Location unavailable" state if we don't get anything
       if (!isCacheValid) {
-        console.warn("No cached location in WebView. Waiting for native app...");
+        console.warn(
+          "No cached location in WebView. Waiting for native app...",
+        );
         // Ensure loading state is true while we wait
         setLocationLoading(true);
       }
@@ -1365,15 +1533,17 @@ export default function GlobeView() {
 
     // Check stored permission state - if user denied before, don't bother asking again
     const storedPermission = getPermissionState();
-    if (storedPermission === 'denied') {
-      console.log('Location permission was previously denied, not prompting again');
+    if (storedPermission === "denied") {
+      console.log(
+        "Location permission was previously denied, not prompting again",
+      );
       setLocationLoading(false);
       return;
     }
 
     // No valid cache, need to request location
     if (!navigator.geolocation) {
-      console.log('Geolocation not supported');
+      console.log("Geolocation not supported");
       setLocationLoading(false);
       return;
     }
@@ -1382,19 +1552,19 @@ export default function GlobeView() {
     const getLocation = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log('Location obtained:', position.coords);
+          console.log("Location obtained:", position.coords);
           const { latitude, longitude } = position.coords;
           setUserLocation({ latitude, longitude });
           cacheLocation(latitude, longitude);
-          setPermissionState('granted');
+          setPermissionState("granted");
           setLocationLoading(false);
         },
         (error) => {
-          console.log('Geolocation error:', error.code, error.message);
+          console.log("Geolocation error:", error.code, error.message);
 
           // Handle permission denied
           if (error.code === error.PERMISSION_DENIED) {
-            setPermissionState('denied');
+            setPermissionState("denied");
             setLocationLoading(false);
             return;
           }
@@ -1407,22 +1577,22 @@ export default function GlobeView() {
             navigator.geolocation.getCurrentPosition(
               (position) => {
                 console.log(
-                  'Location obtained with fallback options:',
-                  position.coords
+                  "Location obtained with fallback options:",
+                  position.coords,
                 );
                 const { latitude, longitude } = position.coords;
                 setUserLocation({ latitude, longitude });
                 cacheLocation(latitude, longitude);
-                setPermissionState('granted');
+                setPermissionState("granted");
                 setLocationLoading(false);
               },
               (fallbackError) => {
                 console.log(
-                  'Fallback geolocation also failed:',
-                  fallbackError.message
+                  "Fallback geolocation also failed:",
+                  fallbackError.message,
                 );
                 if (fallbackError.code === fallbackError.PERMISSION_DENIED) {
-                  setPermissionState('denied');
+                  setPermissionState("denied");
                 }
                 setLocationLoading(false);
               },
@@ -1430,7 +1600,7 @@ export default function GlobeView() {
                 enableHighAccuracy: false,
                 timeout: 15000,
                 maximumAge: 600000, // 10 minutes
-              }
+              },
             );
           } else {
             setLocationLoading(false);
@@ -1440,7 +1610,7 @@ export default function GlobeView() {
           enableHighAccuracy: true,
           timeout: 10000,
           maximumAge: 300000, // 5 minutes
-        }
+        },
       );
     };
 
@@ -1450,15 +1620,17 @@ export default function GlobeView() {
       try {
         // Try the Permissions API first (Chrome, Firefox)
         if (navigator.permissions) {
-          const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          const result = await navigator.permissions.query({
+            name: "geolocation" as PermissionName,
+          });
 
-          if (result.state === 'granted') {
+          if (result.state === "granted") {
             // Permission already granted, get location silently
             getLocation();
-          } else if (result.state === 'denied') {
+          } else if (result.state === "denied") {
             // Permission denied, remember this and don't prompt
-            console.log('Geolocation permission denied via Permissions API');
-            setPermissionState('denied');
+            console.log("Geolocation permission denied via Permissions API");
+            setPermissionState("denied");
             setLocationLoading(false);
           } else {
             // 'prompt' state - will prompt user
@@ -1478,7 +1650,10 @@ export default function GlobeView() {
         }
       } catch (e) {
         // Permissions API failed (common in Safari for geolocation)
-        console.log('Permissions API not available, falling back to direct geolocation:', e);
+        console.log(
+          "Permissions API not available, falling back to direct geolocation:",
+          e,
+        );
         getLocation();
       }
     };
@@ -1520,7 +1695,7 @@ export default function GlobeView() {
           }
         },
         3,
-        200
+        200,
       );
     }
   }, [userLocation, mapLoaded, retryMapOperation, getSafeMap]);
@@ -1603,7 +1778,7 @@ export default function GlobeView() {
           type: "FeatureCollection" as const,
           features: reportFeatures.filter(
             (report) =>
-              report && report.properties.classification === selectedTab
+              report && report.properties.classification === selectedTab,
           ),
         };
 
@@ -1667,90 +1842,7 @@ export default function GlobeView() {
             const reportIndex = feature.properties?.index;
             if (reportIndex !== undefined && latestReports[reportIndex]) {
               const report = latestReports[reportIndex];
-              setSelectedReport(report);
-
-              // Set flag to indicate we're opening from a click
-              openingFromClickRef.current = true;
-
-              // Set seq for physical reports, clear for digital
-              if (report.classification === "physical") {
-                setSeq(report.seq);
-                flyToReport({ lon: report.longitude, lat: report.latitude });
-                // Update URL with seq parameter
-                router.push(
-                  {
-                    pathname: "/",
-                    query: {
-                      ...router.query,
-                      tab: selectedTab,
-                      seq: report.seq,
-                    },
-                  },
-                  undefined,
-                  { shallow: true }
-                );
-              } else {
-                if (!report.brand_name) return;
-                const brandName = report.brand_name;
-
-                // If brand_name is "other", use seq instead of brand_name
-                if (shouldUseSeqForDigital(brandName)) {
-                  // DigitalReportResponse doesn't have seq in type, but report data does
-                  const reportSeq = (report as any).seq;
-                  if (!reportSeq) {
-                    console.error(
-                      "Digital report with 'other' brand_name missing seq"
-                    );
-                    return;
-                  }
-                  setSeq(reportSeq);
-                  setSelectedBrandName(null);
-                  // Set ref to prevent useEffect from fetching again
-                  lastFetchedSeqRef.current = reportSeq;
-                  lastFetchedBrandRef.current = null;
-                  const { lat, lon } = stringToLatLonColor(brandName);
-                  flyToReport({ lon: lon, lat: lat });
-                  // Update URL with seq parameter for "other" digital reports
-                  router.push(
-                    {
-                      pathname: "/",
-                      query: {
-                        ...router.query,
-                        tab: selectedTab,
-                        seq: reportSeq,
-                      },
-                    },
-                    undefined,
-                    { shallow: true }
-                  );
-                } else {
-                  setSeq(null); // Digital reports don't have seq (unless brand_name is "other")
-                  setSelectedBrandName(brandName);
-                  // Set ref to prevent useEffect from fetching again
-                  lastFetchedBrandRef.current = brandName;
-                  lastFetchedSeqRef.current = null;
-                  const { lat, lon } = stringToLatLonColor(brandName);
-                  flyToReport({ lon: lon, lat: lat });
-                  // Update URL with brand_name parameter for digital reports
-                  router.push(
-                    {
-                      pathname: "/",
-                      query: {
-                        ...router.query,
-                        tab: selectedTab,
-                        brand_name: brandName,
-                      },
-                    },
-                    undefined,
-                    { shallow: true }
-                  );
-                }
-              }
-
-              // Clear reportWithAnalysis since we're using report prop
-              setReportWithAnalysis(null);
-
-              setIsCleanAppProOpen(true);
+              void openReportFromSummary(report);
             }
           }
         };
@@ -1786,7 +1878,13 @@ export default function GlobeView() {
         };
       }
     }
-  }, [isPhysical, mapLoaded, latestReports, selectedTab, flyToReport]);
+  }, [
+    isPhysical,
+    mapLoaded,
+    latestReports,
+    openReportFromSummary,
+    selectedTab,
+  ]);
 
   // Handle new report from WebSocket
   const handleNewReport = useCallback(
@@ -1817,7 +1915,7 @@ export default function GlobeView() {
 
       const locale = getCurrentLocale();
       let reportAnalysis = analysis.find(
-        (analysis) => analysis.language === locale
+        (analysis) => analysis.language === locale,
       );
       if (!reportAnalysis) {
         // console.error("No report analysis with current locale found");
@@ -1834,7 +1932,7 @@ export default function GlobeView() {
           "Skipping report with classification:",
           classification,
           "selectedTab:",
-          selectedTab
+          selectedTab,
         );
         return;
       }
@@ -1950,7 +2048,7 @@ export default function GlobeView() {
       // Start the animation
       requestAnimationFrame(animatePin);
     },
-    [selectedTab]
+    [selectedTab],
   );
 
   // Helper function to add a single report pin to the map
@@ -1964,7 +2062,7 @@ export default function GlobeView() {
     const analysis = reportWithAnalysis.analysis;
     const locale = getCurrentLocale();
     const reportAnalysis = analysis.find(
-      (analysis) => analysis.language === locale
+      (analysis) => analysis.language === locale,
     );
     const severity_level = reportAnalysis?.severity_level;
     const title = reportAnalysis?.title;
@@ -2091,7 +2189,7 @@ export default function GlobeView() {
     function getDigitalTerritoriesGeoJSON() {
       const features = [];
       const digitalReports = latestReports.filter(
-        (report) => report.classification === "digital"
+        (report) => report.classification === "digital",
       );
 
       for (const report of digitalReports) {
@@ -2260,83 +2358,20 @@ export default function GlobeView() {
       if (!brandName) return;
 
       const report = latestReports.find(
-        (r) => r.classification === "digital" && r.brand_name === brandName
+        (r) => r.classification === "digital" && r.brand_name === brandName,
       ) as unknown as DigitalReportResponse | undefined;
 
       if (!report) return;
 
-      // Set flag to indicate we're opening from a click
-      openingFromClickRef.current = true;
-
-      // If brand_name is "other", use seq instead of brand_name
-      if (shouldUseSeqForDigital(brandName)) {
-        // DigitalReportResponse doesn't have seq in type, but report data does
-        const reportSeq = (report as any).seq;
-        if (!reportSeq) {
-          console.error("Digital report with 'other' brand_name missing seq");
-          return;
-        }
-        setSelectedReport(report as unknown as ReportResponse);
-        setSeq(reportSeq);
-        setSelectedBrandName(null);
-        // Set ref to prevent useEffect from fetching again
-        lastFetchedSeqRef.current = reportSeq;
-        lastFetchedBrandRef.current = null;
-        setReportWithAnalysis(null); // Clear since we're using report prop
-        const { lat, lon } = stringToLatLonColor(brandName);
-        flyToReport({ lon: lon, lat: lat });
-        // Update URL with seq parameter for "other" digital reports
-        router.push(
-          {
-            pathname: "/",
-            query: {
-              ...router.query,
-              tab: selectedTab,
-              seq: reportSeq,
-            },
-          },
-          undefined,
-          { shallow: true }
-        );
-      } else {
-        setSelectedReport(report as unknown as ReportResponse);
-        setSeq(null); // Digital reports don't have seq (unless brand_name is "other")
-        setSelectedBrandName(brandName);
-        // Set ref to prevent useEffect from fetching again
-        lastFetchedBrandRef.current = brandName;
-        lastFetchedSeqRef.current = null;
-        setReportWithAnalysis(null); // Clear since we're using report prop
-        const { lat, lon } = stringToLatLonColor(
-          (report as DigitalReportResponse).brand_name
-        );
-        flyToReport({ lon: lon, lat: lat });
-        // Update URL with brand_name parameter for digital reports
-        router.push(
-          {
-            pathname: "/",
-            query: {
-              ...router.query,
-              tab: selectedTab,
-              brand_name: brandName,
-            },
-          },
-          undefined,
-          { shallow: true }
-        );
-      }
-
       // Track brand for dashboard personalization (only for non-'other' brands)
-      if (brandName && brandName !== 'other') {
-        console.log('[UserActivity] Tracking brand from map marker click:', brandName);
+      if (brandName && brandName !== "other") {
+        console.log(
+          "[UserActivity] Tracking brand from map marker click:",
+          brandName,
+        );
         trackBrandSearch(brandName);
       }
-
-      setIsCleanAppProOpen(true);
-
-      // Reset the flag after a short delay to allow URL to update
-      setTimeout(() => {
-        openingFromClickRef.current = false;
-      }, 200);
+      void openReportFromSummary(report as unknown as ReportResponse);
     }
     function setPointer() {
       if (map) map.getCanvas().style.cursor = "pointer";
@@ -2377,12 +2412,19 @@ export default function GlobeView() {
         map.off("mouseleave", "digital-pulse", unsetPointer);
       }
     };
-  }, [mapLoaded, mapStyleLoaded, selectedTab, latestReports, flyToReport]);
+  }, [
+    latestReports,
+    mapLoaded,
+    mapStyleLoaded,
+    openReportFromSummary,
+    selectedTab,
+    trackBrandSearch,
+  ]);
 
   useEffect(() => {
     // Connect to the WebSocket endpoint
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`
+      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`,
     );
 
     ws.onopen = function () {
@@ -2398,7 +2440,7 @@ export default function GlobeView() {
         const currentLocale = getCurrentLocale();
         const filteredReports = filterAnalysesByLanguage(
           batch.reports || [],
-          currentLocale
+          currentLocale,
         );
 
         // Fly to new report location and animate the pin (if any filtered reports)
@@ -2524,7 +2566,7 @@ export default function GlobeView() {
     setLatestReports(
       selectedTab === "physical"
         ? latestPhysicalReportsV2
-        : latestDigitalReportsV2
+        : latestDigitalReportsV2,
     );
   }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
 
@@ -2560,7 +2602,7 @@ export default function GlobeView() {
       try {
         // Query the backend to check if this brand exists with reports
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(searchTerm)}&n=1`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(searchTerm)}&n=1`,
         );
 
         if (!response.ok) {
@@ -2578,18 +2620,22 @@ export default function GlobeView() {
 
           // Use total_count from the API response (accurate database count)
           // Falls back to the fetched count if total_count not available
-          const actualTotal = data.total_count || data.count || data.reports.length;
+          const actualTotal =
+            data.total_count || data.count || data.reports.length;
 
           setMatchingBrand({
             brand_name: brandName,
-            brand_display_name: analysis?.brand_display_name || analysis?.brand_name || searchTerm,
+            brand_display_name:
+              analysis?.brand_display_name ||
+              analysis?.brand_name ||
+              searchTerm,
             total: actualTotal,
           });
         } else {
           setMatchingBrand(null);
         }
       } catch (error) {
-        console.error('Error checking brand dashboard:', error);
+        console.error("Error checking brand dashboard:", error);
         setMatchingBrand(null);
       }
     }, 300); // Small debounce to avoid too many API calls
@@ -2615,7 +2661,9 @@ export default function GlobeView() {
           <div className="min-w-0">
             <p className="font-medium text-white line-clamp-1">{place.name}</p>
             <p className="text-xs text-blue-300 mt-1">
-              {place.result_type === "primary" ? "Campus / landmark" : "Related place"}
+              {place.result_type === "primary"
+                ? "Campus / landmark"
+                : "Related place"}
               {place.category ? ` · ${place.category}` : ""}
             </p>
             <p className="text-xs text-gray-400 mt-1 line-clamp-2">
@@ -2628,7 +2676,7 @@ export default function GlobeView() {
         </div>
       </button>
     ),
-    [handlePlaceResultSelect, selectedSearchPlace?.id]
+    [handlePlaceResultSelect, selectedSearchPlace?.id],
   );
 
   // Drawing handlers
@@ -2742,7 +2790,7 @@ export default function GlobeView() {
       onDrawingDisabled: () => {
         setEnableDrawing(false);
       },
-    }
+    },
   );
 
   // Convert pending feature to Area for modal
@@ -2770,7 +2818,7 @@ export default function GlobeView() {
     (
       latitude: number,
       longitude: number,
-      radiusKm: number = 1
+      radiusKm: number = 1,
     ): ViewPort | undefined => {
       // Approximate conversion: 1 degree of latitude ≈ 111 km
       // 1 degree of longitude ≈ 111 km * cos(latitude)
@@ -2784,7 +2832,7 @@ export default function GlobeView() {
         lon_max: longitude + lonOffset,
       };
     },
-    []
+    [],
   );
 
   // Fetch areas on mount to persist across page reloads
@@ -2799,7 +2847,7 @@ export default function GlobeView() {
           viewport = calculateViewportFromLocation(
             userLocation.latitude,
             userLocation.longitude,
-            1 // 10 kilometers radius
+            1, // 10 kilometers radius
           );
           console.log("Fetching areas near user location:", {
             latitude: userLocation.latitude,
@@ -2820,7 +2868,7 @@ export default function GlobeView() {
 
         // Filter to only custom areas (areas drawn by users)
         const customAreas = response.areas.filter(
-          (area) => area.is_custom === true
+          (area) => area.is_custom === true,
         );
 
         console.log("Fetched custom areas:", customAreas.length);
@@ -2904,7 +2952,7 @@ export default function GlobeView() {
           geometry: feature.geometry,
           properties: feature.properties || {},
         } as Feature,
-        feature.properties?.name || "Selected area"
+        feature.properties?.name || "Selected area",
       );
     };
 
@@ -2918,7 +2966,7 @@ export default function GlobeView() {
         map.off(
           "contextmenu",
           "drawn-areas-outline",
-          handleDrawnAreaContextMenu
+          handleDrawnAreaContextMenu,
         );
         if (map.getLayer("drawn-areas-outline")) {
           map.removeLayer("drawn-areas-outline");
@@ -3134,7 +3182,10 @@ export default function GlobeView() {
 
           {/* Custom Location Button for WebView */}
           {selectedTab === "physical" && isReactNativeWebView && (
-            <div className="mapboxgl-ctrl-top-right" style={{ top: 0, right: 0 }}>
+            <div
+              className="mapboxgl-ctrl-top-right"
+              style={{ top: 0, right: 0 }}
+            >
               <div className="mapboxgl-ctrl mapboxgl-ctrl-group">
                 <button
                   className="mapboxgl-ctrl-icon mapboxgl-ctrl-geolocate"
@@ -3143,21 +3194,32 @@ export default function GlobeView() {
                   aria-label="Find my location"
                   onClick={() => {
                     if (userLocation) {
-                      flyToReport({ lon: userLocation.longitude, lat: userLocation.latitude, zoom: 14 });
+                      flyToReport({
+                        lon: userLocation.longitude,
+                        lat: userLocation.latitude,
+                        zoom: 14,
+                      });
                     } else {
-                      console.warn("User location not yet available via native bridge");
+                      console.warn(
+                        "User location not yet available via native bridge",
+                      );
                       // Optionally trigger a request to native
                       // window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "REQUEST_LOCATION" }));
                     }
                   }}
                 >
-                  <span className="mapboxgl-ctrl-icon" aria-hidden="true" style={{
-                    backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg width=\'29\' height=\'29\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23333\'%3E%3Cpath d=\'M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9V15s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z\'/%3E%3Ccircle cx=\'10\' cy=\'10\' r=\'2\'/%3E%3C/svg%3E")',
-                    backgroundSize: '100% 100%',
-                    display: 'block',
-                    width: '100%',
-                    height: '100%'
-                  }}></span>
+                  <span
+                    className="mapboxgl-ctrl-icon"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage:
+                        "url(\"data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9V15s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E\")",
+                      backgroundSize: "100% 100%",
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  ></span>
                 </button>
               </div>
             </div>
@@ -3234,21 +3296,25 @@ export default function GlobeView() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
-                        <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
+                        <p className="text-white font-medium">
+                          {matchingBrand.brand_display_name} Dashboard
+                        </p>
+                        <p className="text-green-400 text-sm">
+                          {matchingBrand.total} reports
+                        </p>
                       </div>
                     </div>
-                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">→</span>
+                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">
+                      →
+                    </span>
                   </div>
                 </button>
               )}
-              {placeResults.map((place) =>
-                renderPlaceSearchHit(place)
-              )}
+              {placeResults.map((place) => renderPlaceSearchHit(place))}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
-                    (analysis) => analysis.language === locale
+                    (analysis) => analysis.language === locale,
                   ) || result.analysis[0];
                 return (
                   <button
@@ -3256,47 +3322,17 @@ export default function GlobeView() {
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       clearSelectedPlace();
-                      setSeq(result.report.seq);
-                      setReportWithAnalysis(result);
 
                       // Track brand search for dashboard personalization
                       const brandName = result.analysis[0]?.brand_name;
-                      if (brandName && brandName !== 'other') {
-                        console.log('[UserActivity] Tracking brand:', brandName);
+                      if (brandName && brandName !== "other") {
+                        console.log(
+                          "[UserActivity] Tracking brand:",
+                          brandName,
+                        );
                         trackBrandSearch(brandName);
                       }
-
-                      let latitude = result.report.latitude;
-                      let longitude = result.report.longitude;
-
-                      if (isDigital) {
-                        const { lat, lon } = stringToLatLonColor(
-                          result.analysis[0]?.brand_name || "other"
-                        );
-                        latitude = lat;
-                        longitude = lon;
-                      } else {
-                        latitude = result.report.latitude;
-                        longitude = result.report.longitude;
-                      }
-
-                      flyToReport({ lon: longitude, lat: latitude, zoom: 9.5 });
-
-                      setIsCleanAppProOpen(true);
-
-                      // Update URL with seq parameter
-                      router.push(
-                        {
-                          pathname: "/",
-                          query: {
-                            ...router.query,
-                            tab: selectedTab,
-                            seq: result.report.seq,
-                          },
-                        },
-                        undefined,
-                        { shallow: true }
-                      );
+                      void openReportFromAnalysis(result);
                     }}
                   >
                     <p className="line-clamp-1">{analysis?.title}</p>
@@ -3322,10 +3358,10 @@ export default function GlobeView() {
                 placeResults.length == 0 &&
                 !searchLoading &&
                 !searchError && (
-                <div className="p-2 text-white rounded-sm w-full">
-                  No matching places or reports found
-                </div>
-              )}
+                  <div className="p-2 text-white rounded-sm w-full">
+                    No matching places or reports found
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -3370,21 +3406,27 @@ export default function GlobeView() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="text-white font-medium">{matchingBrand.brand_display_name} Dashboard</p>
-                        <p className="text-green-400 text-sm">{matchingBrand.total} reports</p>
+                        <p className="text-white font-medium">
+                          {matchingBrand.brand_display_name} Dashboard
+                        </p>
+                        <p className="text-green-400 text-sm">
+                          {matchingBrand.total} reports
+                        </p>
                       </div>
                     </div>
-                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">→</span>
+                    <span className="text-gray-400 group-hover:text-green-400 transition-colors">
+                      →
+                    </span>
                   </div>
                 </button>
               )}
               {placeResults.map((place) =>
-                renderPlaceSearchHit(place, () => setIsMobileSearchOpen(false))
+                renderPlaceSearchHit(place, () => setIsMobileSearchOpen(false)),
               )}
               {searchResults.map((result) => {
                 const analysis =
                   result.analysis.find(
-                    (analysis) => analysis.language === locale
+                    (analysis) => analysis.language === locale,
                   ) || result.analysis[0];
                 return (
                   <button
@@ -3392,51 +3434,17 @@ export default function GlobeView() {
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       clearSelectedPlace();
-                      setSeq(result.report.seq);
-                      setReportWithAnalysis(result);
 
                       // Track brand search for dashboard personalization
                       const brandName = result.analysis[0]?.brand_name;
-                      if (brandName && brandName !== 'other') {
-                        console.log('[UserActivity] Tracking brand:', brandName);
+                      if (brandName && brandName !== "other") {
+                        console.log(
+                          "[UserActivity] Tracking brand:",
+                          brandName,
+                        );
                         trackBrandSearch(brandName);
                       }
-
-                      let latitude = result.report.latitude;
-                      let longitude = result.report.longitude;
-
-                      if (isDigital) {
-                        const { lat, lon } = stringToLatLonColor(
-                          result.analysis[0]?.brand_name || "other"
-                        );
-                        latitude = lat;
-                        longitude = lon;
-                      } else {
-                        latitude = result.report.latitude;
-                        longitude = result.report.longitude;
-                      }
-
-                      flyToReport({
-                        lon: longitude,
-                        lat: latitude,
-                        zoom: 9.5,
-                      });
-
-                      setIsCleanAppProOpen(true);
-
-                      // Update URL with seq parameter
-                      router.push(
-                        {
-                          pathname: "/",
-                          query: {
-                            ...router.query,
-                            tab: selectedTab,
-                            seq: result.report.seq,
-                          },
-                        },
-                        undefined,
-                        { shallow: true }
-                      );
+                      void openReportFromAnalysis(result);
                     }}
                   >
                     <p className="line-clamp-1">{analysis?.title}</p>
@@ -3462,10 +3470,10 @@ export default function GlobeView() {
                 placeResults.length == 0 &&
                 !searchLoading &&
                 !searchError && (
-                <div className="p-2 text-white rounded-sm w-full">
-                  No matching places or reports found
-                </div>
-              )}
+                  <div className="p-2 text-white rounded-sm w-full">
+                    No matching places or reports found
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -3498,8 +3506,9 @@ export default function GlobeView() {
 
           <div
             ref={menuRef}
-            className={`px-3 py-2 bg-gray-900 rounded-md mt-4 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${isMenuOpen ? "block" : "hidden"
-              }`}
+            className={`px-3 py-2 bg-gray-900 rounded-md mt-4 flex flex-col gap-1 transition-all duration-300  border border-gray-700 ${
+              isMenuOpen ? "block" : "hidden"
+            }`}
           >
             {/* Language Switcher */}
             <div className="px-4 py-2">
@@ -3526,7 +3535,6 @@ export default function GlobeView() {
                 label: t("cleanAppGPT"),
                 link: "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp",
               },
-
             ].map((item) => {
               return (
                 <Link
@@ -3562,15 +3570,17 @@ export default function GlobeView() {
       {!isDigital && (
         <div
           id="tutorial-draw-tools"
-          className={`absolute ${isEmbeddedMode ? "top-4" : "top-20"
-            } right-4 z-10 flex flex-col gap-2`}
+          className={`absolute ${
+            isEmbeddedMode ? "top-4" : "top-20"
+          } right-4 z-10 flex flex-col gap-2`}
         >
           <button
             onClick={() => setEnableDrawing(!enableDrawing)}
-            className={`p-3 rounded-md border transition-colors ${enableDrawing
-              ? "bg-purple-600 border-purple-500 text-white"
-              : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-              }`}
+            className={`p-3 rounded-md border transition-colors ${
+              enableDrawing
+                ? "bg-purple-600 border-purple-500 text-white"
+                : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+            }`}
             title={
               enableDrawing ? "Disable drawing mode" : "Enable drawing mode"
             }
@@ -3594,20 +3604,22 @@ export default function GlobeView() {
             <div className="flex flex-col gap-1 bg-gray-800 border border-gray-700 rounded-md p-1">
               <button
                 onClick={() => setDrawMode("rectangle")}
-                className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "rectangle"
-                  ? "bg-purple-600 text-white"
-                  : "text-gray-300 hover:bg-gray-700"
-                  }`}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  drawMode === "rectangle"
+                    ? "bg-purple-600 text-white"
+                    : "text-gray-300 hover:bg-gray-700"
+                }`}
                 title="Rectangle drawing mode"
               >
                 Rectangle
               </button>
               <button
                 onClick={() => setDrawMode("freehand")}
-                className={`px-3 py-2 rounded text-sm transition-colors ${drawMode === "freehand"
-                  ? "bg-purple-600 text-white"
-                  : "text-gray-300 hover:bg-gray-700"
-                  }`}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  drawMode === "freehand"
+                    ? "bg-purple-600 text-white"
+                    : "text-gray-300 hover:bg-gray-700"
+                }`}
                 title="Freehand drawing mode"
               >
                 Freehand
@@ -3641,148 +3653,17 @@ export default function GlobeView() {
         reports={displayedReportsWithAnalysis}
         loading={displayedReportsLoading}
         onReportClick={(report) => {
-          // Set flag to indicate we're opening from a click
-          openingFromClickRef.current = true;
-
-          // Set reportWithAnalysis directly when clicking from LatestReports
-          setReportWithAnalysis(report);
-
-          if (
-            isPhysical &&
-            report.analysis &&
-            report.analysis?.[0]?.classification === "physical"
-          ) {
-            const physicalReport = latestReports.find(
-              (r) =>
-                r.classification === "physical" && r.seq === report.report.seq
-            ) as PhysicalReportResponse | null;
-            setSelectedReport(physicalReport);
-            const reportSeq = report.report.seq;
-            setSeq(reportSeq);
-            // Set ref to prevent useEffect from fetching again
-            lastFetchedSeqRef.current = reportSeq;
-            flyToReport({
-              lon: physicalReport?.longitude,
-              lat: physicalReport?.latitude,
-            });
-            // Update URL with seq parameter
-            router.push(
-              {
-                pathname: "/",
-                query: {
-                  ...router.query,
-                  tab: selectedTab,
-                  seq: reportSeq,
-                },
-              },
-              undefined,
-              { shallow: true }
-            );
-          } else if (
-            isDigital &&
-            report.analysis &&
-            report.analysis?.[0]?.classification === "digital"
-          ) {
-            const brandName = report.analysis[0].brand_name || "other";
-            const reportSeq = report.report.seq;
-
-            // If brand_name is "other", use seq instead of brand_name
-            if (shouldUseSeqForDigital(brandName)) {
-              const digitalReport = latestReports.find(
-                (r) =>
-                  r.classification === "digital" && (r as any).seq === reportSeq
-              ) as ReportResponse | null;
-              setSelectedReport(
-                (prev) =>
-                  digitalReport ??
-                  ({
-                    ...report.report,
-                    classification: "digital",
-                    brand_name: brandName,
-                    brand_display_name:
-                      report.analysis[0].brand_display_name || "Other",
-                    total: 1,
-                  } as ReportResponse)
-              );
-              setSeq(reportSeq);
-              setSelectedBrandName(null);
-              // Set ref to prevent useEffect from fetching again
-              lastFetchedSeqRef.current = reportSeq;
-              lastFetchedBrandRef.current = null;
-              const { lat, lon } = stringToLatLonColor(brandName);
-              flyToReport({ lon: lon, lat: lat });
-              // Update URL with seq parameter for "other" digital reports
-              router.push(
-                {
-                  pathname: "/",
-                  query: {
-                    ...router.query,
-                    tab: selectedTab,
-                    seq: reportSeq,
-                  },
-                },
-                undefined,
-                { shallow: true }
-              );
-            } else {
-              const digitalReport = latestReports.find(
-                (r) =>
-                  r.classification === "digital" && r.brand_name === brandName
-              ) as ReportResponse | null;
-              setSelectedReport(
-                (prev) =>
-                  digitalReport ??
-                  ({
-                    ...report.report,
-                    classification: "digital",
-                    brand_name: brandName,
-                    brand_display_name:
-                      report.analysis[0].brand_display_name || "Other",
-                    total: 1,
-                  } as ReportResponse)
-              );
-              setSeq(null); // Digital reports don't use seq (unless brand_name is "other")
-              setSelectedBrandName(brandName);
-              // Set ref to prevent useEffect from fetching again
-              lastFetchedBrandRef.current = brandName;
-              lastFetchedSeqRef.current = null;
-              const { lat, lon } = stringToLatLonColor(
-                (digitalReport as DigitalReportResponse)?.brand_name ||
-                brandName
-              );
-              flyToReport({ lon: lon, lat: lat });
-              // Update URL with brand_name parameter for digital reports
-              router.push(
-                {
-                  pathname: "/",
-                  query: {
-                    ...router.query,
-                    tab: selectedTab,
-                    brand_name: brandName,
-                  },
-                },
-                undefined,
-                { shallow: true }
-              );
-            }
-          }
-          setIsCleanAppProOpen(true);
-
-          // Reset the flag after a short delay to allow URL to update
-          setTimeout(() => {
-            openingFromClickRef.current = false;
-          }, 200);
+          void openReportFromAnalysis(report);
         }}
         isModalActive={true}
         isMenuOpen={isMenuOpen}
         report={selectedReport as ReportWithAnalysis | null}
       />
 
-
-
       <div
-        className={`absolute ${isMobile ? `bottom-12 right-20` : "bottom-10 right-4"
-          }`}
+        className={`absolute ${
+          isMobile ? `bottom-12 right-20` : "bottom-10 right-4"
+        }`}
       >
         <ReportCounter selectedTab={selectedTab} />
       </div>
@@ -3795,8 +3676,9 @@ export default function GlobeView() {
           setSeq(null);
           setSelectedBrandName(null);
           setReportWithAnalysis(null);
-          // Remove seq and brand_name from URL when modal closes
+          // Remove report selection params from URL when modal closes
           const query = { ...router.query };
+          delete query.public_id;
           delete query.seq;
           delete query.brand_name;
           router.push({ pathname: "/", query }, undefined, { shallow: true });
@@ -3804,11 +3686,11 @@ export default function GlobeView() {
         report={selectedReport}
         seq={seq}
         reportWithAnalysis={reportWithAnalysis}
-      // allReports={latestReportsWithAnalysis}
-      // onReportChange={(report) => {
-      //   // setSelectedReport(report);
-      //   // flyToReport(report);
-      // }}
+        // allReports={latestReportsWithAnalysis}
+        // onReportChange={(report) => {
+        //   // setSelectedReport(report);
+        //   // flyToReport(report);
+        // }}
       />
 
       {/* Location monitoring tutorial overlay */}

@@ -24,6 +24,7 @@ import html2canvas from "html2canvas";
 import { ReportWithAnalysis } from "./GlobeView";
 import Image from "next/image";
 import TextToImage from "./TextToImage";
+import { getCanonicalReportPath } from "@/lib/report-links";
 
 // Map controller component to set center and zoom
 function MapController({ center }: { center: [number, number] }) {
@@ -73,7 +74,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
     if (reportItem?.report?.seq) {
       console.log("reportItem seq:", reportItem.report.seq);
       setImageUrl(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.report.seq}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.report.seq}`,
       );
     } else {
       console.log("reportItem no seq:", reportItem);
@@ -105,9 +106,19 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   };
 
   const handleCopyUrl = async () => {
+    const classification =
+      reportItem?.analysis?.[0]?.classification === "digital"
+        ? "digital"
+        : "physical";
+    const target = getCanonicalReportPath(
+      classification,
+      reportItem?.report?.public_id || null,
+    );
+    const shareUrl = target
+      ? `${window.location.origin}${target}`
+      : window.location.href;
     try {
-      const currentUrl = window.location.href;
-      await navigator.clipboard.writeText(currentUrl);
+      await navigator.clipboard.writeText(shareUrl);
       setUrlCopied(true);
       setTimeout(() => {
         setUrlCopied(false);
@@ -116,7 +127,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       console.error("Failed to copy URL:", error);
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
-      textArea.value = window.location.href;
+      textArea.value = shareUrl;
       textArea.style.position = "fixed";
       textArea.style.opacity = "0";
       document.body.appendChild(textArea);
@@ -231,7 +242,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           fillOpacity: 0.8,
           weight: 2,
           opacity: 1,
-        }
+        },
       ).addTo(map);
 
       // Wait for map to render
@@ -288,7 +299,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
 
       const locale = getCurrentLocale();
       const reportAnalysis = reportItem.analysis.find(
-        (analysis) => analysis.language === locale
+        (analysis) => analysis.language === locale,
       );
 
       // Add title
@@ -311,7 +322,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       // Add timestamp
       const timestamp = document.createElement("p");
       timestamp.textContent = `${t("reportDate")}: ${formatTime(
-        reportItem.report.timestamp
+        reportItem.report.timestamp,
       )}`;
       timestamp.style.fontSize = "10px";
       timestamp.style.color = "#6b7280";
@@ -344,7 +355,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
 
       // Add image if available
       const imageUrl = getDisplayableImage(
-        fullReport?.report?.image || reportItem.report?.image
+        fullReport?.report?.image || reportItem.report?.image,
       );
       if (imageUrl) {
         const img = document.createElement("img");
@@ -412,9 +423,9 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         pdfMapContainer.style.fontSize = "10px";
         pdfMapContainer.style.color = "#6b7280";
         pdfMapContainer.textContent = `${t(
-          "map"
+          "map",
         )}: ${reportItem.report.latitude.toFixed(
-          4
+          4,
         )}, ${reportItem.report.longitude.toFixed(4)}`;
       }
       locationSection.appendChild(pdfMapContainer);
@@ -424,10 +435,10 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       coords.style.color = "#6b7280";
       coords.innerHTML = `
         <div style="margin-bottom: 5px;"><strong>${t(
-          "latitude"
+          "latitude",
         )}:</strong> ${reportItem.report.latitude.toFixed(6)}</div>
         <div><strong>${t(
-          "longitude"
+          "longitude",
         )}:</strong> ${reportItem.report.longitude.toFixed(6)}</div>
       `;
       locationSection.appendChild(coords);
@@ -484,7 +495,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         severityDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <span style="font-size: 11px; color: #374151;">${t(
-              "severityLevel"
+              "severityLevel",
             )}</span>
             <span style="font-size: 11px; font-weight: bold;">${(
               reportAnalysis?.severity_level * 10
@@ -494,8 +505,8 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
             <div style="width: ${
               reportAnalysis?.severity_level * 100
             }%; height: 100%; background-color: ${getGaugeColor(
-          reportAnalysis?.severity_level
-        )}; border-radius: 3px;"></div>
+              reportAnalysis?.severity_level,
+            )}; border-radius: 3px;"></div>
           </div>
         `;
         analysisSection.appendChild(severityDiv);
@@ -507,7 +518,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           litterDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
               <span style="font-size: 11px; color: #374151;">${t(
-                "litterProbability"
+                "litterProbability",
               )}</span>
               <span style="font-size: 11px; font-weight: bold;">${(
                 reportAnalysis?.litter_probability * 100
@@ -517,8 +528,8 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
               <div style="width: ${
                 reportAnalysis?.litter_probability * 100
               }%; height: 100%; background-color: ${getGaugeColor(
-            reportAnalysis?.litter_probability
-          )}; border-radius: 3px;"></div>
+                reportAnalysis?.litter_probability,
+              )}; border-radius: 3px;"></div>
             </div>
           `;
           analysisSection.appendChild(litterDiv);
@@ -531,7 +542,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           hazardDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
               <span style="font-size: 11px; color: #374151;">${t(
-                "hazardProbability"
+                "hazardProbability",
               )}</span>
               <span style="font-size: 11px; font-weight: bold;">${(
                 reportAnalysis?.hazard_probability * 100
@@ -541,8 +552,8 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
               <div style="width: ${
                 reportAnalysis?.hazard_probability * 100
               }%; height: 100%; background-color: ${getGaugeColor(
-            reportAnalysis?.hazard_probability
-          )}; border-radius: 3px;"></div>
+                reportAnalysis?.hazard_probability,
+              )}; border-radius: 3px;"></div>
             </div>
           `;
           analysisSection.appendChild(hazardDiv);
@@ -633,7 +644,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
             0,
             0,
             canvas.width,
-            sourceHeight
+            sourceHeight,
           );
 
           const pageImgData = tempCanvas.toDataURL("image/png");
@@ -667,7 +678,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
           </p>
           <Link
             href={`/login?redirect=${encodeURIComponent(
-              window.location.pathname
+              window.location.pathname,
             )}`}
             className="text-sm font-medium text-red-800 hover:text-red-600 underline"
           >
@@ -713,7 +724,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
   const report = reportItem.report;
   const locale = getCurrentLocale();
   const analysis = reportItem.analysis.find(
-    (analysis) => analysis.language === locale
+    (analysis) => analysis.language === locale,
   );
 
   return (
@@ -859,7 +870,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                   console.error("Failed to load image:", imageUrl);
                   e.currentTarget.style.display = "none";
                   e.currentTarget.nextElementSibling?.classList.remove(
-                    "hidden"
+                    "hidden",
                   );
                   setImageError("Failed to load image: " + imageUrl);
                   setImageLoading(false);
@@ -991,7 +1002,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
-                        analysis.severity_level
+                        analysis.severity_level,
                       )}`}
                       style={{ width: `${analysis.severity_level * 100}%` }}
                     ></div>
@@ -1012,7 +1023,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
-                          analysis.litter_probability
+                          analysis.litter_probability,
                         )}`}
                         style={{
                           width: `${analysis.litter_probability * 100}%`,
@@ -1036,7 +1047,7 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full bg-gradient-to-r ${getGradientColor(
-                          analysis.hazard_probability
+                          analysis.hazard_probability,
                         )}`}
                         style={{
                           width: `${analysis.hazard_probability * 100}%`,

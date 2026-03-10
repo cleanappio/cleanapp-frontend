@@ -75,6 +75,7 @@ export interface ReportCasesResponse {
 export interface CaseReportLink {
   case_id: string;
   seq: number;
+  public_id: string;
   link_reason: string;
   confidence: number;
   attached_at: string;
@@ -270,7 +271,7 @@ class CasesApiClient {
   }): Promise<ClusterAnalysisResponse> {
     const { data } = await this.axios.post<ClusterAnalysisResponse>(
       "/api/v3/clusters/analyze",
-      payload
+      payload,
     );
     return data;
   }
@@ -283,18 +284,23 @@ class CasesApiClient {
   }): Promise<ClusterAnalysisResponse> {
     const { data } = await this.axios.post<ClusterAnalysisResponse>(
       "/api/v3/clusters/from-report",
-      payload
+      payload,
     );
     return data;
   }
 
   async createCase(payload: Record<string, unknown>): Promise<CaseDetail> {
-    const { data } = await this.axios.post<CaseDetail>("/api/v3/cases", payload);
+    const { data } = await this.axios.post<CaseDetail>(
+      "/api/v3/cases",
+      payload,
+    );
     return data;
   }
 
   async getCase(caseId: string): Promise<CaseDetail> {
-    const { data } = await this.axios.get<CaseDetail>(`/api/v3/cases/${caseId}`);
+    const { data } = await this.axios.get<CaseDetail>(
+      `/api/v3/cases/${caseId}`,
+    );
     return normalizeCaseDetail(data);
   }
 
@@ -306,29 +312,29 @@ class CasesApiClient {
     linked_count: number;
   }> {
     const { data } = await this.axios.get(
-      `/api/v3/cases/${caseId}/escalations`
+      `/api/v3/cases/${caseId}/escalations`,
     );
     return data;
   }
 
   async draftCaseEscalation(
     caseId: string,
-    payload: { target_ids: number[]; subject?: string; body?: string }
+    payload: { target_ids: number[]; subject?: string; body?: string },
   ): Promise<CaseEscalationDraftResponse> {
     const { data } = await this.axios.post<CaseEscalationDraftResponse>(
       `/api/v3/cases/${caseId}/escalations/draft`,
-      payload
+      payload,
     );
     return data;
   }
 
   async sendCaseEscalation(
     caseId: string,
-    payload: { target_ids: number[]; subject: string; body: string }
+    payload: { target_ids: number[]; subject: string; body: string },
   ): Promise<CaseEscalationSendResponse> {
     const { data } = await this.axios.post<CaseEscalationSendResponse>(
       `/api/v3/cases/${caseId}/escalations/send`,
-      payload
+      payload,
     );
     return data;
   }
@@ -336,7 +342,7 @@ class CasesApiClient {
   async getCasesByReportSeq(seq: number): Promise<ReportCasesResponse> {
     const { data } = await this.axios.get<ReportCasesResponse>(
       "/api/v3/reports/cases",
-      { params: { seq } }
+      { params: { seq } },
     );
     return data;
   }

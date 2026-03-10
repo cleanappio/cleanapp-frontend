@@ -18,7 +18,7 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
       const lang = getPreferredReportLanguage(brand_name, locale);
       // Fetch reports - the API now returns total_count, high_priority_count, medium_priority_count
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${lang}`
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=100&lang=${lang}&full_data=false`
       );
       const data = await response.json();
       setBrandReports(data.reports);

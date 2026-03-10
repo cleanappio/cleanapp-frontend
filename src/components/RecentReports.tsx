@@ -45,11 +45,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
           reportItem?.classification === "digital" &&
           reportItem?.brand_name
         ) {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.brand_name}&n=10&full_data=false`;
         } else if (reportItem?.classification === "physical") {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`;
         } else {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}`;
+          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=false`;
         }
 
         const response = await fetch(url);
@@ -135,11 +135,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
                       reportItem?.classification === "digital" &&
                       reportItem?.brand_name
                     ) {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${reportItem.brand_name}&n=10`;
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.brand_name}&n=10&full_data=false`;
                     } else if (reportItem?.classification === "physical") {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}`;
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`;
                     } else {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}`;
+                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}&full_data=false`;
                     }
 
                     const response = await fetch(url);
