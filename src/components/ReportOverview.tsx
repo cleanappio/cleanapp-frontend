@@ -9,10 +9,16 @@ import {
 } from "@/lib/i18n";
 import { getBrandNameDisplay, parseBackendDate } from "@/lib/util";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useReverseGeocoding } from "@/hooks/useReverseGeocoding";
 import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
 import TextToImage from "./TextToImage";
 import { ReportResponse } from "@/types/reports/api";
+import { authApiClient } from "@/lib/auth-api-client";
+import {
+  casesApiClient,
+  CaseSummary,
+} from "@/lib/cases-api-client";
 
 interface ReportOverviewProps {
   reportItem?: ReportResponse | null;
@@ -30,6 +36,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
+  const router = useRouter();
   const locale = getCurrentLocale();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
@@ -41,6 +48,10 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     latitude?: number;
     longitude?: number;
   } | null>(null);
+  const [relatedCases, setRelatedCases] = useState<CaseSummary[]>([]);
+  const [caseContextLoading, setCaseContextLoading] = useState(false);
+  const [caseContextError, setCaseContextError] = useState<string | null>(null);
+  const [creatingCase, setCreatingCase] = useState(false);
 
   // Classification
   useEffect(() => {
@@ -210,6 +221,121 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     }
   }, [fullReport, reportItem]);
 
+  const report = fullReport?.report ?? reportItem ?? null;
+  const analysis = fullReport?.analysis?.find(
+    (analysis: any) => analysis.language === locale
+  );
+  const selectedSeq =
+    fullReport?.report?.seq ??
+    reportWithAnalysis?.report?.seq ??
+    (reportItem?.classification === "physical" ? reportItem.seq : null);
+  const authToken = authApiClient.getAuthToken();
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCases = async () => {
+      if (!selectedSeq) {
+        setRelatedCases([]);
+        setCaseContextError(null);
+        setCaseContextLoading(false);
+        return;
+      }
+      setCaseContextLoading(true);
+      setCaseContextError(null);
+      try {
+        const response = await casesApiClient.getCasesByReportSeq(selectedSeq);
+        if (!cancelled) {
+          setRelatedCases(response.cases || []);
+        }
+      } catch (err) {
+        console.error("Failed to load related cases", err);
+        if (!cancelled) {
+          setCaseContextError("Failed to load related cases");
+          setRelatedCases([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setCaseContextLoading(false);
+        }
+      }
+    };
+    loadCases();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSeq]);
+
+  const createCaseFromReport = useCallback(async () => {
+    if (!selectedSeq || !report) {
+      return;
+    }
+    if (!authToken) {
+      router.push("/login");
+      return;
+    }
+
+    setCreatingCase(true);
+    setCaseContextError(null);
+    try {
+      const cluster = await casesApiClient.analyzeClusterFromReport({
+        seq: selectedSeq,
+        radius_km: 0.35,
+        n: 75,
+        classification: isDigital ? "digital" : "physical",
+      });
+
+      const strongestHypothesis =
+        cluster.hypotheses
+          .slice()
+          .sort(
+            (a, b) =>
+              b.urgency_score + b.severity_score -
+              (a.urgency_score + a.severity_score)
+          )[0] || null;
+
+      const reportSeqs =
+        strongestHypothesis?.report_seqs?.length
+          ? strongestHypothesis.report_seqs
+          : cluster.reports.map((item) => item.report.seq);
+
+      const caseTitle =
+        strongestHypothesis?.title ||
+        title ||
+        `${
+          isDigital ? report.brand_name : `Report #${selectedSeq}`
+        } incident case`;
+
+      const caseDetail = await casesApiClient.createCase({
+        title: caseTitle,
+        type: "incident",
+        status: "open",
+        classification: cluster.classification,
+        summary:
+          strongestHypothesis?.rationale?.join(" ") ||
+          analysis?.summary ||
+          analysis?.description ||
+          `Case created from report ${selectedSeq}.`,
+        anchor_report_seq:
+          strongestHypothesis?.representative_report_seq || selectedSeq,
+        report_seqs: reportSeqs,
+        cluster_summary: `Cluster analyzed from report ${selectedSeq}.`,
+        cluster_source_type: cluster.scope_type,
+        cluster_stats: cluster.stats,
+        cluster_analysis: {
+          hypotheses: cluster.hypotheses,
+        },
+        escalation_targets: cluster.suggested_targets,
+      });
+
+      router.push(`/cases/${caseDetail.case.case_id}`);
+    } catch (err) {
+      console.error("Failed to create case from report", err);
+      setCaseContextError("Failed to create case from this report");
+    } finally {
+      setCreatingCase(false);
+    }
+  }, [selectedSeq, report, authToken, router, isDigital, title, analysis]);
+
   if (!reportItem && !reportWithAnalysis)
     throw new Error("Either reportItem or reportWithAnalysis must be provided");
 
@@ -303,11 +429,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
       </div>
     );
   }
-
-  const report = fullReport?.report ?? reportItem;
-  const analysis = fullReport?.analysis?.find(
-    (analysis: any) => analysis.language === locale
-  );
 
   var imageComponent;
 
@@ -529,6 +650,17 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
                 </p>
               </div>
             )}
+
+            <CaseContextPanel
+              relatedCases={relatedCases}
+              loading={caseContextLoading}
+              error={caseContextError}
+              selectedSeq={selectedSeq}
+              canCreateCase={!!selectedSeq}
+              creatingCase={creatingCase}
+              authenticated={!!authToken}
+              onCreateCase={createCaseFromReport}
+            />
           </div>
         </div>
       </div>
@@ -669,10 +801,118 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
             </div>
           )}
+
+          <CaseContextPanel
+            relatedCases={relatedCases}
+            loading={caseContextLoading}
+            error={caseContextError}
+            selectedSeq={selectedSeq}
+            canCreateCase={!!selectedSeq}
+            creatingCase={creatingCase}
+            authenticated={!!authToken}
+            onCreateCase={createCaseFromReport}
+            compact
+          />
         </div>
       </div>
     </div>
   );
 };
+
+function CaseContextPanel({
+  relatedCases,
+  loading,
+  error,
+  selectedSeq,
+  canCreateCase,
+  creatingCase,
+  authenticated,
+  onCreateCase,
+  compact = false,
+}: {
+  relatedCases: CaseSummary[];
+  loading: boolean;
+  error: string | null;
+  selectedSeq: number | null;
+  canCreateCase: boolean;
+  creatingCase: boolean;
+  authenticated: boolean;
+  onCreateCase: () => void;
+  compact?: boolean;
+}) {
+  if (!selectedSeq) {
+    return null;
+  }
+
+  return (
+    <div className={`${compact ? "mt-8" : ""} rounded-lg border border-blue-100 bg-blue-50/60 p-4`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="font-semibold text-sm text-slate-900">Case context</h3>
+          <p className="mt-1 text-sm text-slate-600">
+            See whether this report is already part of a broader incident, or create a new case from it.
+          </p>
+        </div>
+        {canCreateCase && (
+          <button
+            onClick={onCreateCase}
+            disabled={creatingCase}
+            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white px-4 py-2 text-sm font-medium"
+          >
+            {creatingCase
+              ? "Creating..."
+              : authenticated
+                ? "Create case from report"
+                : "Sign in to create case"}
+          </button>
+        )}
+      </div>
+
+      {loading && (
+        <p className="mt-3 text-sm text-slate-500">Loading related cases...</p>
+      )}
+
+      {error && (
+        <p className="mt-3 text-sm text-red-600">{error}</p>
+      )}
+
+      {!loading && !error && relatedCases.length === 0 && (
+        <p className="mt-3 text-sm text-slate-600">
+          No existing cases are linked to this report yet.
+        </p>
+      )}
+
+      {relatedCases.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {relatedCases.map((caseItem) => (
+            <Link
+              key={caseItem.case_id}
+              href={`/cases/${caseItem.case_id}`}
+              className="block rounded-lg border border-blue-100 bg-white px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-medium text-slate-900">{caseItem.title}</p>
+                  {caseItem.summary && (
+                    <p className="mt-1 text-sm text-slate-600 line-clamp-2">
+                      {caseItem.summary}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+                    <span>{caseItem.status}</span>
+                    <span>{Math.round(caseItem.severity_score * 100)}% severity</span>
+                    <span>{caseItem.escalation_target_count || 0} targets</span>
+                    <span>{caseItem.delivery_count || 0} deliveries</span>
+                  </div>
+                </div>
+                <span className="text-sm text-blue-600 shrink-0">Open case</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default ReportOverview;

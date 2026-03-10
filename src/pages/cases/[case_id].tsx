@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import PageHeader from "@/components/PageHeader";
@@ -26,7 +26,7 @@ export default function CaseDetailPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCase = async () => {
+  const loadCase = useCallback(async () => {
     if (!case_id || typeof case_id !== "string") {
       return;
     }
@@ -45,11 +45,11 @@ export default function CaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [case_id]);
 
   useEffect(() => {
     loadCase();
-  }, [case_id]);
+  }, [loadCase]);
 
   const selectedTargets = useMemo(() => {
     if (!detail) return [];
@@ -57,6 +57,57 @@ export default function CaseDetailPage() {
       selectedTargetIds.includes(target.id)
     );
   }, [detail, selectedTargetIds]);
+
+  const timelineItems = useMemo(() => {
+    if (!detail) return [];
+
+    const items = [
+      ...detail.audit_events.map((event: any) => ({
+        key: `audit-${event.id || event.created_at || Math.random()}`,
+        ts: event.created_at,
+        title: humanizeAuditEvent(event.event_type || "case_updated"),
+        description:
+          summarizePayload(event.payload_json) ||
+          (event.actor_user_id
+            ? `Action by ${event.actor_user_id}`
+            : "Case event recorded."),
+        kind: "audit" as const,
+      })),
+      ...detail.escalation_actions.map((action) => ({
+        key: `action-${action.id}`,
+        ts: action.sent_at || action.created_at,
+        title: action.sent_at ? "Escalation email sent" : "Escalation drafted",
+        description: action.subject || "Escalation action recorded.",
+        kind: "action" as const,
+      })),
+      ...detail.email_deliveries.map((delivery) => ({
+        key: `delivery-${delivery.id}`,
+        ts: delivery.sent_at || delivery.created_at,
+        title:
+          delivery.delivery_status === "sent"
+            ? `Delivered to ${delivery.recipient_email}`
+            : `Delivery ${delivery.delivery_status}`,
+        description:
+          delivery.delivery_source
+            ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
+            : delivery.provider || "email",
+        kind: "delivery" as const,
+      })),
+      ...detail.resolution_signals.map((signal: any, index) => ({
+        key: `resolution-${index}`,
+        ts: signal.created_at,
+        title: signal.source_type
+          ? `Resolution signal: ${signal.source_type}`
+          : "Resolution signal",
+        description: signal.summary || summarizePayload(signal.payload_json),
+        kind: "resolution" as const,
+      })),
+    ]
+      .filter((item) => !!item.ts)
+      .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
+    return items;
+  }, [detail]);
 
   const toggleTarget = (target: CaseEscalationTarget) => {
     setSelectedTargetIds((current) =>
@@ -216,6 +267,38 @@ export default function CaseDetailPage() {
 
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Case timeline
+              </h2>
+              {timelineItems.length === 0 ? (
+                <p className="text-slate-600">No case activity recorded yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {timelineItems.map((item) => (
+                    <div
+                      key={item.key}
+                      className="rounded-xl border border-slate-200 px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-slate-900">{item.title}</p>
+                          {item.description && (
+                            <p className="mt-1 text-sm text-slate-600">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        <p className="shrink-0 text-xs text-slate-500">
+                          {new Date(item.ts).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Escalation activity
               </h2>
               <div className="space-y-3">
@@ -357,4 +440,40 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
+}
+
+function humanizeAuditEvent(eventType: string) {
+  switch (eventType) {
+    case "case_created":
+      return "Case created";
+    case "reports_added":
+      return "Reports added";
+    case "status_changed":
+      return "Case status changed";
+    case "case_escalation_drafted":
+      return "Escalation drafted";
+    case "case_escalation_sent":
+      return "Escalation sent";
+    default:
+      return eventType
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
+function summarizePayload(payload: unknown) {
+  if (!payload) return "";
+  if (typeof payload === "string") {
+    return payload;
+  }
+  if (typeof payload === "object") {
+    const map = payload as Record<string, unknown>;
+    if (typeof map.summary === "string") return map.summary;
+    if (typeof map.subject === "string") return map.subject;
+    if (Array.isArray(map.report_seqs) && map.report_seqs.length > 0) {
+      return `Reports: ${map.report_seqs.join(", ")}`;
+    }
+  }
+  return "";
 }
