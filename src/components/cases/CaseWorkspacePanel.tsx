@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import type { Feature } from "geojson";
 import { authApiClient } from "@/lib/auth-api-client";
+import { navigateToCase } from "@/lib/case-navigation";
 import {
   casesApiClient,
   ClusterAnalysisResponse,
@@ -14,6 +15,8 @@ interface CaseWorkspacePanelProps {
   scopeLabel: string;
   scopeType: "place" | "area";
   geometry: Feature;
+  variant?: "floating" | "embedded";
+  onClose?: () => void;
 }
 
 function scoreLabel(value: number) {
@@ -24,6 +27,8 @@ export default function CaseWorkspacePanel({
   scopeLabel,
   scopeType,
   geometry,
+  variant = "floating",
+  onClose,
 }: CaseWorkspacePanelProps) {
   const router = useRouter();
   const [analysis, setAnalysis] = useState<ClusterAnalysisResponse | null>(null);
@@ -99,7 +104,7 @@ export default function CaseWorkspacePanel({
         },
         escalation_targets: analysis.suggested_targets,
       });
-      router.push(`/cases/${detail.case.case_id}`);
+      await navigateToCase(router, detail.case.case_id);
     } catch (err) {
       console.error("Failed to create case", err);
       setError("Failed to create case");
@@ -108,20 +113,43 @@ export default function CaseWorkspacePanel({
     }
   };
 
+  const isEmbedded = variant === "embedded";
+  const wrapperClassName = isEmbedded
+    ? "w-full"
+    : "absolute z-20 left-4 right-4 top-24 md:left-auto md:right-4 md:top-28 md:w-[420px]";
+  const panelClassName = isEmbedded
+    ? "rounded-2xl border border-emerald-600/30 bg-slate-950/95 shadow-xl overflow-hidden"
+    : "rounded-2xl border border-emerald-600/40 bg-slate-950/90 shadow-2xl backdrop-blur-md overflow-hidden";
+
   return (
-    <div className="absolute z-20 left-4 right-4 top-24 md:left-auto md:right-4 md:top-28 md:w-[420px]">
-      <div className="rounded-2xl border border-emerald-600/40 bg-slate-950/90 shadow-2xl backdrop-blur-md overflow-hidden">
+    <div className={wrapperClassName}>
+      <div className={panelClassName}>
         <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/90">
-            Cluster Workspace
-          </p>
-          <h3 className="text-white text-lg font-semibold leading-tight">
-            {scopeLabel}
-          </h3>
-          <p className="text-emerald-50/85 text-sm">
-            Analyze this {scopeType} scope, group reports into incident
-            hypotheses, and create a durable case.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/90">
+                Cluster Workspace
+              </p>
+              <h3 className="text-white text-lg font-semibold leading-tight">
+                {scopeLabel}
+              </h3>
+              <p className="text-emerald-50/85 text-sm">
+                Analyze this {scopeType} scope, group reports into incident
+                hypotheses, and create a durable case.
+              </p>
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="shrink-0 rounded-md border border-emerald-200/30 bg-black/15 px-2 py-1 text-lg leading-none text-white hover:bg-black/25"
+                aria-label="Close cluster workspace"
+                title="Close"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="px-4 py-4 space-y-4">

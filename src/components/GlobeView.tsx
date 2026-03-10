@@ -43,6 +43,12 @@ import {
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
+
+type ActiveCaseScope = {
+  label: string;
+  scopeType: "place" | "area";
+  geometry: Feature;
+};
 // Type for window.ReactNativeWebView
 declare global {
   interface Window {
@@ -145,6 +151,8 @@ export default function GlobeView() {
   const [selectedPlaceReportsError, setSelectedPlaceReportsError] = useState<
     string | null
   >(null);
+  const [activeCaseScope, setActiveCaseScope] =
+    useState<ActiveCaseScope | null>(null);
 
   const [digitalReportsByBrand, setDigitalReportsByBrand] = useState<
     GeoJSON.Feature[]
@@ -453,13 +461,40 @@ export default function GlobeView() {
     setSelectedPlaceReports(null);
     setSelectedPlaceReportsError(null);
     setSelectedPlaceReportsLoading(false);
+    setActiveCaseScope((current) =>
+      current?.scopeType === "place" ? null : current
+    );
   }, []);
+
+  const closeCaseWorkspace = useCallback(() => {
+    setActiveCaseScope(null);
+  }, []);
+
+  const openCaseWorkspaceForPlace = useCallback((place: PlaceSearchResult) => {
+    setActiveCaseScope({
+      label: place.name,
+      scopeType: "place",
+      geometry: place.geometry,
+    });
+  }, []);
+
+  const openCaseWorkspaceForArea = useCallback(
+    (geometry: Feature, label: string) => {
+      setActiveCaseScope({
+        label,
+        scopeType: "area",
+        geometry,
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (selectedTab !== "physical") {
       clearSelectedPlace();
+      closeCaseWorkspace();
     }
-  }, [selectedTab, clearSelectedPlace]);
+  }, [selectedTab, clearSelectedPlace, closeCaseWorkspace]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -475,6 +510,7 @@ export default function GlobeView() {
 
       clearSelectedPlace();
       setSelectedSearchPlace(place);
+      setActiveCaseScope(null);
       setSelectedPlaceReportsLoading(true);
       setSelectedPlaceReportsError(null);
       setSeq(null);
@@ -528,27 +564,6 @@ export default function GlobeView() {
   const displayedReportsLoading = selectedSearchPlace
     ? selectedPlaceReportsLoading
     : reportTabsLoading.current && latestReportsWithAnalysis.length === 0;
-
-  const activeCaseScope = useMemo(() => {
-    if (selectedSearchPlace) {
-      return {
-        label: selectedSearchPlace.name,
-        scopeType: "place" as const,
-        geometry: selectedSearchPlace.geometry,
-      };
-    }
-
-    const latestArea = drawnAreas[drawnAreas.length - 1];
-    if (latestArea?.coordinates) {
-      return {
-        label: latestArea.name || "Selected area",
-        scopeType: "area" as const,
-        geometry: latestArea.coordinates,
-      };
-    }
-
-    return null;
-  }, [drawnAreas, selectedSearchPlace]);
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -2876,9 +2891,35 @@ export default function GlobeView() {
       });
     }
 
+    const handleDrawnAreaContextMenu = (event: any) => {
+      event.preventDefault?.();
+      const feature = event.features?.[0];
+      if (!feature?.geometry) {
+        return;
+      }
+
+      openCaseWorkspaceForArea(
+        {
+          type: "Feature",
+          geometry: feature.geometry,
+          properties: feature.properties || {},
+        } as Feature,
+        feature.properties?.name || "Selected area"
+      );
+    };
+
+    map.on("contextmenu", "drawn-areas-fill", handleDrawnAreaContextMenu);
+    map.on("contextmenu", "drawn-areas-outline", handleDrawnAreaContextMenu);
+
     // Cleanup on unmount
     return () => {
       try {
+        map.off("contextmenu", "drawn-areas-fill", handleDrawnAreaContextMenu);
+        map.off(
+          "contextmenu",
+          "drawn-areas-outline",
+          handleDrawnAreaContextMenu
+        );
         if (map.getLayer("drawn-areas-outline")) {
           map.removeLayer("drawn-areas-outline");
         }
@@ -2892,7 +2933,13 @@ export default function GlobeView() {
         // Ignore errors during cleanup
       }
     };
-  }, [mapInstance, mapLoaded, mapStyleLoaded, drawnAreas]);
+  }, [
+    drawnAreas,
+    mapInstance,
+    mapLoaded,
+    mapStyleLoaded,
+    openCaseWorkspaceForArea,
+  ]);
 
   useEffect(() => {
     if (!mapInstance || !mapLoaded || !mapStyleLoaded) return;
@@ -2958,8 +3005,18 @@ export default function GlobeView() {
       });
     }
 
+    const handlePlaceContextMenu = (event: any) => {
+      event.preventDefault?.();
+      openCaseWorkspaceForPlace(selectedSearchPlace);
+    };
+
+    map.on("contextmenu", fillLayerId, handlePlaceContextMenu);
+    map.on("contextmenu", outlineLayerId, handlePlaceContextMenu);
+
     return () => {
       try {
+        map.off("contextmenu", fillLayerId, handlePlaceContextMenu);
+        map.off("contextmenu", outlineLayerId, handlePlaceContextMenu);
         if (map.getLayer(outlineLayerId)) {
           map.removeLayer(outlineLayerId);
         }
@@ -2973,7 +3030,13 @@ export default function GlobeView() {
         // Ignore cleanup errors
       }
     };
-  }, [mapInstance, mapLoaded, mapStyleLoaded, selectedSearchPlace]);
+  }, [
+    mapInstance,
+    mapLoaded,
+    mapStyleLoaded,
+    openCaseWorkspaceForPlace,
+    selectedSearchPlace,
+  ]);
 
   return (
     <div className="flex flex-col h-svh relative">
@@ -3564,11 +3627,12 @@ export default function GlobeView() {
         />
       )}
 
-      {!isDigital && activeCaseScope && (
+      {!isDigital && activeCaseScope && !pendingArea && (
         <CaseWorkspacePanel
           scopeLabel={activeCaseScope.label}
           scopeType={activeCaseScope.scopeType}
           geometry={activeCaseScope.geometry}
+          onClose={closeCaseWorkspace}
         />
       )}
 

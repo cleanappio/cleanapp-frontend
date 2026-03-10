@@ -11,6 +11,7 @@ import {
   CaseEscalationDraftResponse,
   CaseEscalationTarget,
 } from "@/lib/cases-api-client";
+import { authApiClient } from "@/lib/auth-api-client";
 
 export default function CaseDetailPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function CaseDetailPage() {
     setLoading(true);
     setError(null);
     try {
+      authApiClient.loadTokenFromStorage();
       const data = await casesApiClient.getCase(case_id);
       setDetail(data);
       const ids = data.escalation_targets

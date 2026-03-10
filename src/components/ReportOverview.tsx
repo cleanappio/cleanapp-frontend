@@ -15,6 +15,7 @@ import ReverseGeocodingDisplay from "./ReverseGeocodingDisplay";
 import TextToImage from "./TextToImage";
 import { ReportResponse } from "@/types/reports/api";
 import { authApiClient } from "@/lib/auth-api-client";
+import { navigateToCase } from "@/lib/case-navigation";
 import {
   casesApiClient,
   CaseSummary,
@@ -327,7 +328,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
         escalation_targets: cluster.suggested_targets,
       });
 
-      router.push(`/cases/${caseDetail.case.case_id}`);
+      await navigateToCase(router, caseDetail.case.case_id);
     } catch (err) {
       console.error("Failed to create case from report", err);
       setCaseContextError("Failed to create case from this report");
