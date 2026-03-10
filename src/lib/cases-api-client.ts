@@ -187,6 +187,41 @@ function asArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
+function parseJsonIfPossible<T = unknown>(value: T): T | unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return value;
+  }
+  if (
+    !(trimmed.startsWith("{") && trimmed.endsWith("}")) &&
+    !(trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    return value;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function normalizeAuditEvent(event: Record<string, unknown>) {
+  return {
+    ...event,
+    payload_json: parseJsonIfPossible(event?.payload_json),
+  };
+}
+
+function normalizeResolutionSignal(signal: Record<string, unknown>) {
+  return {
+    ...signal,
+    payload_json: parseJsonIfPossible(signal?.payload_json),
+  };
+}
+
 function normalizeCaseDetail(data: CaseDetail): CaseDetail {
   return {
     ...data,
@@ -195,8 +230,12 @@ function normalizeCaseDetail(data: CaseDetail): CaseDetail {
     escalation_targets: asArray(data?.escalation_targets),
     escalation_actions: asArray(data?.escalation_actions),
     email_deliveries: asArray(data?.email_deliveries),
-    resolution_signals: asArray(data?.resolution_signals),
-    audit_events: asArray(data?.audit_events),
+    resolution_signals: asArray(data?.resolution_signals).map((signal) =>
+      normalizeResolutionSignal(signal as Record<string, unknown>),
+    ),
+    audit_events: asArray(data?.audit_events).map((event) =>
+      normalizeAuditEvent(event as Record<string, unknown>),
+    ),
   };
 }
 

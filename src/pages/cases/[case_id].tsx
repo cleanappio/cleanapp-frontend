@@ -134,47 +134,59 @@ export default function CaseDetailPage() {
     const emailDeliveries = detail.email_deliveries ?? [];
     const resolutionSignals = detail.resolution_signals ?? [];
 
-    const items = [
-      ...auditEvents.map((event: any) => ({
-        key: `audit-${event.id || event.created_at || Math.random()}`,
-        ts: event.created_at,
-        title: humanizeAuditEvent(event.event_type || "case_updated"),
-        description: describeAuditEvent(event),
-        kind: "audit" as const,
-      })),
-      ...escalationActions.map((action) => ({
-        key: `action-${action.id}`,
-        ts: action.sent_at || action.created_at,
-        title: action.sent_at ? "Escalation email sent" : "Escalation drafted",
-        description: action.subject || "Escalation action recorded.",
-        kind: "action" as const,
-      })),
-      ...emailDeliveries.map((delivery) => ({
-        key: `delivery-${delivery.id}`,
-        ts: delivery.sent_at || delivery.created_at,
-        title:
-          delivery.delivery_status === "sent"
-            ? `Delivered to ${delivery.recipient_email}`
-            : `Delivery ${delivery.delivery_status}`,
-        description: delivery.delivery_source
-          ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
-          : delivery.provider || "email",
-        kind: "delivery" as const,
-      })),
-      ...resolutionSignals.map((signal: any, index) => ({
-        key: `resolution-${index}`,
-        ts: signal.created_at,
-        title: signal.source_type
-          ? `Resolution signal: ${signal.source_type}`
-          : "Resolution signal",
-        description: signal.summary || summarizePayload(signal.payload_json),
-        kind: "resolution" as const,
-      })),
-    ]
-      .filter((item) => !!item.ts)
-      .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    try {
+      const items = [
+        ...auditEvents.map((event: any) => ({
+          key: `audit-${event.id || event.created_at || Math.random()}`,
+          ts: event.created_at,
+          title: humanizeAuditEvent(event.event_type || "case_updated"),
+          description: describeAuditEvent(event),
+          kind: "audit" as const,
+        })),
+        ...escalationActions.map((action) => ({
+          key: `action-${action.id}`,
+          ts: action.sent_at || action.created_at,
+          title: action.sent_at
+            ? "Escalation email sent"
+            : "Escalation drafted",
+          description: action.subject || "Escalation action recorded.",
+          kind: "action" as const,
+        })),
+        ...emailDeliveries.map((delivery) => ({
+          key: `delivery-${delivery.id}`,
+          ts: delivery.sent_at || delivery.created_at,
+          title:
+            delivery.delivery_status === "sent"
+              ? `Delivered to ${delivery.recipient_email}`
+              : `Delivery ${delivery.delivery_status}`,
+          description: delivery.delivery_source
+            ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
+            : delivery.provider || "email",
+          kind: "delivery" as const,
+        })),
+        ...resolutionSignals.map((signal: any, index) => ({
+          key: `resolution-${index}`,
+          ts: signal.created_at,
+          title: signal.source_type
+            ? `Resolution signal: ${signal.source_type}`
+            : "Resolution signal",
+          description: signal.summary || summarizePayload(signal.payload_json),
+          kind: "resolution" as const,
+        })),
+      ]
+        .filter((item) => !!item.ts)
+        .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
-    return items;
+      return items.map((item) => ({
+        ...item,
+        title: typeof item.title === "string" ? item.title : String(item.title),
+        description:
+          typeof item.description === "string" ? item.description : "",
+      }));
+    } catch (err) {
+      console.error("Failed to build case timeline", err);
+      return [];
+    }
   }, [detail]);
 
   const toggleTarget = (target: CaseEscalationTarget) => {
@@ -364,7 +376,7 @@ export default function CaseDetailPage() {
                           )}
                         </div>
                         <p className="shrink-0 text-xs text-slate-500">
-                          {new Date(item.ts).toLocaleString()}
+                          {formatTimelineTimestamp(item.ts)}
                         </p>
                       </div>
                     </div>
@@ -548,10 +560,7 @@ function humanizeAuditEvent(eventType: string) {
 }
 
 function describeAuditEvent(event: any) {
-  const payload =
-    event && typeof event.payload_json === "object" && event.payload_json !== null
-      ? (event.payload_json as Record<string, unknown>)
-      : null;
+  const payload = parseEventPayload(event?.payload_json);
 
   switch (event?.event_type) {
     case "case_created": {
@@ -602,22 +611,64 @@ function describeAuditEvent(event: any) {
       return "Sent escalation email.";
     }
     default:
-      return "";
+      return summarizePayload(payload);
   }
 }
 
 function summarizePayload(payload: unknown) {
   if (!payload) return "";
   if (typeof payload === "string") {
-    return payload;
+    const parsed = parseEventPayload(payload);
+    if (parsed && typeof parsed === "object") {
+      return summarizePayload(parsed);
+    }
+    return "";
   }
   if (typeof payload === "object") {
     const map = payload as Record<string, unknown>;
     if (typeof map.summary === "string") return map.summary;
     if (typeof map.subject === "string") return map.subject;
+    if (typeof map.body === "string") return map.body;
+    if (typeof map.retry_reason === "string") return map.retry_reason;
     if (Array.isArray(map.report_seqs) && map.report_seqs.length > 0) {
       return `Reports: ${map.report_seqs.join(", ")}`;
     }
+    if (typeof map.target_count === "number") {
+      return `Targets: ${map.target_count}`;
+    }
   }
   return "";
+}
+
+function parseEventPayload(payload: unknown) {
+  if (!payload || typeof payload !== "string") {
+    return typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>)
+      : null;
+  }
+
+  const trimmed = payload.trim();
+  if (
+    !(trimmed.startsWith("{") && trimmed.endsWith("}")) &&
+    !(trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatTimelineTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }
