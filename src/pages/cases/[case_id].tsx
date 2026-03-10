@@ -223,12 +223,41 @@ export default function CaseDetailPage() {
     setSending(true);
     setError(null);
     try {
-      await casesApiClient.sendCaseEscalation(caseId, {
+      const sent = await casesApiClient.sendCaseEscalation(caseId, {
         target_ids: selectedTargetIds,
         subject,
         body,
       });
-      await loadCase();
+      setDetail((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          escalation_actions: [
+            ...(current.escalation_actions ?? []),
+            ...(sent.actions ?? []),
+          ],
+          email_deliveries: [
+            ...(current.email_deliveries ?? []),
+            ...(sent.deliveries ?? []),
+          ],
+          audit_events: [
+            ...(current.audit_events ?? []),
+            {
+              id: `client-send-${Date.now()}`,
+              event_type: "case_escalation_sent",
+              actor_user_id: "",
+              payload_json: {
+                recipient_count: Array.isArray(sent.deliveries)
+                  ? sent.deliveries.length
+                  : 0,
+                subject: sent.subject,
+              },
+              created_at: new Date().toISOString(),
+            },
+          ],
+        };
+      });
+      setDraft(null);
     } catch (err) {
       console.error("Failed to send escalation", err);
       setError("Failed to send escalation");
@@ -551,6 +580,10 @@ function humanizeAuditEvent(eventType: string) {
       return "Escalation drafted";
     case "case_escalation_sent":
       return "Escalation sent";
+    case "case_escalation_requested":
+      return "Escalation requested";
+    case "case_escalation_recorded":
+      return "Escalation recorded";
     default:
       return eventType
         .split("_")
@@ -610,6 +643,22 @@ function describeAuditEvent(event: any) {
       }
       return "Sent escalation email.";
     }
+    case "case_escalation_requested": {
+      const targetCount =
+        typeof payload?.target_count === "number" ? payload.target_count : 0;
+      if (targetCount > 0) {
+        return `Queued escalation for ${targetCount} target${targetCount === 1 ? "" : "s"}.`;
+      }
+      return "Queued escalation request.";
+    }
+    case "case_escalation_recorded": {
+      const deliveryCount =
+        typeof payload?.delivery_count === "number" ? payload.delivery_count : 0;
+      if (deliveryCount > 0) {
+        return `Recorded ${deliveryCount} email deliver${deliveryCount === 1 ? "y" : "ies"}.`;
+      }
+      return "Recorded escalation delivery results.";
+    }
     default:
       return summarizePayload(payload);
   }
@@ -628,13 +677,12 @@ function summarizePayload(payload: unknown) {
     const map = payload as Record<string, unknown>;
     if (typeof map.summary === "string") return map.summary;
     if (typeof map.subject === "string") return map.subject;
-    if (typeof map.body === "string") return map.body;
     if (typeof map.retry_reason === "string") return map.retry_reason;
-    if (Array.isArray(map.report_seqs) && map.report_seqs.length > 0) {
-      return `Reports: ${map.report_seqs.join(", ")}`;
-    }
     if (typeof map.target_count === "number") {
       return `Targets: ${map.target_count}`;
+    }
+    if (typeof map.delivery_count === "number") {
+      return `Deliveries: ${map.delivery_count}`;
     }
   }
   return "";
