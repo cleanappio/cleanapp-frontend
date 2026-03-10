@@ -209,10 +209,10 @@ for MODE in ${MODES}; do
     
     echo 'Authenticating with Docker registry...'
     ACCESS_TOKEN=\$(gcloud auth print-access-token)
-    echo \"\${ACCESS_TOKEN}\" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+    echo \"\${ACCESS_TOKEN}\" | sudo docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
     
     echo 'Pulling new image...'
-    docker pull ${DOCKER_TAG}:${OPT}
+    sudo docker pull ${DOCKER_TAG}:${OPT}
     
     echo 'Starting ${CONTAINER_NAME}...'
     sudo docker run -d --name ${CONTAINER_NAME} \
