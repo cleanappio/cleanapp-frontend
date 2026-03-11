@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useRouter } from "next/router";
 
 // Translation keys and their English values
@@ -1023,22 +1024,21 @@ export function useTranslations() {
   const locale =
     (router.locale as Locale) || (router.defaultLocale as Locale) || "en";
 
-  const t = (
-    key: TranslationKey,
-    params?: Record<string, string | number>
-  ): string => {
-    // Always fallback to English if the locale is not supported or translation is missing
-    const translation =
-      translations[locale]?.[key] || translations.en[key] || key;
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string | number>): string => {
+      const translation =
+        translations[locale]?.[key] || translations.en[key] || key;
 
-    if (params) {
-      return Object.entries(params).reduce((str, [param, value]) => {
-        return str.replace(new RegExp(`{${param}}`, "g"), String(value));
-      }, translation);
-    }
+      if (params) {
+        return Object.entries(params).reduce((str, [param, value]) => {
+          return str.replace(new RegExp(`{${param}}`, "g"), String(value));
+        }, translation);
+      }
 
-    return translation;
-  };
+      return translation;
+    },
+    [locale]
+  );
 
   return { t, locale };
 }

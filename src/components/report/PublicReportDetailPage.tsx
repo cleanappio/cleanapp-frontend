@@ -20,7 +20,10 @@ export default function PublicReportDetailPage({
   expectedClassification,
 }: Props) {
   const router = useRouter();
-  const { public_id } = router.query;
+  const publicId =
+    typeof router.query.public_id === "string" ? router.query.public_id : null;
+  const isReady = router.isReady;
+  const asPath = router.asPath;
   const locale = getCurrentLocale();
   const { t } = useTranslations();
 
@@ -29,7 +32,7 @@ export default function PublicReportDetailPage({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!router.isReady || typeof public_id !== "string") {
+    if (!isReady || !publicId) {
       return;
     }
 
@@ -40,7 +43,7 @@ export default function PublicReportDetailPage({
       setError(null);
       try {
         const response = await fetch(
-          `/api/reports/by-public-id?public_id=${encodeURIComponent(public_id)}`
+          `/api/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`
         );
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
@@ -55,15 +58,15 @@ export default function PublicReportDetailPage({
           data.analysis?.[0]?.classification || expectedClassification;
         const canonicalPath = getCanonicalReportPath(
           actualClassification,
-          data.report.public_id || public_id
+          data.report.public_id || publicId
         );
 
         if (
           canonicalPath &&
           actualClassification !== expectedClassification &&
-          router.asPath !== canonicalPath
+          asPath !== canonicalPath
         ) {
-          router.replace(canonicalPath);
+          void router.replace(canonicalPath);
           return;
         }
 
@@ -86,7 +89,7 @@ export default function PublicReportDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [expectedClassification, public_id, router, t]);
+  }, [asPath, expectedClassification, isReady, publicId, router, t]);
 
   const matchingAnalysis = useMemo(() => {
     if (!report?.analysis?.length) {
@@ -168,7 +171,7 @@ export default function PublicReportDetailPage({
             ) : null}
             <li>/</li>
             <li className="text-gray-700 font-medium">
-              {report.report.public_id || public_id}
+              {report.report.public_id || publicId}
             </li>
           </ol>
         </nav>
@@ -179,7 +182,7 @@ export default function PublicReportDetailPage({
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   {matchingAnalysis?.title ||
-                    `${t("report")} ${report.report.public_id || public_id}`}
+                    `${t("report")} ${report.report.public_id || publicId}`}
                 </h1>
                 <p className="text-gray-600">
                   {classification === "digital" && brandDisplay
