@@ -9,8 +9,13 @@ export interface CaseEscalationTarget {
   role_type: string;
   organization: string;
   display_name: string;
+  channel: string;
   email: string;
   phone: string;
+  website: string;
+  contact_url: string;
+  social_platform: string;
+  social_handle: string;
   target_source: string;
   confidence_score: number;
   rationale: string;

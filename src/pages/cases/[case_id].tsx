@@ -20,6 +20,10 @@ import {
 } from "@/lib/case-display";
 import { getCanonicalReportPath } from "@/lib/report-links";
 
+type ResponsiblePartyCard = CaseEscalationTarget & {
+  preview_only?: boolean;
+};
+
 function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
   const queryCaseId = router.query.case_id;
   if (typeof queryCaseId === "string" && queryCaseId.trim()) {
@@ -46,6 +50,8 @@ function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
 export default function CaseDetailPage() {
   const router = useRouter();
   const caseId = useMemo(() => resolveCaseId(router), [router]);
+  const previewMode =
+    process.env.NODE_ENV !== "production" && router.query.mock === "1";
   const canonicalizedRef = useRef(false);
 
   useEffect(() => {
@@ -82,6 +88,23 @@ export default function CaseDetailPage() {
     setLoading(true);
     setError(null);
     try {
+      if (previewMode) {
+        const data = buildMockCaseDetail(caseId);
+        setDetail(data);
+        setDraft(null);
+        setSubject("");
+        setBody("");
+        setCCInput("");
+        setHasManualDraftEdits(false);
+        autoDraftKeyRef.current = "";
+        setSelectedTargetIds(
+          data.escalation_targets
+            .filter((target) => !!target.email)
+            .map((target) => target.id),
+        );
+        return;
+      }
+
       authApiClient.loadTokenFromStorage();
       const token = authApiClient.getAuthToken();
       if (!token) {
@@ -120,7 +143,7 @@ export default function CaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [caseId, router]);
+  }, [caseId, previewMode, router]);
 
   useEffect(() => {
     loadCase();
@@ -180,6 +203,26 @@ export default function CaseDetailPage() {
   const displaySummary = useMemo(
     () => buildCaseDisplaySummary(caseRecord?.summary, landmarkLabel),
     [caseRecord?.summary, landmarkLabel],
+  );
+  const responsibleParties = useMemo(
+    () =>
+      buildResponsiblePartyCards(
+        escalationTargets,
+        linkedReports,
+        landmarkLabel,
+        previewMode,
+      ),
+    [escalationTargets, linkedReports, landmarkLabel, previewMode],
+  );
+  const holisticSummary = useMemo(
+    () =>
+      buildHolisticClusterSummary(
+        displayTitle,
+        landmarkLabel,
+        linkedReports,
+        detail?.case.classification || "physical",
+      ),
+    [detail?.case.classification, displayTitle, landmarkLabel, linkedReports],
   );
   const bannerCandidates = useMemo(
     () =>
@@ -299,6 +342,22 @@ export default function CaseDetailPage() {
         setError(null);
       }
       try {
+        if (previewMode) {
+          const nextDraft = buildMockCaseEscalationDraft(
+            caseId,
+            displayTitle,
+            selectedTargets,
+            nextSubject,
+            nextBody,
+            parseEmailList(nextCCInput),
+          );
+          setDraft(nextDraft);
+          setSubject(nextDraft.subject);
+          setBody(nextDraft.body);
+          setCCInput(formatEmailList(nextDraft.cc_emails));
+          setHasManualDraftEdits(false);
+          return;
+        }
         const nextDraft = await casesApiClient.draftCaseEscalation(caseId, {
           target_ids: selectedTargetIds,
           cc_emails: parseEmailList(nextCCInput),
@@ -319,7 +378,16 @@ export default function CaseDetailPage() {
         setDrafting(false);
       }
     },
-    [body, caseId, ccInput, selectedTargetIds, subject],
+    [
+      body,
+      caseId,
+      ccInput,
+      displayTitle,
+      previewMode,
+      selectedTargetIds,
+      selectedTargets,
+      subject,
+    ],
   );
 
   useEffect(() => {
@@ -489,6 +557,24 @@ export default function CaseDetailPage() {
         <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
           <div className="space-y-6">
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    Holistic summary
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-slate-700">
+                    {holisticSummary}
+                  </p>
+                </div>
+                {previewMode && (
+                  <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                    localhost preview
+                  </span>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Linked reports
               </h2>
@@ -579,39 +665,110 @@ export default function CaseDetailPage() {
           <div className="space-y-6">
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
-                Escalation targets
+                Responsible parties
               </h2>
               <div className="space-y-3">
-                {escalationTargets.length === 0 ? (
+                {responsibleParties.length === 0 ? (
                   <p className="text-slate-600">
-                    No escalation targets suggested yet.
+                    No responsible parties identified yet.
                   </p>
                 ) : (
-                  escalationTargets.map((target) => (
-                    <label
-                      key={target.id}
-                      className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedTargetIds.includes(target.id)}
-                        onChange={() => toggleTarget(target)}
-                        className="mt-1"
-                      />
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {target.display_name ||
-                            target.organization ||
-                            target.email}
-                        </p>
-                        <p className="text-sm text-slate-600">{target.email}</p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {target.target_source} · confidence{" "}
-                          {Math.round((target.confidence_score || 0) * 100)}%
-                        </p>
-                      </div>
-                    </label>
-                  ))
+                  responsibleParties.map((target) => {
+                    const selectable = !!target.email && !target.preview_only;
+                    const checked = selectable
+                      ? selectedTargetIds.includes(target.id)
+                      : false;
+                    return (
+                      <label
+                        key={target.id}
+                        className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+                          selectable
+                            ? "cursor-pointer border-slate-200"
+                            : "border-slate-100 bg-slate-50/70"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!selectable}
+                          onChange={() => toggleTarget(target)}
+                          className="mt-1"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-slate-900">
+                              {target.display_name ||
+                                target.organization ||
+                                target.email ||
+                                target.website}
+                            </p>
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                              {formatRoleType(target.role_type)}
+                            </span>
+                            {target.preview_only && (
+                              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-blue-700">
+                                preview
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {target.organization &&
+                            target.organization !== target.display_name
+                              ? target.organization
+                              : formatTargetSourceLabel(target.target_source)}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                            {target.email && (
+                              <a
+                                href={`mailto:${target.email}`}
+                                className="text-blue-600 hover:text-blue-500 hover:underline"
+                              >
+                                {target.email}
+                              </a>
+                            )}
+                            {target.phone && (
+                              <a
+                                href={`tel:${target.phone}`}
+                                className="text-blue-600 hover:text-blue-500 hover:underline"
+                              >
+                                {target.phone}
+                              </a>
+                            )}
+                            {target.website && (
+                              <a
+                                href={target.website}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:text-blue-500 hover:underline"
+                              >
+                                Official site
+                              </a>
+                            )}
+                            {target.contact_url &&
+                              target.contact_url !== target.website && (
+                                <a
+                                  href={target.contact_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-blue-600 hover:text-blue-500 hover:underline"
+                                >
+                                  Source page
+                                </a>
+                              )}
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {target.channel || "contact"} · confidence{" "}
+                            {Math.round((target.confidence_score || 0) * 100)}%
+                          </p>
+                          {target.rationale && (
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              {target.rationale}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -690,11 +847,19 @@ export default function CaseDetailPage() {
               <button
                 onClick={handleSend}
                 disabled={
-                  sending || selectedTargets.length === 0 || !subject || !body
+                  previewMode ||
+                  sending ||
+                  selectedTargets.length === 0 ||
+                  !subject ||
+                  !body
                 }
                 className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-4 py-3 font-medium"
               >
-                {sending ? "Sending..." : "Send escalation"}
+                {previewMode
+                  ? "Preview mode"
+                  : sending
+                    ? "Sending..."
+                    : "Send escalation"}
               </button>
             </section>
 
@@ -803,6 +968,449 @@ function parseEmailList(value: string): string[] {
 
 function formatEmailList(emails: string[] | null | undefined): string {
   return (emails || []).join(", ");
+}
+
+function buildMockCaseDetail(caseId: string): CaseDetail {
+  return {
+    case: {
+      case_id: caseId,
+      slug: "incident-cluster-at-schulhaus-kopfholz",
+      title: "Incident cluster at Schulhaus Kopfholz",
+      type: "incident",
+      status: "open",
+      classification: "physical",
+      summary: "Case created from area scope around Schulhaus Kopfholz.",
+      uncertainty_notes: "",
+      geometry_json: "",
+      aggregate_geometry_json: "",
+      aggregate_bbox_json: "",
+      anchor_report_seq: 1160263,
+      severity_score: 1,
+      urgency_score: 1,
+      confidence_score: 0.92,
+      exposure_score: 0.88,
+      criticality_score: 0.94,
+      trend_score: 0.73,
+      cluster_count: 3,
+      linked_report_count: 18,
+      first_seen_at: "2026-02-23T12:13:31Z",
+      last_seen_at: "2026-03-11T18:47:29Z",
+      last_cluster_at: "2026-03-11T18:47:29Z",
+      created_by_user_id: "preview",
+      created_at: "2026-03-11T07:37:57Z",
+      updated_at: "2026-03-11T18:47:29Z",
+    },
+    linked_reports: [
+      {
+        case_id: caseId,
+        seq: 1160263,
+        public_id: "rpt_mock_1160263",
+        link_reason: "initial_selection",
+        confidence: 1,
+        attached_at: "2026-03-11T07:37:57Z",
+        title:
+          "Extreme Structural Hazard: Bricks Separating from Primary School Facade",
+        summary:
+          "The facade of a primary school building exhibits significant structural separation, with bricks at imminent risk of falling onto occupied school grounds.",
+        classification: "physical",
+        severity_level: 1,
+        latitude: 47.3085,
+        longitude: 8.53375,
+        report_timestamp: "2026-02-23T12:13:31Z",
+        recipient_count: 0,
+      },
+      {
+        case_id: caseId,
+        seq: 1160312,
+        public_id: "rpt_mock_1160312",
+        link_reason: "cluster_match",
+        confidence: 0.95,
+        attached_at: "2026-03-11T18:47:29Z",
+        title:
+          "Structural Defect: Significant Vertical Crack in Building Facade",
+        summary:
+          "A deep vertical crack is visible along the exterior facade, exposing substrate and suggesting escalating masonry failure.",
+        classification: "physical",
+        severity_level: 0.9,
+        latitude: 47.30849,
+        longitude: 8.53376,
+        report_timestamp: "2026-03-10T14:06:00Z",
+        recipient_count: 0,
+      },
+      {
+        case_id: caseId,
+        seq: 14036,
+        public_id: "rpt_mock_14036",
+        link_reason: "merged_from:case_287e7b4a3c08c00273ddedd8",
+        confidence: 1,
+        attached_at: "2026-03-11T18:35:44Z",
+        title: "Visible Crack in Building Structure",
+        summary:
+          "Visible cracking and joint separation recur across multiple vantage points, reinforcing a school-facade failure pattern.",
+        classification: "physical",
+        severity_level: 0.8,
+        latitude: 47.30848,
+        longitude: 8.53374,
+        report_timestamp: "2026-03-09T10:11:00Z",
+        recipient_count: 0,
+      },
+    ],
+    clusters: [],
+    escalation_targets: [
+      {
+        id: 101,
+        case_id: caseId,
+        role_type: "operator",
+        organization: "Schulhaus Kopfholz",
+        display_name: "Schulverwaltung Adliswil",
+        channel: "email",
+        email: "schulverwaltung@adliswil.ch",
+        phone: "+41447112020",
+        website: "https://www.schule-adliswil.ch/",
+        contact_url: "https://www.schule-adliswil.ch/area_contact",
+        social_platform: "",
+        social_handle: "",
+        target_source: "web_search",
+        confidence_score: 0.93,
+        rationale:
+          "Official school administration contact identified from the school website for the affected campus.",
+        created_at: "2026-03-11T18:47:29Z",
+      },
+      {
+        id: 102,
+        case_id: caseId,
+        role_type: "architect",
+        organization: "Anderegg Partner AG",
+        display_name: "Anderegg Partner AG",
+        channel: "website",
+        email: "",
+        phone: "+41437112233",
+        website: "https://andereggpartner.ch/",
+        contact_url:
+          "https://andereggpartner.ch/referenzen/objekt/2026-erweiterung-schulanlage-kopfholz-adlisiwl",
+        social_platform: "",
+        social_handle: "",
+        target_source: "web_search",
+        confidence_score: 0.83,
+        rationale:
+          "Project-page search result links the firm to the Kopfholz school extension and points to its official contact surface.",
+        created_at: "2026-03-11T18:47:29Z",
+      },
+      {
+        id: 103,
+        case_id: caseId,
+        role_type: "contractor",
+        organization: "Example Bauunternehmung AG",
+        display_name: "Example Bauunternehmung AG",
+        channel: "website",
+        email: "",
+        phone: "+41445550000",
+        website: "https://contractor.example/",
+        contact_url: "https://contractor.example/referenzen/schulhaus-kopfholz",
+        social_platform: "",
+        social_handle: "",
+        target_source: "localhost_preview",
+        confidence_score: 0.78,
+        rationale:
+          "Preview contractor card showing how a construction stakeholder would render when discovered from project references.",
+        created_at: "2026-03-11T18:47:29Z",
+      },
+      {
+        id: 104,
+        case_id: caseId,
+        role_type: "building_authority",
+        organization: "Stadt Adliswil",
+        display_name: "Adliswil building office",
+        channel: "website",
+        email: "",
+        phone: "+41447112000",
+        website: "https://www.adliswil.ch/",
+        contact_url: "https://www.adliswil.ch/de/verwaltung/bau",
+        social_platform: "",
+        social_handle: "",
+        target_source: "web_search",
+        confidence_score: 0.77,
+        rationale:
+          "Municipal building authority identified from the city administration website for local structural-hazard escalation.",
+        created_at: "2026-03-11T18:47:29Z",
+      },
+    ],
+    escalation_actions: [],
+    email_deliveries: [
+      {
+        id: 901,
+        case_id: caseId,
+        action_id: 801,
+        target_id: 101,
+        recipient_email: "schulverwaltung@adliswil.ch",
+        delivery_status: "sent",
+        delivery_source: "case_target",
+        provider: "sendgrid",
+        provider_message_id: "preview-message-1",
+        sent_at: "2026-03-11T18:16:12Z",
+        error_message: "",
+        created_at: "2026-03-11T18:16:12Z",
+      },
+    ],
+    resolution_signals: [],
+    audit_events: [],
+  };
+}
+
+function buildMockCaseEscalationDraft(
+  caseId: string,
+  displayTitle: string,
+  targets: CaseEscalationTarget[],
+  subject: string,
+  body: string,
+  ccEmails: string[],
+): CaseEscalationDraftResponse {
+  const permalink = `https://www.cleanapp.io/cases/${caseId}`;
+  const nextSubject =
+    subject.trim() || `[Preview] Immediate review requested: ${displayTitle}`;
+  const nextBody =
+    body.trim() ||
+    `Guten Tag,\n\nCleanApp has aggregated multiple high-severity structural hazard reports tied to this location. The attached case indicates repeated evidence of facade separation and falling-brick risk near an occupied school site.\n\nCase link: ${permalink}\n\nBitte prüfen Sie die Situation kurzfristig und koordinieren Sie die appropriate technical response.\n`;
+  return {
+    case_id: caseId,
+    subject: nextSubject,
+    body: nextBody,
+    cc_emails: ccEmails,
+    targets,
+    linked_count: 3,
+  };
+}
+
+function buildResponsiblePartyCards(
+  targets: CaseEscalationTarget[],
+  linkedReports: CaseDetail["linked_reports"],
+  landmarkLabel: string | null,
+  previewMode: boolean,
+): ResponsiblePartyCard[] {
+  const preferred = targets.filter(
+    (target) => target.target_source !== "inferred_contact",
+  );
+  const base = preferred.length > 0 ? preferred : targets;
+  if (!previewMode || !looksStructuralCase(linkedReports)) {
+    return base;
+  }
+  const hasStructuralStakeholder = base.some((target) =>
+    ["architect", "contractor", "engineer", "building_authority"].includes(
+      target.role_type,
+    ),
+  );
+  if (hasStructuralStakeholder) {
+    return base;
+  }
+
+  const label = landmarkLabel || "the affected site";
+  return [
+    ...base,
+    {
+      id: -101,
+      case_id: "",
+      role_type: "architect",
+      organization: `Project architect for ${label}`,
+      display_name: `${label} design architect`,
+      channel: "website",
+      email: "",
+      phone: "",
+      website: "https://architect.example/contact",
+      contact_url: "https://architect.example/projects",
+      social_platform: "",
+      social_handle: "",
+      target_source: "localhost_preview",
+      confidence_score: 0.82,
+      rationale:
+        "Preview-only localhost card for a structurally relevant architect stakeholder.",
+      created_at: "",
+      preview_only: true,
+    },
+    {
+      id: -102,
+      case_id: "",
+      role_type: "contractor",
+      organization: `General contractor for ${label}`,
+      display_name: `${label} build contractor`,
+      channel: "website",
+      email: "",
+      phone: "",
+      website: "https://contractor.example/contact",
+      contact_url: "https://contractor.example/references",
+      social_platform: "",
+      social_handle: "",
+      target_source: "localhost_preview",
+      confidence_score: 0.79,
+      rationale:
+        "Preview-only localhost card for a structurally relevant contractor stakeholder.",
+      created_at: "",
+      preview_only: true,
+    },
+    {
+      id: -103,
+      case_id: "",
+      role_type: "building_authority",
+      organization: `${label} municipal building office`,
+      display_name: "Local building authority",
+      channel: "website",
+      email: "",
+      phone: "",
+      website: "https://municipality.example/building-office",
+      contact_url: "https://municipality.example/emergency-reporting",
+      social_platform: "",
+      social_handle: "",
+      target_source: "localhost_preview",
+      confidence_score: 0.74,
+      rationale:
+        "Preview-only localhost card showing how a municipal authority would appear.",
+      created_at: "",
+      preview_only: true,
+    },
+  ];
+}
+
+function buildHolisticClusterSummary(
+  displayTitle: string,
+  landmarkLabel: string | null,
+  linkedReports: CaseDetail["linked_reports"],
+  classification: string,
+): string {
+  if (linkedReports.length === 0) {
+    return `No linked reports are available yet for ${landmarkLabel || "this case"}.`;
+  }
+
+  const highestSeverity = linkedReports[0]?.severity_level || 0;
+  const severeCount = linkedReports.filter(
+    (report) => report.severity_level >= 0.8,
+  ).length;
+  const recurringThemes = topThemeTerms(linkedReports, 3);
+  const firstSeen = linkedReports
+    .map((report) => new Date(report.report_timestamp))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  const lastSeen = linkedReports
+    .map((report) => new Date(report.report_timestamp))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+
+  const place = landmarkLabel || "the affected site";
+  const timeWindow =
+    firstSeen && lastSeen
+      ? ` Reports span from ${firstSeen.toLocaleDateString()} to ${lastSeen.toLocaleDateString()}.`
+      : "";
+  const themes =
+    recurringThemes.length > 0
+      ? ` Repeated themes include ${recurringThemes.join(", ")}.`
+      : "";
+
+  if (looksStructuralCase(linkedReports)) {
+    return `${linkedReports.length} linked reports converge on a structural hazard at ${place}. ${severeCount} reports are already in the highest-severity band, and the strongest evidence in "${displayTitle}" points to falling-material risk near an occupied public site.${themes}${timeWindow}`;
+  }
+
+  return `${linkedReports.length} linked ${classification} reports around ${place} point to a recurring incident pattern rather than a one-off event. The strongest report severity is ${Math.round(highestSeverity * 100)}%.${themes}${timeWindow}`;
+}
+
+function topThemeTerms(
+  linkedReports: CaseDetail["linked_reports"],
+  limit: number,
+): string[] {
+  const stopWords = new Set([
+    "the",
+    "and",
+    "with",
+    "from",
+    "this",
+    "that",
+    "building",
+    "school",
+    "hazard",
+    "incident",
+    "structural",
+    "report",
+    "reports",
+    "primary",
+    "exterior",
+  ]);
+  const counts = new Map<string, number>();
+  for (const report of linkedReports) {
+    const tokens = `${report.title} ${report.summary}`
+      .toLowerCase()
+      .match(/[a-zà-ÿ]{4,}/g);
+    if (!tokens) {
+      continue;
+    }
+    for (const token of tokens) {
+      if (stopWords.has(token)) {
+        continue;
+      }
+      counts.set(token, (counts.get(token) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([token]) => token);
+}
+
+function looksStructuralCase(
+  linkedReports: CaseDetail["linked_reports"],
+): boolean {
+  const keywords = [
+    "brick",
+    "bricks",
+    "crack",
+    "cracks",
+    "cracking",
+    "facade",
+    "wall",
+    "concrete",
+    "masonry",
+    "structural",
+    "collapse",
+    "falling",
+    "roof",
+    "beam",
+  ];
+  return linkedReports.some((report) => {
+    const text = `${report.title} ${report.summary}`.toLowerCase();
+    return keywords.some((keyword) => text.includes(keyword));
+  });
+}
+
+function formatRoleType(roleType: string): string {
+  switch (roleType) {
+    case "building_authority":
+      return "Building authority";
+    case "facility_manager":
+      return "Facility manager";
+    default:
+      return roleType
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
+function formatTargetSourceLabel(source: string): string {
+  switch (source) {
+    case "area_contact":
+      return "Mapped local contact";
+    case "osm_reverse":
+      return "OpenStreetMap contact";
+    case "osm_poi":
+      return "Nearby place contact";
+    case "google_places":
+      return "Google Places contact";
+    case "web_search":
+      return "Web-discovered stakeholder";
+    case "localhost_preview":
+      return "Local preview stakeholder";
+    default:
+      return source
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
 }
 
 function humanizeAuditEvent(eventType: string) {
