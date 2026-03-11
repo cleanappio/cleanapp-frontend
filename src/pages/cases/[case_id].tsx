@@ -134,6 +134,50 @@ export default function CaseDetailPage() {
     );
   }, [detail, selectedTargetIds]);
 
+  const caseRecord = detail?.case ?? null;
+  const linkedReports = detail?.linked_reports ?? [];
+  const emailDeliveries = detail?.email_deliveries ?? [];
+  const escalationTargets = detail?.escalation_targets ?? [];
+  const landmarkLabel = useMemo(
+    () => deriveCaseLandmarkLabel(escalationTargets),
+    [escalationTargets],
+  );
+  const displayTitle = useMemo(
+    () => buildCaseDisplayTitle(caseRecord?.title, landmarkLabel),
+    [caseRecord?.title, landmarkLabel],
+  );
+  const displaySummary = useMemo(
+    () => buildCaseDisplaySummary(caseRecord?.summary, landmarkLabel),
+    [caseRecord?.summary, landmarkLabel],
+  );
+  const bannerCandidates = useMemo(
+    () =>
+      [...linkedReports]
+        .filter((report) => !!report.public_id)
+        .sort((a, b) => {
+          if (b.severity_level !== a.severity_level) {
+            return b.severity_level - a.severity_level;
+          }
+          return (
+            new Date(b.report_timestamp).getTime() -
+            new Date(a.report_timestamp).getTime()
+          );
+        }),
+    [linkedReports],
+  );
+  const activeBannerReport = bannerCandidates[bannerIndex] || null;
+  const activeBannerImageUrl = activeBannerReport
+    ? `${
+        process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"
+      }/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(
+        activeBannerReport.public_id,
+      )}`
+    : null;
+
+  useEffect(() => {
+    setBannerIndex(0);
+  }, [bannerCandidates.length, caseRecord?.case_id]);
+
   const timelineItems = useMemo(() => {
     if (!detail) return [];
 
@@ -279,43 +323,7 @@ export default function CaseDetailPage() {
     );
   }
 
-  const { case: caseRecord } = detail;
-  const linkedReports = detail.linked_reports ?? [];
-  const emailDeliveries = detail.email_deliveries ?? [];
-  const escalationTargets = detail.escalation_targets ?? [];
-  const landmarkLabel = deriveCaseLandmarkLabel(escalationTargets);
-  const displayTitle = buildCaseDisplayTitle(caseRecord.title, landmarkLabel);
-  const displaySummary = buildCaseDisplaySummary(
-    caseRecord.summary,
-    landmarkLabel,
-  );
-  const bannerCandidates = useMemo(
-    () =>
-      [...linkedReports]
-        .filter((report) => !!report.public_id)
-        .sort((a, b) => {
-          if (b.severity_level !== a.severity_level) {
-            return b.severity_level - a.severity_level;
-          }
-          return (
-            new Date(b.report_timestamp).getTime() -
-            new Date(a.report_timestamp).getTime()
-          );
-        }),
-    [linkedReports],
-  );
-  const activeBannerReport = bannerCandidates[bannerIndex] || null;
-  const activeBannerImageUrl = activeBannerReport
-    ? `${
-        process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"
-      }/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(
-        activeBannerReport.public_id,
-      )}`
-    : null;
-
-  useEffect(() => {
-    setBannerIndex(0);
-  }, [caseRecord.case_id, bannerCandidates.length]);
+  const caseView = detail.case;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -364,15 +372,15 @@ export default function CaseDetailPage() {
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-200 bg-white p-6 md:grid-cols-4">
-            <MetricCard label="Status" value={caseRecord.status} />
+            <MetricCard label="Status" value={caseView.status} />
             <MetricCard label="Reports" value={String(linkedReports.length)} />
             <MetricCard
               label="Severity"
-              value={`${Math.round(caseRecord.severity_score * 100)}%`}
+              value={`${Math.round(caseView.severity_score * 100)}%`}
             />
             <MetricCard
               label="Urgency"
-              value={`${Math.round(caseRecord.urgency_score * 100)}%`}
+              value={`${Math.round(caseView.urgency_score * 100)}%`}
             />
             {bannerCandidates.length > 1 && (
               <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
