@@ -148,7 +148,19 @@ export default function CaseDetailPage() {
   );
 
   const caseRecord = detail?.case ?? null;
-  const linkedReports = useMemo(() => detail?.linked_reports ?? [], [detail]);
+  const linkedReports = useMemo(
+    () =>
+      [...(detail?.linked_reports ?? [])].sort((a, b) => {
+        if (b.severity_level !== a.severity_level) {
+          return b.severity_level - a.severity_level;
+        }
+        return (
+          new Date(b.report_timestamp).getTime() -
+          new Date(a.report_timestamp).getTime()
+        );
+      }),
+    [detail],
+  );
   const emailDeliveries = useMemo(
     () => detail?.email_deliveries ?? [],
     [detail],
@@ -486,41 +498,50 @@ export default function CaseDetailPage() {
                     key={`${report.case_id}-${report.seq}`}
                     className="rounded-xl border border-slate-200 px-4 py-3"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {report.title || `Report #${report.seq}`}
-                        </p>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {report.summary || "No summary available."}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-2">
-                          Link reason: {report.link_reason || "cluster_match"} ·
-                          confidence {Math.round(report.confidence * 100)}%
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${scorePillTone(report.severity_level)}`}
-                        >
-                          Severity {Math.round(report.severity_level * 100)}%
-                        </p>
-                        <Link
-                          href={
-                            getCanonicalReportPath(
-                              report.classification === "digital"
-                                ? "digital"
-                                : "physical",
-                              report.public_id,
-                            ) ||
-                            `/?tab=${report.classification}&seq=${report.seq}`
-                          }
-                          className="text-sm text-blue-600 hover:text-blue-500"
-                        >
-                          Open report
-                        </Link>
-                      </div>
-                    </div>
+                    {(() => {
+                      const reportHref =
+                        getCanonicalReportPath(
+                          report.classification === "digital"
+                            ? "digital"
+                            : "physical",
+                          report.public_id,
+                        ) || `/?tab=${report.classification}&seq=${report.seq}`;
+
+                      return (
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <Link
+                              href={reportHref}
+                              className="font-semibold text-slate-900 hover:text-blue-600 hover:underline"
+                            >
+                              {report.title || `Report #${report.seq}`}
+                            </Link>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {report.summary || "No summary available."}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-2">
+                              Link reason:{" "}
+                              {report.link_reason || "cluster_match"} ·
+                              confidence {Math.round(report.confidence * 100)}%
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${scorePillTone(report.severity_level)}`}
+                            >
+                              Severity {Math.round(report.severity_level * 100)}
+                              %
+                            </p>
+                            <Link
+                              href={reportHref}
+                              className="text-sm text-blue-600 hover:text-blue-500"
+                            >
+                              Open report
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
