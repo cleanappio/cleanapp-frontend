@@ -33,7 +33,7 @@ export async function fetchPublicLatest(
   n: number = 10,
 ): Promise<PublicDiscoveryBatch> {
   return fetchJson<PublicDiscoveryBatch>(
-    buildUrl("/api/v4/public/discovery/last", { classification, lang, n }),
+    buildUrl("/api/v3/public/discovery/last", { classification, lang, n }),
   );
 }
 
@@ -44,7 +44,7 @@ export async function searchPublicReports(
   n: number = 12,
 ): Promise<PublicDiscoveryBatch> {
   return fetchJson<PublicDiscoveryBatch>(
-    buildUrl("/api/v4/public/discovery/search", { q, classification, lang, n }),
+    buildUrl("/api/v3/public/discovery/search", { q, classification, lang, n }),
   );
 }
 
@@ -54,7 +54,7 @@ export async function fetchPublicBrandReports(
   n: number = 12,
 ): Promise<PublicDiscoveryBatch> {
   return fetchJson<PublicDiscoveryBatch>(
-    buildUrl("/api/v4/public/discovery/by-brand", {
+    buildUrl("/api/v3/public/discovery/by-brand", {
       brand_name: brandName,
       lang,
       n,
@@ -66,7 +66,7 @@ export async function fetchPublicDigitalBrandSummaries(
   lang: string,
 ): Promise<PublicBrandSummary[]> {
   return fetchJson<PublicBrandSummary[]>(
-    buildUrl("/api/v4/public/discovery/brands/summary", {
+    buildUrl("/api/v3/public/discovery/brands/summary", {
       classification: "digital",
       lang,
     }),
@@ -79,7 +79,7 @@ export async function fetchPublicPhysicalPoints(
   limit: number = 4000,
 ): Promise<PublicPhysicalPoint[]> {
   return fetchJson<PublicPhysicalPoint[]>(
-    buildUrl("/api/v4/public/discovery/physical-points", {
+    buildUrl("/api/v3/public/discovery/physical-points", {
       bbox: bbox.join(","),
       zoom,
       limit,
@@ -91,6 +91,6 @@ export async function resolvePublicDiscoveryToken(
   token: string,
 ): Promise<PublicDiscoveryResolveResponse> {
   return fetchJson<PublicDiscoveryResolveResponse>(
-    buildUrl("/api/v4/public/resolve", { token }),
+    buildUrl("/api/v3/public/resolve", { token }),
   );
 }
