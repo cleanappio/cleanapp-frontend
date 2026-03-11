@@ -2,6 +2,7 @@
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import { useReportsByBrand } from "@/hooks/useReportsByBrand";
+import { usePublicReportsByBrand } from "@/hooks/usePublicReportsByBrand";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
 import { useRouter } from "next/router";
@@ -27,8 +28,25 @@ export default function DigitalBrandPage() {
 
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  const { brandReports, totalCount, highPriority, mediumPriority, isLoading, error, fetchRecentReportsByBrand } =
-    useReportsByBrand(brand_name as string, locale);
+  const {
+    brandReports,
+    totalCount: subscribedTotalCount,
+    highPriority: subscribedHighPriority,
+    mediumPriority: subscribedMediumPriority,
+    isLoading: subscribedLoading,
+    error: subscribedError,
+    fetchRecentReportsByBrand,
+  } = useReportsByBrand(brand_name as string, locale, isSubscribed);
+
+  const {
+    items: publicBrandItems,
+    totalCount: publicTotalCount,
+    highPriority: publicHighPriority,
+    mediumPriority: publicMediumPriority,
+    brandDisplayName: publicBrandDisplayName,
+    isLoading: publicLoading,
+    error: publicError,
+  } = usePublicReportsByBrand(brand_name as string, locale, !isSubscribed);
 
   useEffect(() => {
     // Only show subscribed view if user has an active subscription
@@ -39,7 +57,13 @@ export default function DigitalBrandPage() {
     }
   }, [isAuthenticated, isAuthLoading, subscription, billingLoading]);
 
-  if (isLoading || isAuthLoading || billingLoading) {
+  const isLoading = isAuthLoading || billingLoading || (isSubscribed ? subscribedLoading : publicLoading);
+  const error = isSubscribed ? subscribedError : publicError;
+  const totalCount = isSubscribed ? subscribedTotalCount : publicTotalCount;
+  const highPriority = isSubscribed ? subscribedHighPriority : publicHighPriority;
+  const mediumPriority = isSubscribed ? subscribedMediumPriority : publicMediumPriority;
+
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
         <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
@@ -71,7 +95,13 @@ export default function DigitalBrandPage() {
             </p>
             <p className="text-sm text-red-500 mt-1">{error}</p>
             <button
-              onClick={() => fetchRecentReportsByBrand(brand_name as string)}
+              onClick={() => {
+                if (isSubscribed) {
+                  fetchRecentReportsByBrand(brand_name as string);
+                  return;
+                }
+                router.replace(router.asPath);
+              }}
               className="mt-4 sm:mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-4 sm:py-2 rounded-md transition-colors text-sm"
             >
               {t("retry")}
@@ -99,13 +129,17 @@ export default function DigitalBrandPage() {
     );
   };
 
+  const pageBrandDisplayName = isSubscribed
+    ? getAnalysis(brandReports) &&
+      getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName
+    : publicBrandDisplayName || (brand_name as string);
+
   return (
     <div className="bg-gray-50">
       <PageHeader />
       <div className="max-w-7xl mx-auto my-6 sm:my-8 px-6 md:px-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-4">
-          {getAnalysis(brandReports) &&
-            getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName}
+          {pageBrandDisplayName}
         </h1>
         <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
           {t("totalReports")} ({totalCount})
@@ -119,7 +153,7 @@ export default function DigitalBrandPage() {
         {isSubscribed && (
           <SubscribedBrandDashboard brandReports={brandReports} />
         )}
-        {!isSubscribed && <PublicBrandDashboard brandReports={brandReports} />}
+        {!isSubscribed && <PublicBrandDashboard items={publicBrandItems} />}
         <AIInsights brandReports={brandReports} totalCount={totalCount} highPriority={highPriority} mediumPriority={mediumPriority} />
       </div>
 

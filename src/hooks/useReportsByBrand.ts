@@ -3,7 +3,11 @@ import { useTranslations } from "@/lib/i18n";
 import { getPreferredReportLanguage } from "@/lib/report-language";
 import { useEffect, useState } from "react";
 
-export const useReportsByBrand = (brand_name: string, locale: string) => {
+export const useReportsByBrand = (
+  brand_name: string,
+  locale: string,
+  enabled: boolean = true,
+) => {
   const [brandReports, setBrandReports] = useState<ReportWithAnalysis[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [highPriority, setHighPriority] = useState<number>(0);
@@ -36,13 +40,21 @@ export const useReportsByBrand = (brand_name: string, locale: string) => {
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setBrandReports([]);
+      setTotalCount(0);
+      setHighPriority(0);
+      setMediumPriority(0);
+      setIsLoading(false);
+      return;
+    }
     if (brand_name) {
       fetchRecentReportsByBrand(brand_name);
     }
     // Intentionally not depending on t(): the translation function is recreated
     // per render in i18n hook and would retrigger fetch loops/flicker.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brand_name, locale]);
+  }, [brand_name, enabled, locale]);
 
   return { brandReports, totalCount, highPriority, mediumPriority, isLoading, error, fetchRecentReportsByBrand };
 };

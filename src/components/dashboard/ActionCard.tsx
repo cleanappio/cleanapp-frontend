@@ -181,11 +181,18 @@ export default function ActionCard() {
                     {searchResults.length > 0 ? (
                       searchResults.map((result) => (
                         <button
-                          key={result.report.seq}
+                          key={result.discovery_token}
                           className="p-3 text-left text-gray-200 hover:bg-white/10 w-full text-sm border-b border-white/5 last:border-none"
-                          onClick={() => handleBrandClick(result.analysis?.[0]?.brand_name || searchTerm, result.analysis?.[0]?.brand_display_name || result.analysis?.[0]?.brand_name || searchTerm)}
+                          onClick={() =>
+                            handleBrandClick(
+                              result.brand_name || searchTerm,
+                              result.brand_display_name || result.brand_name || searchTerm,
+                            )
+                          }
                         >
-                          <p className="line-clamp-1 opacity-80">{result.analysis?.[0]?.title || `Report #${result.report.seq}`}</p>
+                          <p className="line-clamp-1 opacity-80">
+                            {result.title || result.brand_display_name || result.brand_name || "Report"}
+                          </p>
                         </button>
                       ))
                     ) : !matchingBrand && !searchLoading && (

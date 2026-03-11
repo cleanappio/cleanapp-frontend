@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ReportWithAnalysis } from "@/components/GlobeView";
 import { PlaceSearchResult, PlaceSearchResponse } from "@/lib/place-search";
+import { searchPublicReports } from "@/lib/public-discovery-api";
+import { PublicDiscoveryCard } from "@/types/public-discovery";
+import { getCurrentLocale } from "@/lib/i18n";
 
 export const useBackendSearch = (classification: "digital" | "physical") => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<ReportWithAnalysis[]>([]);
+  const [searchResults, setSearchResults] = useState<PublicDiscoveryCard[]>([]);
   const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,22 +38,15 @@ export const useBackendSearch = (classification: "digital" | "physical") => {
 
     const controller = new AbortController();
     const requestId = ++latestRequestIdRef.current;
-    const apiUrl =
-      process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
+    const locale = getCurrentLocale();
 
     const search = async (term: string, cls: "digital" | "physical") => {
       try {
         setLoading(true);
         setError(null);
 
-        const requests: Promise<Response>[] = [
-          fetch(
-            `${apiUrl}/api/v3/reports/search?q=${encodeURIComponent(term)}&classification=${cls}`,
-            {
-              signal: controller.signal,
-              cache: "no-store",
-            }
-          ),
+        const requests: Promise<unknown>[] = [
+          searchPublicReports(term, cls, locale, 12),
         ];
 
         if (cls === "physical") {
@@ -73,21 +68,18 @@ export const useBackendSearch = (classification: "digital" | "physical") => {
         let firstError: string | null = null;
 
         if (reportsResponse.status === "fulfilled") {
-          if (!reportsResponse.value.ok) {
-            firstError = `Failed to search: ${reportsResponse.value.status}`;
-            setSearchResults([]);
-          } else {
-            const data = await reportsResponse.value.json();
-            setSearchResults(data.reports || []);
-            reportsLoaded = true;
-          }
+          const data = reportsResponse.value as { items?: PublicDiscoveryCard[] };
+          setSearchResults(data.items || []);
+          reportsLoaded = true;
         } else {
           firstError = reportsResponse.reason instanceof Error ? reportsResponse.reason.message : "Load failed";
           setSearchResults([]);
         }
 
         if (cls === "physical") {
-          const placesSettled = placesResponse;
+          const placesSettled = placesResponse as
+            | PromiseSettledResult<Response>
+            | undefined;
           if (placesSettled && placesSettled.status === "fulfilled") {
             if (placesSettled.value.ok) {
               const placesData = (await placesSettled.value.json()) as PlaceSearchResponse;

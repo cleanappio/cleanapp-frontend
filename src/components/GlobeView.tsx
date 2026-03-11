@@ -21,12 +21,12 @@ import {
 import LanguageSwitcher from "./LanguageSwitcher";
 import { MAX_REPORTS_LIMIT } from "@/constants/app_constants";
 import { CollapsibleLatestReports } from "./CollapsibleLatestReports";
+import { PublicCollapsibleLatestReports } from "./PublicCollapsibleLatestReports";
 
 // Define interface for company object
 import ReportCounter from "./ReportCounter";
 import { useReportTabs } from "@/hooks/useReportTabs";
 import { ReportTabs } from "@/components/ui/ReportTabs";
-import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
@@ -41,6 +41,16 @@ import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 import { getCanonicalReportPath } from "@/lib/report-links";
+import { usePublicMapDiscovery } from "@/hooks/usePublicMapDiscovery";
+import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
+import {
+  resolvePublicDiscoveryToken,
+} from "@/lib/public-discovery-api";
+import {
+  PublicBrandSummary,
+  PublicDiscoveryCard,
+  PublicPhysicalPoint,
+} from "@/types/public-discovery";
 
 type ActiveCaseScope = {
   label: string;
@@ -96,6 +106,8 @@ export interface ReportWithAnalysis {
   analysis: ReportAnalysis[];
 }
 
+type PublicMapItem = PublicPhysicalPoint | PublicBrandSummary;
+
 // Responsive hook for mobile detection
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -136,10 +148,14 @@ export default function GlobeView() {
   const mapRef = useRef<MapRef | null>(null);
   const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [latestReports, setLatestReports] = useState<ReportResponse[]>([]);
+  const [latestReports, setLatestReports] = useState<PublicMapItem[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
   >([]);
+  const [physicalBBox, setPhysicalBBox] = useState<
+    [number, number, number, number] | null
+  >(null);
+  const [mapZoom, setMapZoom] = useState(2.5);
   const [selectedSearchPlace, setSelectedSearchPlace] =
     useState<PlaceSearchResult | null>(null);
   const [selectedPlaceReports, setSelectedPlaceReports] = useState<
@@ -253,16 +269,6 @@ export default function GlobeView() {
     setSelectedTab: setSelectedTabOriginal,
     isPhysical,
     isDigital,
-    filteredReports: filteredLatestReports,
-    physicalReports,
-    digitalReports,
-    loading: reportTabsLoading,
-    errors: reportTabsErrors,
-    fetchPhysicalReports,
-    fetchDigitalReports,
-    fetchCurrentTabReports,
-    appendPhysicalFull,
-    appendDigitalFull,
   } = useReportTabs();
 
   const {
@@ -283,6 +289,17 @@ export default function GlobeView() {
   );
 
   const locale = getCurrentLocale();
+
+  const {
+    items: publicLatestItems,
+    loading: publicLatestLoading,
+    error: publicLatestError,
+  } = usePublicLatestReports(selectedTab);
+
+  const {
+    physicalItems: publicPhysicalItems,
+    digitalItems: publicDigitalItems,
+  } = usePublicMapDiscovery(selectedTab, physicalBBox, mapZoom);
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -332,14 +349,6 @@ export default function GlobeView() {
     [router, setSelectedTabOriginal, seq, selectedBrandName],
   );
 
-  const {
-    physicalReports: latestPhysicalReportsV2,
-    digitalReports: latestDigitalReportsV2,
-    loading: liteLoadingByTabV2,
-    appendPhysicalLite: appendPhysicalLiteV2,
-    appendDigitalLite: appendDigitalLiteV2,
-  } = useLiteReportsByTabV2();
-
   const openCanonicalReport = useCallback(
     (classification: "physical" | "digital", publicId?: string | null) => {
       const target = getCanonicalReportPath(classification, publicId);
@@ -348,6 +357,43 @@ export default function GlobeView() {
       }
       void router.push(target);
       return true;
+    },
+    [router],
+  );
+
+  const openPublicDiscoveryItem = useCallback(
+    async (item: PublicDiscoveryCard) => {
+      const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
+      if (resolved.canonical_path) {
+        await router.push(resolved.canonical_path);
+      }
+    },
+    [router],
+  );
+
+  const openPublicDiscoveryToken = useCallback(
+    async (token?: string | null) => {
+      if (!token) {
+        return;
+      }
+      const resolved = await resolvePublicDiscoveryToken(token);
+      if (resolved.canonical_path) {
+        await router.push(resolved.canonical_path);
+      }
+    },
+    [router],
+  );
+
+  const openPublicBrandSummary = useCallback(
+    async (item: PublicBrandSummary) => {
+      if (item.brand_name) {
+        await router.push(`/digital/${encodeURIComponent(item.brand_name)}`);
+        return;
+      }
+      const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
+      if (resolved.canonical_path) {
+        await router.push(resolved.canonical_path);
+      }
     },
     [router],
   );
@@ -524,6 +570,24 @@ export default function GlobeView() {
       return null;
     }
   }, [mapLoaded, mapStyleLoaded]);
+
+  const updatePhysicalViewport = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) {
+      return;
+    }
+    const bounds = map.getBounds();
+    if (!bounds) {
+      return;
+    }
+    setPhysicalBBox([
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ]);
+    setMapZoom(map.getZoom() || 2.5);
+  }, []);
 
   // Retry mechanism for map operations
   const retryMapOperation = useCallback(
@@ -721,7 +785,7 @@ export default function GlobeView() {
 
   const displayedReportsLoading = selectedSearchPlace
     ? selectedPlaceReportsLoading
-    : reportTabsLoading.current && latestReportsWithAnalysis.length === 0;
+    : false;
 
   // Handle query parameter for report sharing
   useEffect(() => {
@@ -1702,78 +1766,60 @@ export default function GlobeView() {
 
   // Add report pins to the map when reports are loaded
   useEffect(() => {
-    if (mapLoaded && mapRef.current && latestReports.length > 0) {
+    if (mapLoaded && mapRef.current) {
       const map = mapRef.current.getMap();
       if (map) {
-        // console.log("map", map);
-        // Create GeoJSON data from reports
         const reportFeatures = latestReports.map((report, index) => {
-          // const locale = getCurrentLocale();
-          // const reportAnalysis = report.analysis.find(
-          //   (analysis) => analysis.language === locale
-          // );
-
-          const classification = report.classification;
-
-          // Default value to digital lat, lon
-          var latitude = 0,
-            longitude = 0,
-            color = "",
-            title = "",
-            size = 10;
-
-          const isDigital = classification === "digital";
-          const isPhysical = classification === "physical";
-
-          if (isPhysical) {
-            latitude = report.latitude;
-            longitude = report.longitude;
-            color = getColorByValue(report.severity_level);
+          if (selectedTab === "physical") {
+            const point = report as PublicPhysicalPoint;
+            return {
+              type: "Feature" as const,
+              geometry: {
+                type: "Point" as const,
+                coordinates: [point.longitude, point.latitude],
+              },
+              properties: {
+                color: getColorByValue(point.severity_level),
+                title:
+                  point.kind === "cluster" ? `${point.count || 0} reports` : "",
+                index,
+                severity: point.severity_level,
+                classification: "physical",
+                size:
+                  point.kind === "cluster"
+                    ? 10 + Math.min(14, Math.log2((point.count || 1) + 1) * 4)
+                    : 10,
+                kind: point.kind,
+                count: point.count || 0,
+                markerToken: point.marker_token || "",
+              },
+            };
           }
 
-          if (isDigital) {
-            const brandName = report.brand_name;
-            const brandDisplayName = report.brand_display_name;
-
-            if (!brandName) return;
-
-            // console.log("brandName", brandName);
-            // console.log("brandDisplayName", brandDisplayName);
-            const {
-              lat,
-              lon,
-              color: brandColor,
-            } = stringToLatLonColor(brandName);
-            color = brandColor;
-            latitude = lat;
-            longitude = lon;
-            title = `${brandDisplayName} (${report.total})`;
-
-            const total = report.total;
-            // Calculate size based on report count (shared helper)
-            const baseSize = 10;
-            size = baseSize + computeDigitalSizeIncrement(total);
-          }
+          const brand = report as PublicBrandSummary;
+          const {
+            lat,
+            lon,
+            color: brandColor,
+          } = stringToLatLonColor(brand.brand_name);
 
           return {
             type: "Feature" as const,
             geometry: {
               type: "Point" as const,
-              coordinates: [longitude, latitude],
+              coordinates: [lon, lat],
             },
             properties: {
-              color: color,
-              seq: isPhysical ? report.seq : undefined,
-              title: title,
-              index: index,
-              severity: isPhysical ? report.severity_level : undefined,
-              classification: classification,
-              size: size,
+              color: brandColor,
+              title: `${brand.brand_display_name} (${brand.total})`,
+              index,
+              classification: "digital",
+              size: 10 + computeDigitalSizeIncrement(brand.total),
+              kind: "brand",
             },
           };
         });
 
-        // Filter reports by classification (physical or digital) and add to the map
         const reportGeoJSON = {
           type: "FeatureCollection" as const,
           features: reportFeatures.filter(
@@ -1803,6 +1849,8 @@ export default function GlobeView() {
               "circle-radius": [
                 "case",
                 ["==", ["get", "classification"], "digital"],
+                ["get", "size"],
+                ["==", ["get", "kind"], "cluster"],
                 ["get", "size"],
                 [
                   "interpolate",
@@ -1839,10 +1887,17 @@ export default function GlobeView() {
         const handleReportPinClick = (e: any) => {
           if (e.features && e.features[0]) {
             const feature = e.features[0];
-            const reportIndex = feature.properties?.index;
-            if (reportIndex !== undefined && latestReports[reportIndex]) {
-              const report = latestReports[reportIndex];
-              void openReportFromSummary(report);
+            if (feature.properties?.kind === "cluster") {
+              map.easeTo({
+                center: feature.geometry.coordinates,
+                zoom: Math.min((map.getZoom() || 2.5) + 2, 12),
+                duration: 600,
+              });
+              return;
+            }
+            const markerToken = feature.properties?.markerToken;
+            if (typeof markerToken === "string" && markerToken) {
+              void openPublicDiscoveryToken(markerToken);
             }
           }
         };
@@ -1882,7 +1937,7 @@ export default function GlobeView() {
     isPhysical,
     mapLoaded,
     latestReports,
-    openReportFromSummary,
+    openPublicDiscoveryToken,
     selectedTab,
   ]);
 
@@ -2188,9 +2243,9 @@ export default function GlobeView() {
     // Helper to convert DIGITAL_PROPERTIES to GeoJSON FeatureCollection
     function getDigitalTerritoriesGeoJSON() {
       const features = [];
-      const digitalReports = latestReports.filter(
-        (report) => report.classification === "digital",
-      );
+      const digitalReports = latestReports.filter((report) => {
+        return report.classification === "digital";
+      }) as PublicBrandSummary[];
 
       for (const report of digitalReports) {
         const brandName = report.brand_name;
@@ -2357,9 +2412,12 @@ export default function GlobeView() {
       const brandName = feature.properties?.parentName;
       if (!brandName) return;
 
-      const report = latestReports.find(
-        (r) => r.classification === "digital" && r.brand_name === brandName,
-      ) as unknown as DigitalReportResponse | undefined;
+      const report = latestReports.find((r) => {
+        return (
+          r.classification === "digital" &&
+          (r as PublicBrandSummary).brand_name === brandName
+        );
+      }) as PublicBrandSummary | undefined;
 
       if (!report) return;
 
@@ -2371,7 +2429,7 @@ export default function GlobeView() {
         );
         trackBrandSearch(brandName);
       }
-      void openReportFromSummary(report as unknown as ReportResponse);
+      void openPublicBrandSummary(report);
     }
     function setPointer() {
       if (map) map.getCanvas().style.cursor = "pointer";
@@ -2416,159 +2474,19 @@ export default function GlobeView() {
     latestReports,
     mapLoaded,
     mapStyleLoaded,
-    openReportFromSummary,
+    openPublicBrandSummary,
     selectedTab,
     trackBrandSearch,
   ]);
 
-  useEffect(() => {
-    // Connect to the WebSocket endpoint
-    const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`,
-    );
-
-    ws.onopen = function () {
-      console.log("=== WebSocket Connected ===");
-    };
-
-    ws.onmessage = function (event) {
-      const message = JSON.parse(event.data);
-
-      if (message.type === "reports") {
-        const batch = message.data;
-        console.log("Batch", batch);
-        const currentLocale = getCurrentLocale();
-        const filteredReports = filterAnalysesByLanguage(
-          batch.reports || [],
-          currentLocale,
-        );
-
-        // Fly to new report location and animate the pin (if any filtered reports)
-        if (
-          filteredReports.length > 0 &&
-          filteredReports[0].analysis[0] &&
-          selectedTab === filteredReports[0].analysis[0].classification
-        ) {
-          handleNewReport(filteredReports[0]);
-        }
-
-        // Append into lite arrays used by map (physical/digital) and into full arrays used by list
-        const toAppend = filteredReports.map((report) => ({
-          report: {
-            seq: report.report.seq,
-            timestamp: report.report.timestamp,
-            id: report.report.id,
-            latitude: report.report.latitude,
-            longitude: report.report.longitude,
-            image: report.report.image,
-          },
-          analysis: report.analysis,
-        }));
-
-        if (
-          toAppend.length > 0 &&
-          toAppend[0].analysis &&
-          toAppend[0].analysis[0] &&
-          toAppend[0].analysis[0].classification
-        ) {
-          const classification = toAppend[0].analysis[0].classification;
-          if (classification === "physical") {
-            for (const report of toAppend) {
-              // Update lite arrays for map
-              appendPhysicalLiteV2([
-                {
-                  classification: "physical",
-                  seq: report.report.seq,
-                  latitude: report.report.latitude,
-                  longitude: report.report.longitude,
-                  severity_level: report.analysis[0].severity_level,
-                } as PhysicalReportResponse,
-              ]);
-            }
-            // Update full arrays for list
-            appendPhysicalFull(toAppend);
-          } else {
-            for (const report of toAppend) {
-              appendDigitalLiteV2([
-                {
-                  classification: "digital",
-                  brand_name: report.analysis[0]?.brand_name || "other",
-                  brand_display_name:
-                    report.analysis[0]?.brand_display_name || "Other",
-                  total: report.analysis[0]?.total || 1,
-                } as DigitalReportResponse,
-              ]);
-            }
-            appendDigitalFull(toAppend);
-          }
-        }
-
-        // Update LatestReportsWithAnalysis only when the classification matches current tab
-        if (
-          filteredReports.length > 0 &&
-          filteredReports[0].analysis[0] &&
-          selectedTab === filteredReports[0].analysis[0].classification
-        ) {
-          setLatestReportsWithAnalysis((prev) => {
-            const newReports = filteredReports.map((report) => ({
-              report: {
-                seq: report.report.seq,
-                timestamp: report.report.timestamp,
-                id: report.report.id,
-                latitude: report.report.latitude,
-                longitude: report.report.longitude,
-                image: report.report.image,
-              },
-              analysis: report.analysis[0],
-            }));
-            const seen = new Set<number>();
-            const combined = [...newReports, ...prev].filter((item) => {
-              const seq = item.report?.seq as number;
-              if (seen.has(seq)) return false;
-              seen.add(seq);
-              return true;
-            });
-            return combined;
-          });
-        }
-      }
-    };
-
-    ws.onclose = function () {
-      console.log("Disconnected from report listener");
-    };
-
-    ws.onerror = function (error) {
-      console.error("WebSocket error:", error);
-    };
-
-    // Cleanup on unmount
-    return () => {
-      console.log("Closing WebSocket connection");
-      ws.close();
-    };
-    // Empty deps: WebSocket should only connect once, refs are used for latest values
-  }, []);
-
-  // Fetch reports when tab changes using the hook
-  useEffect(() => {
-    // Fetch a small number for the list to keep UI responsive
-    fetchCurrentTabReports(10);
-  }, [selectedTab, fetchCurrentTabReports]);
-
-  // Update list content from hook's filtered reports
-  useEffect(() => {
-    setLatestReportsWithAnalysis(filteredLatestReports);
-  }, [filteredLatestReports]);
-
-  // Update map content from lite reports based on selected tab, immediately available
+  // Update map content from public discovery endpoints based on selected tab.
   useEffect(() => {
     setLatestReports(
       selectedTab === "physical"
-        ? latestPhysicalReportsV2
-        : latestDigitalReportsV2,
+        ? publicPhysicalItems
+        : publicDigitalItems,
     );
-  }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
+  }, [selectedTab, publicDigitalItems, publicPhysicalItems]);
 
   // Removed inline fetch; using hook-based fetching instead
 
@@ -2597,51 +2515,28 @@ export default function GlobeView() {
       return;
     }
 
-    // Debounce the API call
-    const timeoutId = setTimeout(async () => {
-      try {
-        // Query the backend to check if this brand exists with reports
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(searchTerm)}&n=1`,
+    const timeoutId = setTimeout(() => {
+      const normalized = searchTerm.trim().toLowerCase();
+      const match = publicDigitalItems.find((item) => {
+        return (
+          item.brand_name.toLowerCase().includes(normalized) ||
+          item.brand_display_name.toLowerCase().includes(normalized)
         );
+      });
 
-        if (!response.ok) {
-          setMatchingBrand(null);
-          return;
-        }
-
-        const data = await response.json();
-
-        // If we got reports back, there's a dashboard for this brand
-        if (data.reports && data.reports.length > 0) {
-          const firstReport = data.reports[0];
-          const analysis = firstReport.analysis?.[0];
-          const brandName = analysis?.brand_name || searchTerm;
-
-          // Use total_count from the API response (accurate database count)
-          // Falls back to the fetched count if total_count not available
-          const actualTotal =
-            data.total_count || data.count || data.reports.length;
-
-          setMatchingBrand({
-            brand_name: brandName,
-            brand_display_name:
-              analysis?.brand_display_name ||
-              analysis?.brand_name ||
-              searchTerm,
-            total: actualTotal,
-          });
-        } else {
-          setMatchingBrand(null);
-        }
-      } catch (error) {
-        console.error("Error checking brand dashboard:", error);
+      if (match) {
+        setMatchingBrand({
+          brand_name: match.brand_name,
+          brand_display_name: match.brand_display_name,
+          total: match.total,
+        });
+      } else {
         setMatchingBrand(null);
       }
-    }, 300); // Small debounce to avoid too many API calls
+    }, 200);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, isDigital, latestDigitalReportsV2]);
+  }, [isDigital, publicDigitalItems, searchTerm]);
 
   const renderPlaceSearchHit = useCallback(
     (place: PlaceSearchResult, onAfterSelect?: () => void) => (
@@ -3130,6 +3025,10 @@ export default function GlobeView() {
                 console.log("Style not loaded yet in onLoad");
               }
             }
+            updatePhysicalViewport();
+          }}
+          onMoveEnd={() => {
+            updatePhysicalViewport();
           }}
           onStyleData={() => {
             if (mapRef.current && !mapStyleLoaded) {
@@ -3137,6 +3036,7 @@ export default function GlobeView() {
               if (map && map.isStyleLoaded()) {
                 console.log("Map style fully loaded");
                 setMapStyleLoaded(true);
+                updatePhysicalViewport();
               } else {
                 // console.log(
                 //   "Style data received but style not fully loaded yet"
@@ -3312,19 +3212,15 @@ export default function GlobeView() {
               )}
               {placeResults.map((place) => renderPlaceSearchHit(place))}
               {searchResults.map((result) => {
-                const analysis =
-                  result.analysis.find(
-                    (analysis) => analysis.language === locale,
-                  ) || result.analysis[0];
                 return (
                   <button
-                    key={result.report.seq}
+                    key={result.discovery_token}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       clearSelectedPlace();
 
                       // Track brand search for dashboard personalization
-                      const brandName = result.analysis[0]?.brand_name;
+                      const brandName = result.brand_name;
                       if (brandName && brandName !== "other") {
                         console.log(
                           "[UserActivity] Tracking brand:",
@@ -3332,10 +3228,10 @@ export default function GlobeView() {
                         );
                         trackBrandSearch(brandName);
                       }
-                      void openReportFromAnalysis(result);
+                      void openPublicDiscoveryItem(result);
                     }}
                   >
-                    <p className="line-clamp-1">{analysis?.title}</p>
+                    <p className="line-clamp-1">{result.title}</p>
                   </button>
                 );
               })}
@@ -3424,19 +3320,15 @@ export default function GlobeView() {
                 renderPlaceSearchHit(place, () => setIsMobileSearchOpen(false)),
               )}
               {searchResults.map((result) => {
-                const analysis =
-                  result.analysis.find(
-                    (analysis) => analysis.language === locale,
-                  ) || result.analysis[0];
                 return (
                   <button
-                    key={result.report.seq}
+                    key={result.discovery_token}
                     className="p-3 bg-gray-800 border border-gray-700 text-left text-gray-200 hover:bg-gray-900 w-full"
                     onClick={() => {
                       clearSelectedPlace();
 
                       // Track brand search for dashboard personalization
-                      const brandName = result.analysis[0]?.brand_name;
+                      const brandName = result.brand_name;
                       if (brandName && brandName !== "other") {
                         console.log(
                           "[UserActivity] Tracking brand:",
@@ -3444,10 +3336,10 @@ export default function GlobeView() {
                         );
                         trackBrandSearch(brandName);
                       }
-                      void openReportFromAnalysis(result);
+                      void openPublicDiscoveryItem(result);
                     }}
                   >
-                    <p className="line-clamp-1">{analysis?.title}</p>
+                    <p className="line-clamp-1">{result.title}</p>
                   </button>
                 );
               })}
@@ -3648,17 +3540,29 @@ export default function GlobeView() {
         />
       )}
 
-      {/* Latest Reports - only show when modal is not open and not on mobile */}
-      <CollapsibleLatestReports
-        reports={displayedReportsWithAnalysis}
-        loading={displayedReportsLoading}
-        onReportClick={(report) => {
-          void openReportFromAnalysis(report);
-        }}
-        isModalActive={true}
-        isMenuOpen={isMenuOpen}
-        report={selectedReport as ReportWithAnalysis | null}
-      />
+      {/* Latest Reports - selected places still use full report cards; default browse uses public discovery cards */}
+      {selectedSearchPlace ? (
+        <CollapsibleLatestReports
+          reports={displayedReportsWithAnalysis}
+          loading={displayedReportsLoading}
+          onReportClick={(report) => {
+            void openReportFromAnalysis(report);
+          }}
+          isModalActive={true}
+          isMenuOpen={isMenuOpen}
+          report={selectedReport as ReportWithAnalysis | null}
+        />
+      ) : (
+        <PublicCollapsibleLatestReports
+          items={publicLatestItems}
+          loading={publicLatestLoading}
+          error={publicLatestError}
+          onItemClick={(item) => {
+            void openPublicDiscoveryItem(item);
+          }}
+          isMenuOpen={isMenuOpen}
+        />
+      )}
 
       <div
         className={`absolute ${
