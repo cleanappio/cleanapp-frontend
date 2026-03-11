@@ -42,6 +42,27 @@ export interface ClusterStats {
   classification_breakdown: Record<string, number>;
 }
 
+export interface CaseMatchCandidate {
+  case_id: string;
+  slug: string;
+  title: string;
+  status: string;
+  classification: string;
+  summary: string;
+  geometry_json: string;
+  aggregate_geometry_json: string;
+  aggregate_bbox_json: string;
+  anchor_report_seq?: number;
+  anchor_lat?: number;
+  anchor_lng?: number;
+  cluster_count: number;
+  linked_report_count: number;
+  shared_report_count: number;
+  match_score: number;
+  match_reasons: string[];
+  updated_at: string;
+}
+
 export interface ClusterAnalysisResponse {
   scope_type: string;
   classification: string;
@@ -51,6 +72,7 @@ export interface ClusterAnalysisResponse {
   stats: ClusterStats;
   hypotheses: ClusterIncidentHypothesis[];
   suggested_targets: CaseEscalationTarget[];
+  candidate_cases: CaseMatchCandidate[];
 }
 
 export interface CaseSummary {
@@ -146,6 +168,8 @@ export interface CaseDetail {
     summary: string;
     uncertainty_notes: string;
     geometry_json: string;
+    aggregate_geometry_json: string;
+    aggregate_bbox_json: string;
     anchor_report_seq?: number;
     severity_score: number;
     urgency_score: number;
@@ -153,8 +177,12 @@ export interface CaseDetail {
     exposure_score: number;
     criticality_score: number;
     trend_score: number;
+    cluster_count: number;
+    linked_report_count: number;
     first_seen_at?: string;
     last_seen_at?: string;
+    last_cluster_at?: string;
+    merged_into_case_id?: string;
     created_by_user_id: string;
     created_at: string;
     updated_at: string;
@@ -289,12 +317,51 @@ class CasesApiClient {
     return data;
   }
 
+  async matchCluster(payload: {
+    geometry?: Feature;
+    classification?: string;
+    report_seqs?: number[];
+    title?: string;
+    summary?: string;
+    n?: number;
+  }): Promise<{
+    classification: string;
+    candidate_cases: CaseMatchCandidate[];
+  }> {
+    const { data } = await this.axios.post<{
+      classification: string;
+      candidate_cases: CaseMatchCandidate[];
+    }>("/api/v3/cases/match-cluster", payload);
+    return data;
+  }
+
   async createCase(payload: Record<string, unknown>): Promise<CaseDetail> {
     const { data } = await this.axios.post<CaseDetail>(
       "/api/v3/cases",
       payload,
     );
-    return data;
+    return normalizeCaseDetail(data);
+  }
+
+  async upsertFromCluster(
+    payload: Record<string, unknown>,
+  ): Promise<CaseDetail> {
+    const { data } = await this.axios.post<CaseDetail>(
+      "/api/v3/cases/upsert-from-cluster",
+      payload,
+    );
+    return normalizeCaseDetail(data);
+  }
+
+  async mergeCases(payload: {
+    target_case_id: string;
+    source_case_ids: string[];
+  }): Promise<CaseDetail> {
+    const { data } = await this.axios.post<CaseDetail>(
+      "/api/v3/cases/merge",
+      payload,
+    );
+    return normalizeCaseDetail(data);
   }
 
   async getCase(caseId: string): Promise<CaseDetail> {

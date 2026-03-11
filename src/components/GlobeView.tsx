@@ -40,6 +40,7 @@ import { computeFeatureBBox, PlaceSearchResult } from "@/lib/place-search";
 import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
+import { CaseMatchCandidate, casesApiClient } from "@/lib/cases-api-client";
 import { getCanonicalReportPath } from "@/lib/report-links";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
@@ -59,6 +60,76 @@ type ActiveCaseScope = {
   scopeType: "place" | "area";
   geometry: Feature;
 };
+
+function parseCaseGeometryJSON(
+  raw?: string | null,
+): GeoJSON.FeatureCollection | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    const type = (parsed as { type?: string }).type;
+    if (type === "FeatureCollection") {
+      return parsed as GeoJSON.FeatureCollection;
+    }
+    if (type === "Feature") {
+      return {
+        type: "FeatureCollection",
+        features: [parsed as GeoJSON.Feature],
+      };
+    }
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: parsed as GeoJSON.Geometry,
+        },
+      ],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildCaseMatchFeatureCollection(
+  cases: CaseMatchCandidate[],
+): GeoJSON.FeatureCollection {
+  const features: GeoJSON.Feature[] = [];
+  cases.forEach((candidate) => {
+    const collection =
+      parseCaseGeometryJSON(candidate.aggregate_geometry_json) ||
+      parseCaseGeometryJSON(candidate.geometry_json);
+    if (!collection?.features?.length) {
+      return;
+    }
+    collection.features.forEach((feature) => {
+      if (!feature?.geometry) {
+        return;
+      }
+      features.push({
+        type: "Feature",
+        geometry: feature.geometry,
+        properties: {
+          ...(feature.properties || {}),
+          case_id: candidate.case_id,
+          title: candidate.title,
+          match_score: candidate.match_score,
+          cluster_count: candidate.cluster_count,
+        },
+      });
+    });
+  });
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
 // Type for window.ReactNativeWebView
 declare global {
   interface Window {
@@ -161,6 +232,9 @@ export default function GlobeView() {
   const [selectedPlaceReports, setSelectedPlaceReports] = useState<
     ReportWithAnalysis[] | null
   >(null);
+  const [selectedPlaceCaseMatches, setSelectedPlaceCaseMatches] = useState<
+    CaseMatchCandidate[]
+  >([]);
   const [selectedPlaceReportsLoading, setSelectedPlaceReportsLoading] =
     useState(false);
   const [selectedPlaceReportsError, setSelectedPlaceReportsError] = useState<
@@ -663,6 +737,7 @@ export default function GlobeView() {
   const clearSelectedPlace = useCallback(() => {
     setSelectedSearchPlace(null);
     setSelectedPlaceReports(null);
+    setSelectedPlaceCaseMatches([]);
     setSelectedPlaceReportsError(null);
     setSelectedPlaceReportsLoading(false);
     setActiveCaseScope((current) =>
@@ -742,10 +817,28 @@ export default function GlobeView() {
         }
 
         const data = await response.json();
-        setSelectedPlaceReports(data.reports || []);
+        const placeReports = data.reports || [];
+        setSelectedPlaceReports(placeReports);
+        try {
+          const matchResponse = await casesApiClient.matchCluster({
+            geometry: place.geometry,
+            classification: "physical",
+            report_seqs: placeReports.map(
+              (item: ReportWithAnalysis) => item.report.seq,
+            ),
+            title: place.name,
+            summary: place.address,
+            n: 100,
+          });
+          setSelectedPlaceCaseMatches(matchResponse.candidate_cases || []);
+        } catch (matchError) {
+          console.error("Failed to load matching cases:", matchError);
+          setSelectedPlaceCaseMatches([]);
+        }
       } catch (error) {
         console.error("Failed to load place reports:", error);
         setSelectedPlaceReports([]);
+        setSelectedPlaceCaseMatches([]);
         setSelectedPlaceReportsError(
           error instanceof Error
             ? error.message
@@ -1921,18 +2014,14 @@ export default function GlobeView() {
         };
       }
     }
-  }, [
-    isPhysical,
-    mapLoaded,
-    latestReports,
-    router,
-    selectedTab,
-  ]);
+  }, [isPhysical, mapLoaded, latestReports, router, selectedTab]);
 
   const pickPublicLiveAnalysis = useCallback(
     (analyses: PublicLiveAnalysis[]) => {
       const locale = getCurrentLocale();
-      return analyses.find((analysis) => analysis.language === locale) || analyses[0];
+      return (
+        analyses.find((analysis) => analysis.language === locale) || analyses[0]
+      );
     },
     [],
   );
@@ -2389,16 +2478,10 @@ export default function GlobeView() {
         ? latestPhysicalReportsV2
         : latestDigitalReportsV2,
     );
-  }, [
-    selectedTab,
-    latestPhysicalReportsV2,
-    latestDigitalReportsV2,
-  ]);
+  }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
 
   useEffect(() => {
-    const ws = new WebSocket(
-      getPublicLiveSocketUrl(),
-    );
+    const ws = new WebSocket(getPublicLiveSocketUrl());
 
     ws.onopen = function () {
       console.log("=== WebSocket Connected ===");
@@ -2422,7 +2505,9 @@ export default function GlobeView() {
           : [];
 
         for (const report of reports) {
-          const selectedAnalysis = pickPublicLiveAnalysis(report.analysis || []);
+          const selectedAnalysis = pickPublicLiveAnalysis(
+            report.analysis || [],
+          );
           if (!selectedAnalysis) {
             continue;
           }
@@ -3002,6 +3087,94 @@ export default function GlobeView() {
     mapLoaded,
     mapStyleLoaded,
     openCaseWorkspaceForPlace,
+    selectedSearchPlace,
+  ]);
+
+  useEffect(() => {
+    if (!mapInstance || !mapLoaded || !mapStyleLoaded) return;
+
+    const map = mapInstance;
+    const sourceId = "selected-place-case-matches";
+    const fillLayerId = "selected-place-case-matches-fill";
+    const outlineLayerId = "selected-place-case-matches-outline";
+
+    if (!selectedSearchPlace || selectedPlaceCaseMatches.length === 0) {
+      try {
+        if (map.getLayer(outlineLayerId)) {
+          map.removeLayer(outlineLayerId);
+        }
+        if (map.getLayer(fillLayerId)) {
+          map.removeLayer(fillLayerId);
+        }
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+      return;
+    }
+
+    const geoJSON = buildCaseMatchFeatureCollection(selectedPlaceCaseMatches);
+    if (geoJSON.features.length === 0) {
+      return;
+    }
+
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: geoJSON,
+      });
+    } else {
+      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+      source.setData(geoJSON);
+    }
+
+    if (!map.getLayer(fillLayerId)) {
+      map.addLayer({
+        id: fillLayerId,
+        type: "fill",
+        source: sourceId,
+        paint: {
+          "fill-color": "#0ea5e9",
+          "fill-opacity": 0.11,
+        },
+      });
+    }
+
+    if (!map.getLayer(outlineLayerId)) {
+      map.addLayer({
+        id: outlineLayerId,
+        type: "line",
+        source: sourceId,
+        paint: {
+          "line-color": "#38bdf8",
+          "line-width": 3,
+          "line-opacity": 0.85,
+        },
+      });
+    }
+
+    return () => {
+      try {
+        if (map.getLayer(outlineLayerId)) {
+          map.removeLayer(outlineLayerId);
+        }
+        if (map.getLayer(fillLayerId)) {
+          map.removeLayer(fillLayerId);
+        }
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    };
+  }, [
+    mapInstance,
+    mapLoaded,
+    mapStyleLoaded,
+    selectedPlaceCaseMatches,
     selectedSearchPlace,
   ]);
 

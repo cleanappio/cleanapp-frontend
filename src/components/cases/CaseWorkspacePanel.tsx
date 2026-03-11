@@ -7,6 +7,7 @@ import { authApiClient } from "@/lib/auth-api-client";
 import { navigateToCase } from "@/lib/case-navigation";
 import {
   casesApiClient,
+  CaseMatchCandidate,
   ClusterAnalysisResponse,
   ClusterIncidentHypothesis,
 } from "@/lib/cases-api-client";
@@ -23,6 +24,10 @@ function scoreLabel(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function matchScoreLabel(value: number) {
+  return `${Math.round(value * 100)}% match`;
+}
+
 export default function CaseWorkspacePanel({
   scopeLabel,
   scopeType,
@@ -31,18 +36,31 @@ export default function CaseWorkspacePanel({
   onClose,
 }: CaseWorkspacePanelProps) {
   const router = useRouter();
-  const [analysis, setAnalysis] = useState<ClusterAnalysisResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [creatingHypothesisId, setCreatingHypothesisId] = useState<string | null>(
-    null
+  const [analysis, setAnalysis] = useState<ClusterAnalysisResponse | null>(
+    null,
   );
+  const [loading, setLoading] = useState(false);
+  const [creatingHypothesisId, setCreatingHypothesisId] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const token = authApiClient.getAuthToken();
 
   const topHypotheses = useMemo(
     () => (analysis?.hypotheses || []).slice(0, 3),
-    [analysis]
+    [analysis],
   );
+  const topCandidateCases = useMemo(
+    () => (analysis?.candidate_cases || []).slice(0, 3),
+    [analysis],
+  );
+  const preferredCandidate = useMemo(() => {
+    const first = topCandidateCases[0];
+    if (!first || first.match_score < 0.58) {
+      return null;
+    }
+    return first;
+  }, [topCandidateCases]);
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -62,7 +80,11 @@ export default function CaseWorkspacePanel({
     }
   };
 
-  const createCase = async (hypothesis?: ClusterIncidentHypothesis) => {
+  const createCase = async (
+    hypothesis?: ClusterIncidentHypothesis,
+    existingCase?: CaseMatchCandidate | null,
+    forceNewCase = false,
+  ) => {
     if (!token) {
       router.push("/login");
       return;
@@ -73,19 +95,18 @@ export default function CaseWorkspacePanel({
 
     const title =
       hypothesis?.title ||
+      existingCase?.title ||
       `${scopeLabel} incident cluster`;
     const reportSeqs = hypothesis?.report_seqs?.length
       ? hypothesis.report_seqs
       : analysis.reports.map((item) => item.report.seq);
     const anchorSeq =
-      hypothesis?.representative_report_seq ||
-      reportSeqs[0] ||
-      0;
+      hypothesis?.representative_report_seq || reportSeqs[0] || 0;
 
     setCreatingHypothesisId(hypothesis?.hypothesis_id || "generic");
     setError(null);
     try {
-      const detail = await casesApiClient.createCase({
+      const detail = await casesApiClient.upsertFromCluster({
         title,
         type: "incident",
         status: "open",
@@ -96,6 +117,8 @@ export default function CaseWorkspacePanel({
         geometry,
         anchor_report_seq: anchorSeq,
         report_seqs: reportSeqs,
+        existing_case_id: existingCase?.case_id,
+        force_new_case: forceNewCase,
         cluster_summary: `Cluster analyzed from ${scopeType} scope ${scopeLabel}.`,
         cluster_source_type: analysis.scope_type,
         cluster_stats: analysis.stats,
@@ -106,8 +129,8 @@ export default function CaseWorkspacePanel({
       });
       await navigateToCase(router, detail.case.case_id);
     } catch (err) {
-      console.error("Failed to create case", err);
-      setError("Failed to create case");
+      console.error("Failed to create or attach case", err);
+      setError("Failed to save case");
     } finally {
       setCreatingHypothesisId(null);
     }
@@ -135,7 +158,7 @@ export default function CaseWorkspacePanel({
               </h3>
               <p className="text-emerald-50/85 text-sm">
                 Analyze this {scopeType} scope, group reports into incident
-                hypotheses, and create a durable case.
+                hypotheses, and grow an existing case when the match is strong.
               </p>
             </div>
             {onClose && (
@@ -198,6 +221,52 @@ export default function CaseWorkspacePanel({
                 </div>
               </div>
 
+              {topCandidateCases.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-white font-semibold">
+                      Existing nearby cases
+                    </h4>
+                    <span className="text-xs text-slate-400">
+                      Strong matches should absorb this cluster.
+                    </span>
+                  </div>
+                  {topCandidateCases.map((candidate) => (
+                    <div
+                      key={candidate.case_id}
+                      className="rounded-xl border border-sky-500/30 bg-slate-900/70 px-3 py-3 space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="text-white font-medium">
+                            {candidate.title}
+                          </h5>
+                          <p className="text-sm text-slate-300">
+                            {matchScoreLabel(candidate.match_score)} ·{" "}
+                            {candidate.linked_report_count} linked reports ·{" "}
+                            {candidate.cluster_count} clusters
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => createCase(undefined, candidate)}
+                          disabled={creatingHypothesisId !== null}
+                          className="shrink-0 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white text-sm font-medium px-3 py-2"
+                        >
+                          Attach cluster
+                        </button>
+                      </div>
+                      {candidate.match_reasons?.length > 0 && (
+                        <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+                          {candidate.match_reasons.slice(0, 3).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-white font-semibold">
@@ -213,8 +282,8 @@ export default function CaseWorkspacePanel({
 
                 {topHypotheses.length === 0 ? (
                   <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 text-sm text-slate-300">
-                    No distinct incident hypotheses yet. You can still create a
-                    case from the full cluster.
+                    No distinct incident hypotheses yet. You can still create or
+                    attach the full cluster.
                   </div>
                 ) : (
                   topHypotheses.map((hypothesis) => (
@@ -234,15 +303,28 @@ export default function CaseWorkspacePanel({
                           </p>
                         </div>
                         <button
-                          onClick={() => createCase(hypothesis)}
+                          onClick={() =>
+                            createCase(hypothesis, preferredCandidate)
+                          }
                           disabled={creatingHypothesisId !== null}
                           className="shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-sm font-medium px-3 py-2"
                         >
                           {creatingHypothesisId === hypothesis.hypothesis_id
-                            ? "Creating..."
-                            : "Create case"}
+                            ? "Saving..."
+                            : preferredCandidate
+                              ? "Attach"
+                              : "Create case"}
                         </button>
                       </div>
+                      {preferredCandidate && (
+                        <button
+                          onClick={() => createCase(hypothesis, null, true)}
+                          disabled={creatingHypothesisId !== null}
+                          className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-slate-500 hover:text-white disabled:opacity-60"
+                        >
+                          Create new case instead
+                        </button>
+                      )}
                       <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
                         {hypothesis.rationale.slice(0, 3).map((item) => (
                           <li key={item}>{item}</li>
@@ -264,9 +346,14 @@ export default function CaseWorkspacePanel({
                 ) : (
                   <div className="space-y-2">
                     {analysis.suggested_targets.slice(0, 4).map((target) => (
-                      <div key={`${target.email}-${target.organization}`} className="text-sm">
+                      <div
+                        key={`${target.email}-${target.organization}`}
+                        className="text-sm"
+                      >
                         <p className="text-white">
-                          {target.display_name || target.organization || target.email}
+                          {target.display_name ||
+                            target.organization ||
+                            target.email}
                         </p>
                         <p className="text-slate-400">
                           {target.email || target.phone} ·{" "}
@@ -279,16 +366,31 @@ export default function CaseWorkspacePanel({
               </div>
 
               <button
-                onClick={() => createCase()}
+                onClick={() => createCase(undefined, preferredCandidate)}
                 disabled={creatingHypothesisId !== null}
                 className="w-full rounded-xl border border-emerald-500/50 bg-emerald-950/60 hover:bg-emerald-900/60 disabled:opacity-60 text-emerald-100 font-medium px-4 py-3"
               >
                 {creatingHypothesisId === "generic"
-                  ? "Creating case..."
-                  : token
-                  ? "Create case from full cluster"
-                  : "Sign in to create case"}
+                  ? "Saving case..."
+                  : preferredCandidate
+                    ? "Attach full cluster to existing case"
+                    : token
+                      ? "Create case from full cluster"
+                      : "Sign in to create case"}
               </button>
+              {preferredCandidate && (
+                <button
+                  onClick={() => createCase(undefined, null, true)}
+                  disabled={creatingHypothesisId !== null}
+                  className="w-full rounded-xl border border-slate-600 bg-slate-900/60 hover:bg-slate-800/60 disabled:opacity-60 text-slate-100 font-medium px-4 py-3"
+                >
+                  {creatingHypothesisId === "generic"
+                    ? "Saving case..."
+                    : token
+                      ? "Create a new case from full cluster"
+                      : "Sign in to create case"}
+                </button>
+              )}
             </>
           )}
         </div>
