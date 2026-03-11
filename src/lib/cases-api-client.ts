@@ -200,6 +200,7 @@ export interface CaseEscalationDraftResponse {
   case_id: string;
   subject: string;
   body: string;
+  cc_emails: string[];
   targets: CaseEscalationTarget[];
   linked_count: number;
 }
@@ -208,6 +209,7 @@ export interface CaseEscalationSendResponse {
   case_id: string;
   subject: string;
   body: string;
+  cc_emails: string[];
   actions: CaseEscalationAction[];
   deliveries: CaseEmailDelivery[];
 }
@@ -386,7 +388,12 @@ class CasesApiClient {
 
   async draftCaseEscalation(
     caseId: string,
-    payload: { target_ids: number[]; subject?: string; body?: string },
+    payload: {
+      target_ids: number[];
+      cc_emails?: string[];
+      subject?: string;
+      body?: string;
+    },
   ): Promise<CaseEscalationDraftResponse> {
     const { data } = await this.axios.post<CaseEscalationDraftResponse>(
       `/api/v3/cases/${caseId}/escalations/draft`,
@@ -397,7 +404,12 @@ class CasesApiClient {
 
   async sendCaseEscalation(
     caseId: string,
-    payload: { target_ids: number[]; subject: string; body: string },
+    payload: {
+      target_ids: number[];
+      cc_emails?: string[];
+      subject: string;
+      body: string;
+    },
   ): Promise<CaseEscalationSendResponse> {
     const { data } = await this.axios.post<CaseEscalationSendResponse>(
       `/api/v3/cases/${caseId}/escalations/send`,

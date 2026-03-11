@@ -65,12 +65,15 @@ export default function CaseDetailPage() {
   const [draft, setDraft] = useState<CaseEscalationDraftResponse | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [ccInput, setCCInput] = useState("");
   const [selectedTargetIds, setSelectedTargetIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [drafting, setDrafting] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [hasManualDraftEdits, setHasManualDraftEdits] = useState(false);
+  const autoDraftKeyRef = useRef("");
 
   const loadCase = useCallback(async () => {
     if (!caseId) {
@@ -90,6 +93,12 @@ export default function CaseDetailPage() {
 
       const data = await casesApiClient.getCase(caseId);
       setDetail(data);
+      setDraft(null);
+      setSubject("");
+      setBody("");
+      setCCInput("");
+      setHasManualDraftEdits(false);
+      autoDraftKeyRef.current = "";
       const ids = data.escalation_targets
         .filter((target) => !!target.email)
         .map((target) => target.id);
@@ -133,11 +142,21 @@ export default function CaseDetailPage() {
       selectedTargetIds.includes(target.id),
     );
   }, [detail, selectedTargetIds]);
+  const selectedTargetKey = useMemo(
+    () => [...selectedTargetIds].sort((a, b) => a - b).join(","),
+    [selectedTargetIds],
+  );
 
   const caseRecord = detail?.case ?? null;
-  const linkedReports = detail?.linked_reports ?? [];
-  const emailDeliveries = detail?.email_deliveries ?? [];
-  const escalationTargets = detail?.escalation_targets ?? [];
+  const linkedReports = useMemo(() => detail?.linked_reports ?? [], [detail]);
+  const emailDeliveries = useMemo(
+    () => detail?.email_deliveries ?? [],
+    [detail],
+  );
+  const escalationTargets = useMemo(
+    () => detail?.escalation_targets ?? [],
+    [detail],
+  );
   const landmarkLabel = useMemo(
     () => deriveCaseLandmarkLabel(escalationTargets),
     [escalationTargets],
@@ -250,25 +269,74 @@ export default function CaseDetailPage() {
     );
   };
 
+  const requestDraft = useCallback(
+    async ({
+      nextSubject = subject,
+      nextBody = body,
+      nextCCInput = ccInput,
+      silent = false,
+    }: {
+      nextSubject?: string;
+      nextBody?: string;
+      nextCCInput?: string;
+      silent?: boolean;
+    } = {}) => {
+      if (!caseId) return;
+      setDrafting(true);
+      if (!silent) {
+        setError(null);
+      }
+      try {
+        const nextDraft = await casesApiClient.draftCaseEscalation(caseId, {
+          target_ids: selectedTargetIds,
+          cc_emails: parseEmailList(nextCCInput),
+          subject: nextSubject,
+          body: nextBody,
+        });
+        setDraft(nextDraft);
+        setSubject(nextDraft.subject);
+        setBody(nextDraft.body);
+        setCCInput(formatEmailList(nextDraft.cc_emails));
+        setHasManualDraftEdits(false);
+      } catch (err) {
+        console.error("Failed to draft escalation", err);
+        if (!silent) {
+          setError("Failed to draft escalation");
+        }
+      } finally {
+        setDrafting(false);
+      }
+    },
+    [body, caseId, ccInput, selectedTargetIds, subject],
+  );
+
+  useEffect(() => {
+    if (!detail || !caseId || !selectedTargetKey || hasManualDraftEdits) {
+      return;
+    }
+    const nextKey = `${caseId}:${selectedTargetKey}`;
+    if (autoDraftKeyRef.current === nextKey) {
+      return;
+    }
+    autoDraftKeyRef.current = nextKey;
+    void requestDraft({
+      nextSubject: "",
+      nextBody: "",
+      nextCCInput: ccInput,
+      silent: true,
+    });
+  }, [
+    caseId,
+    ccInput,
+    detail,
+    hasManualDraftEdits,
+    requestDraft,
+    selectedTargetKey,
+  ]);
+
   const handleDraft = async () => {
     if (!caseId) return;
-    setDrafting(true);
-    setError(null);
-    try {
-      const nextDraft = await casesApiClient.draftCaseEscalation(caseId, {
-        target_ids: selectedTargetIds,
-        subject,
-        body,
-      });
-      setDraft(nextDraft);
-      setSubject(nextDraft.subject);
-      setBody(nextDraft.body);
-    } catch (err) {
-      console.error("Failed to draft escalation", err);
-      setError("Failed to draft escalation");
-    } finally {
-      setDrafting(false);
-    }
+    await requestDraft();
   };
 
   const handleSend = async () => {
@@ -278,6 +346,7 @@ export default function CaseDetailPage() {
     try {
       await casesApiClient.sendCaseEscalation(caseId, {
         target_ids: selectedTargetIds,
+        cc_emails: parseEmailList(ccInput),
         subject,
         body,
       });
@@ -377,10 +446,12 @@ export default function CaseDetailPage() {
             <MetricCard
               label="Severity"
               value={`${Math.round(caseView.severity_score * 100)}%`}
+              tone={scoreTone(caseView.severity_score)}
             />
             <MetricCard
               label="Urgency"
               value={`${Math.round(caseView.urgency_score * 100)}%`}
+              tone={scoreTone(caseView.urgency_score)}
             />
             {bannerCandidates.length > 1 && (
               <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
@@ -429,7 +500,9 @@ export default function CaseDetailPage() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-slate-500">
+                        <p
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${scorePillTone(report.severity_level)}`}
+                        >
                           Severity {Math.round(report.severity_level * 100)}%
                         </p>
                         <Link
@@ -585,10 +658,31 @@ export default function CaseDetailPage() {
                 </label>
                 <input
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  onChange={(e) => {
+                    setHasManualDraftEdits(true);
+                    setSubject(e.target.value);
+                  }}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2"
                   placeholder="Escalation subject"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  CC
+                </label>
+                <input
+                  value={ccInput}
+                  onChange={(e) => {
+                    setHasManualDraftEdits(true);
+                    setCCInput(e.target.value);
+                  }}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                  placeholder="Additional copy recipients, separated by commas"
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Additional recipients receive the same escalation copy.
+                </p>
               </div>
 
               <div>
@@ -597,7 +691,10 @@ export default function CaseDetailPage() {
                 </label>
                 <textarea
                   value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                  onChange={(e) => {
+                    setHasManualDraftEdits(true);
+                    setBody(e.target.value);
+                  }}
                   rows={12}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2"
                   placeholder="Escalation body"
@@ -630,15 +727,67 @@ export default function CaseDetailPage() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({
+  label,
+  value,
+  tone = "border-slate-200 bg-slate-50 text-slate-900",
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <div className={`rounded-xl border px-4 py-3 ${tone}`}>
       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 text-lg font-semibold">{value}</p>
     </div>
   );
+}
+
+function scoreTone(score: number) {
+  if (score >= 0.85) {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+  if (score >= 0.65) {
+    return "border-orange-200 bg-orange-50 text-orange-700";
+  }
+  if (score >= 0.4) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function scorePillTone(score: number) {
+  if (score >= 0.85) {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+  if (score >= 0.65) {
+    return "border-orange-200 bg-orange-50 text-orange-700";
+  }
+  if (score >= 0.4) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function parseEmailList(value: string): string[] {
+  const seen = new Set<string>();
+  return value
+    .split(/[,\n;]+/)
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => {
+      if (!item || seen.has(item)) {
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
+}
+
+function formatEmailList(emails: string[] | null | undefined): string {
+  return (emails || []).join(", ");
 }
 
 function humanizeAuditEvent(eventType: string) {
