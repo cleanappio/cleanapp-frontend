@@ -1,6 +1,54 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { cache, inFlightRequests, CACHE_TTL } from "@/lib/report-cache";
 
+type BackendAttempt = {
+  response: Response;
+  bodyText: string;
+};
+
+async function fetchReportByPublicId(
+  apiUrl: string,
+  publicId: string
+): Promise<BackendAttempt> {
+  const query = `public_id=${encodeURIComponent(publicId)}`;
+  const endpoints = [
+    `${apiUrl}/api/v4/reports/by-public-id?${query}`,
+    `${apiUrl}/api/v3/reports/by-public-id?${query}`,
+  ];
+
+  let lastAttempt: BackendAttempt | null = null;
+
+  for (let i = 0; i < endpoints.length; i += 1) {
+    const response = await fetch(endpoints[i], {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+
+    const bodyText = await response.text();
+    const attempt = { response, bodyText };
+    lastAttempt = attempt;
+
+    if (response.ok) {
+      return attempt;
+    }
+
+    const shouldTryLegacy =
+      i === 0 && (response.status === 404 || response.status === 405);
+    if (!shouldTryLegacy) {
+      return attempt;
+    }
+  }
+
+  if (!lastAttempt) {
+    throw new Error("No backend endpoints configured");
+  }
+
+  return lastAttempt;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -53,22 +101,29 @@ export default async function handler(
     try {
       const apiUrl =
         process.env.NEXT_PUBLIC_LIVE_API_URL || "http://localhost:8080";
-      const response = await fetch(
-        `${apiUrl}/api/v4/reports/by-public-id?public_id=${encodeURIComponent(public_id)}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
+      const { response, bodyText } = await fetchReportByPublicId(
+        apiUrl,
+        public_id
       );
 
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        const contentType = response.headers.get("content-type") || "";
+        let payload: unknown = bodyText;
+        if (contentType.includes("application/json") && bodyText) {
+          try {
+            payload = JSON.parse(bodyText);
+          } catch {
+            payload = bodyText;
+          }
+        }
+
+        throw Object.assign(new Error(`API returned ${response.status}`), {
+          status: response.status,
+          payload,
+        });
       }
 
-      const data = await response.json();
+      const data = bodyText ? JSON.parse(bodyText) : null;
 
       if (cache.size > 1000) {
         const entriesToRemove = Math.ceil(cache.size * 0.2);
@@ -103,8 +158,23 @@ export default async function handler(
     res.status(200).json(data);
   } catch (error) {
     console.error("Error fetching report by public id:", error);
-    return res.status(500).json({
-      error: "Internal server error",
+    const status =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      typeof error.status === "number"
+        ? error.status
+        : 500;
+    return res.status(status).json({
+      ...(typeof error === "object" &&
+      error !== null &&
+      "payload" in error &&
+      error.payload &&
+      typeof error.payload === "object"
+        ? (error.payload as Record<string, unknown>)
+        : {
+            error: status === 404 ? "Report not found" : "Internal server error",
+          }),
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
