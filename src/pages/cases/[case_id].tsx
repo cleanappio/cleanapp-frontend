@@ -532,12 +532,6 @@ export default function CaseDetailPage() {
                               Severity {Math.round(report.severity_level * 100)}
                               %
                             </p>
-                            <Link
-                              href={reportHref}
-                              className="text-sm text-blue-600 hover:text-blue-500"
-                            >
-                              Open report
-                            </Link>
                           </div>
                         </div>
                       );
@@ -579,43 +573,6 @@ export default function CaseDetailPage() {
                   ))}
                 </div>
               )}
-            </section>
-
-            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4">
-                Escalation activity
-              </h2>
-              <div className="space-y-3">
-                {emailDeliveries.length === 0 ? (
-                  <p className="text-slate-600">
-                    No escalation deliveries yet.
-                  </p>
-                ) : (
-                  emailDeliveries.map((delivery) => (
-                    <div
-                      key={delivery.id}
-                      className="rounded-xl border border-slate-200 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="font-medium text-slate-900">
-                            {delivery.recipient_email}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            {delivery.delivery_status} ·{" "}
-                            {delivery.delivery_source}
-                          </p>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          {delivery.sent_at
-                            ? new Date(delivery.sent_at).toLocaleString()
-                            : "Pending"}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
             </section>
           </div>
 
@@ -739,6 +696,43 @@ export default function CaseDetailPage() {
               >
                 {sending ? "Sending..." : "Send escalation"}
               </button>
+            </section>
+
+            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Escalation activity
+              </h2>
+              <div className="space-y-3">
+                {emailDeliveries.length === 0 ? (
+                  <p className="text-slate-600">
+                    No escalation deliveries yet.
+                  </p>
+                ) : (
+                  emailDeliveries.map((delivery) => (
+                    <div
+                      key={delivery.id}
+                      className="rounded-xl border border-slate-200 px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {delivery.recipient_email}
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            {delivery.delivery_status} ·{" "}
+                            {delivery.delivery_source}
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {delivery.sent_at
+                            ? new Date(delivery.sent_at).toLocaleString()
+                            : "Pending"}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </section>
           </div>
         </div>
