@@ -41,6 +41,7 @@ import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 import { CaseMatchCandidate, casesApiClient } from "@/lib/cases-api-client";
+import { navigateToCase } from "@/lib/case-navigation";
 import { getCanonicalReportPath } from "@/lib/report-links";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
@@ -129,6 +130,40 @@ function buildCaseMatchFeatureCollection(
     type: "FeatureCollection",
     features,
   };
+}
+
+function mergeBBox(
+  current: [number, number, number, number] | null,
+  next: [number, number, number, number] | null,
+): [number, number, number, number] | null {
+  if (!next) {
+    return current;
+  }
+  if (!current) {
+    return [...next] as [number, number, number, number];
+  }
+  return [
+    Math.min(current[0], next[0]),
+    Math.min(current[1], next[1]),
+    Math.max(current[2], next[2]),
+    Math.max(current[3], next[3]),
+  ];
+}
+
+function computeCaseCandidateBBox(
+  candidate: CaseMatchCandidate,
+): [number, number, number, number] | null {
+  const collection =
+    parseCaseGeometryJSON(candidate.aggregate_geometry_json) ||
+    parseCaseGeometryJSON(candidate.geometry_json);
+  if (!collection?.features?.length) {
+    return null;
+  }
+
+  return collection.features.reduce<[number, number, number, number] | null>(
+    (bounds, feature) => mergeBBox(bounds, computeFeatureBBox(feature)),
+    null,
+  );
 }
 // Type for window.ReactNativeWebView
 declare global {
@@ -350,6 +385,7 @@ export default function GlobeView() {
     setSearchTerm,
     searchResults,
     placeResults,
+    caseResults,
     loading: searchLoading,
     error: searchError,
   } = useBackendSearch(selectedTab);
@@ -2683,6 +2719,51 @@ export default function GlobeView() {
     [handlePlaceResultSelect, selectedSearchPlace?.id],
   );
 
+  const renderCaseSearchHit = useCallback(
+    (candidate: CaseMatchCandidate, onAfterSelect?: () => void) => {
+      const isGenericTitle =
+        candidate.title?.trim().toLowerCase() ===
+        "selected area incident cluster";
+      const title =
+        isGenericTitle && searchTerm.trim()
+          ? `${searchTerm.trim()} case`
+          : candidate.title;
+
+      return (
+        <button
+          key={`case-${candidate.case_id}`}
+          className="p-3 border border-sky-500/50 bg-sky-950/30 text-left w-full transition-colors hover:bg-sky-900/40"
+          onClick={() => {
+            const bbox = computeCaseCandidateBBox(candidate);
+            clearSelectedPlace();
+            setSelectedPlaceCaseMatches([candidate]);
+            setActiveCaseScope(null);
+            if (bbox) {
+              fitMapToBBox(bbox);
+            }
+            onAfterSelect?.();
+            void navigateToCase(router, candidate.case_id);
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-white line-clamp-1">{title}</p>
+              <p className="text-xs text-sky-300 mt-1">
+                Existing case · {candidate.cluster_count || 0} clusters ·{" "}
+                {candidate.linked_report_count || 0} reports
+              </p>
+              <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                {candidate.summary || "Open the existing case for this area."}
+              </p>
+            </div>
+            <span className="text-xs text-sky-300 whitespace-nowrap">Case</span>
+          </div>
+        </button>
+      );
+    },
+    [clearSelectedPlace, fitMapToBBox, router, searchTerm],
+  );
+
   // Drawing handlers
   const handleAreaCreated = useCallback(async (area: Area) => {
     console.log("Area created:", area);
@@ -3098,7 +3179,7 @@ export default function GlobeView() {
     const fillLayerId = "selected-place-case-matches-fill";
     const outlineLayerId = "selected-place-case-matches-outline";
 
-    if (!selectedSearchPlace || selectedPlaceCaseMatches.length === 0) {
+    if (selectedPlaceCaseMatches.length === 0) {
       try {
         if (map.getLayer(outlineLayerId)) {
           map.removeLayer(outlineLayerId);
@@ -3155,8 +3236,42 @@ export default function GlobeView() {
       });
     }
 
+    const openCaseFromLayerEvent = (event: mapboxgl.MapLayerMouseEvent) => {
+      event.preventDefault?.();
+      const caseId = event.features?.[0]?.properties?.case_id;
+      if (!caseId || typeof caseId !== "string") {
+        return;
+      }
+      void navigateToCase(router, caseId);
+    };
+
+    const setPointer = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+
+    const unsetPointer = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    map.on("click", fillLayerId, openCaseFromLayerEvent);
+    map.on("click", outlineLayerId, openCaseFromLayerEvent);
+    map.on("contextmenu", fillLayerId, openCaseFromLayerEvent);
+    map.on("contextmenu", outlineLayerId, openCaseFromLayerEvent);
+    map.on("mouseenter", fillLayerId, setPointer);
+    map.on("mouseenter", outlineLayerId, setPointer);
+    map.on("mouseleave", fillLayerId, unsetPointer);
+    map.on("mouseleave", outlineLayerId, unsetPointer);
+
     return () => {
       try {
+        map.off("click", fillLayerId, openCaseFromLayerEvent);
+        map.off("click", outlineLayerId, openCaseFromLayerEvent);
+        map.off("contextmenu", fillLayerId, openCaseFromLayerEvent);
+        map.off("contextmenu", outlineLayerId, openCaseFromLayerEvent);
+        map.off("mouseenter", fillLayerId, setPointer);
+        map.off("mouseenter", outlineLayerId, setPointer);
+        map.off("mouseleave", fillLayerId, unsetPointer);
+        map.off("mouseleave", outlineLayerId, unsetPointer);
         if (map.getLayer(outlineLayerId)) {
           map.removeLayer(outlineLayerId);
         }
@@ -3174,8 +3289,8 @@ export default function GlobeView() {
     mapInstance,
     mapLoaded,
     mapStyleLoaded,
+    router,
     selectedPlaceCaseMatches,
-    selectedSearchPlace,
   ]);
 
   return (
@@ -3408,6 +3523,7 @@ export default function GlobeView() {
                 </button>
               )}
               {placeResults.map((place) => renderPlaceSearchHit(place))}
+              {caseResults.map((candidate) => renderCaseSearchHit(candidate))}
               {searchResults.map((result) => {
                 return (
                   <button
@@ -3449,6 +3565,7 @@ export default function GlobeView() {
               )}
               {searchResults.length == 0 &&
                 placeResults.length == 0 &&
+                caseResults.length == 0 &&
                 !searchLoading &&
                 !searchError && (
                   <div className="p-2 text-white rounded-sm w-full">
@@ -3516,6 +3633,11 @@ export default function GlobeView() {
               {placeResults.map((place) =>
                 renderPlaceSearchHit(place, () => setIsMobileSearchOpen(false)),
               )}
+              {caseResults.map((candidate) =>
+                renderCaseSearchHit(candidate, () =>
+                  setIsMobileSearchOpen(false),
+                ),
+              )}
               {searchResults.map((result) => {
                 return (
                   <button
@@ -3557,6 +3679,7 @@ export default function GlobeView() {
               )}
               {searchResults.length == 0 &&
                 placeResults.length == 0 &&
+                caseResults.length == 0 &&
                 !searchLoading &&
                 !searchError && (
                   <div className="p-2 text-white rounded-sm w-full">
