@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import PageHeader from "@/components/PageHeader";
@@ -12,6 +13,11 @@ import {
   CaseEscalationTarget,
 } from "@/lib/cases-api-client";
 import { authApiClient } from "@/lib/auth-api-client";
+import {
+  buildCaseDisplaySummary,
+  buildCaseDisplayTitle,
+  deriveCaseLandmarkLabel,
+} from "@/lib/case-display";
 import { getCanonicalReportPath } from "@/lib/report-links";
 
 function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
@@ -64,6 +70,7 @@ export default function CaseDetailPage() {
   const [drafting, setDrafting] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
 
   const loadCase = useCallback(async () => {
     if (!caseId) {
@@ -276,39 +283,115 @@ export default function CaseDetailPage() {
   const linkedReports = detail.linked_reports ?? [];
   const emailDeliveries = detail.email_deliveries ?? [];
   const escalationTargets = detail.escalation_targets ?? [];
+  const landmarkLabel = deriveCaseLandmarkLabel(escalationTargets);
+  const displayTitle = buildCaseDisplayTitle(caseRecord.title, landmarkLabel);
+  const displaySummary = buildCaseDisplaySummary(
+    caseRecord.summary,
+    landmarkLabel,
+  );
+  const bannerCandidates = useMemo(
+    () =>
+      [...linkedReports]
+        .filter((report) => !!report.public_id)
+        .sort((a, b) => {
+          if (b.severity_level !== a.severity_level) {
+            return b.severity_level - a.severity_level;
+          }
+          return (
+            new Date(b.report_timestamp).getTime() -
+            new Date(a.report_timestamp).getTime()
+          );
+        }),
+    [linkedReports],
+  );
+  const activeBannerReport = bannerCandidates[bannerIndex] || null;
+  const activeBannerImageUrl = activeBannerReport
+    ? `${
+        process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"
+      }/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(
+        activeBannerReport.public_id,
+      )}`
+    : null;
+
+  useEffect(() => {
+    setBannerIndex(0);
+  }, [caseRecord.case_id, bannerCandidates.length]);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <PageHeader />
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-emerald-700">
-                Case
-              </p>
-              <h1 className="text-3xl font-bold text-slate-900">
-                {caseRecord.title}
-              </h1>
-              <p className="text-slate-600 mt-2 max-w-3xl">
-                {caseRecord.summary || "No summary provided yet."}
-              </p>
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+          <div className="relative min-h-[260px]">
+            {activeBannerImageUrl ? (
+              <Image
+                src={activeBannerImageUrl}
+                alt={activeBannerReport?.title || displayTitle}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 1152px"
+                priority
+                unoptimized
+                onError={() =>
+                  setBannerIndex((current) =>
+                    current + 1 < bannerCandidates.length
+                      ? current + 1
+                      : bannerCandidates.length,
+                  )
+                }
+              />
+            ) : (
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.45),_transparent_38%),linear-gradient(135deg,_#0f172a,_#111827_55%,_#1e293b)]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/60 to-slate-900/20" />
+            <div className="relative z-10 flex min-h-[260px] flex-col justify-end gap-4 p-6 md:p-8">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-emerald-300">
+                  Case
+                </p>
+                <h1 className="mt-2 max-w-3xl text-3xl font-bold text-white md:text-4xl">
+                  {displayTitle}
+                </h1>
+                <p className="mt-3 max-w-3xl text-sm text-slate-200 md:text-base">
+                  {displaySummary}
+                </p>
+                {activeBannerReport && (
+                  <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-300">
+                    Cover image from report {activeBannerReport.seq}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 min-w-[260px]">
-              <MetricCard label="Status" value={caseRecord.status} />
-              <MetricCard
-                label="Reports"
-                value={String(linkedReports.length)}
-              />
-              <MetricCard
-                label="Severity"
-                value={`${Math.round(caseRecord.severity_score * 100)}%`}
-              />
-              <MetricCard
-                label="Urgency"
-                value={`${Math.round(caseRecord.urgency_score * 100)}%`}
-              />
-            </div>
+          </div>
+          <div className="grid gap-3 border-t border-slate-200 bg-white p-6 md:grid-cols-4">
+            <MetricCard label="Status" value={caseRecord.status} />
+            <MetricCard label="Reports" value={String(linkedReports.length)} />
+            <MetricCard
+              label="Severity"
+              value={`${Math.round(caseRecord.severity_score * 100)}%`}
+            />
+            <MetricCard
+              label="Urgency"
+              value={`${Math.round(caseRecord.urgency_score * 100)}%`}
+            />
+            {bannerCandidates.length > 1 && (
+              <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
+                {bannerCandidates.slice(0, 5).map((report, index) => (
+                  <button
+                    key={`banner-${report.seq}`}
+                    type="button"
+                    onClick={() => setBannerIndex(index)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      index === bannerIndex
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                    }`}
+                  >
+                    Report {report.seq}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

@@ -6,6 +6,11 @@ import type { Feature } from "geojson";
 import { authApiClient } from "@/lib/auth-api-client";
 import { navigateToCase } from "@/lib/case-navigation";
 import {
+  buildCaseDisplaySummary,
+  buildCaseDisplayTitle,
+  buildCaseScopeLabel,
+} from "@/lib/case-display";
+import {
   casesApiClient,
   CaseMatchCandidate,
   ClusterAnalysisResponse,
@@ -61,6 +66,10 @@ export default function CaseWorkspacePanel({
     }
     return first;
   }, [topCandidateCases]);
+  const displayScopeLabel = useMemo(
+    () => buildCaseScopeLabel(scopeLabel, analysis?.suggested_targets),
+    [analysis?.suggested_targets, scopeLabel],
+  );
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -96,7 +105,10 @@ export default function CaseWorkspacePanel({
     const title =
       hypothesis?.title ||
       existingCase?.title ||
-      `${scopeLabel} incident cluster`;
+      buildCaseDisplayTitle(
+        "selected area incident cluster",
+        displayScopeLabel,
+      );
     const reportSeqs = hypothesis?.report_seqs?.length
       ? hypothesis.report_seqs
       : analysis.reports.map((item) => item.report.seq);
@@ -113,13 +125,16 @@ export default function CaseWorkspacePanel({
         classification: analysis.classification,
         summary:
           hypothesis?.rationale?.join(" ") ||
-          `Case created from ${scopeType} scope ${scopeLabel}.`,
+          buildCaseDisplaySummary(
+            `Case created from ${scopeType} scope ${scopeLabel}.`,
+            displayScopeLabel,
+          ),
         geometry,
         anchor_report_seq: anchorSeq,
         report_seqs: reportSeqs,
         existing_case_id: existingCase?.case_id,
         force_new_case: forceNewCase,
-        cluster_summary: `Cluster analyzed from ${scopeType} scope ${scopeLabel}.`,
+        cluster_summary: `Cluster analyzed from ${scopeType} scope around ${displayScopeLabel}.`,
         cluster_source_type: analysis.scope_type,
         cluster_stats: analysis.stats,
         cluster_analysis: {
@@ -154,7 +169,7 @@ export default function CaseWorkspacePanel({
                 Cluster Workspace
               </p>
               <h3 className="text-white text-lg font-semibold leading-tight">
-                {scopeLabel}
+                {displayScopeLabel}
               </h3>
               <p className="text-emerald-50/85 text-sm">
                 Analyze this {scopeType} scope, group reports into incident
