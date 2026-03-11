@@ -94,3 +94,17 @@ export async function resolvePublicDiscoveryToken(
     buildUrl("/api/v3/public/resolve", { token }),
   );
 }
+
+export async function resolvePublicPhysicalPoint(
+  latitude: number,
+  longitude: number,
+  radiusKm: number = 0.35,
+): Promise<PublicDiscoveryResolveResponse> {
+  return fetchJson<PublicDiscoveryResolveResponse>(
+    buildUrl("/api/v3/public/resolve-physical-point", {
+      latitude,
+      longitude,
+      radius_km: radiusKm,
+    }),
+  );
+}

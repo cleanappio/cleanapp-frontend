@@ -43,7 +43,10 @@ import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 import { getCanonicalReportPath } from "@/lib/report-links";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
-import { resolvePublicDiscoveryToken } from "@/lib/public-discovery-api";
+import {
+  resolvePublicDiscoveryToken,
+  resolvePublicPhysicalPoint,
+} from "@/lib/public-discovery-api";
 import { PublicDiscoveryCard } from "@/types/public-discovery";
 
 type ActiveCaseScope = {
@@ -1780,7 +1783,6 @@ export default function GlobeView() {
             },
             properties: {
               color,
-              seq: isPhysical ? report.seq : undefined,
               title,
               index,
               severity: isPhysical ? report.severity_level : undefined,
@@ -1855,10 +1857,23 @@ export default function GlobeView() {
         const handleReportPinClick = (e: any) => {
           if (e.features && e.features[0]) {
             const feature = e.features[0];
-            const reportIndex = feature.properties?.index;
-            if (reportIndex !== undefined && latestReports[reportIndex]) {
-              const report = latestReports[reportIndex];
-              void openReportFromSummary(report);
+            const coordinates = feature.geometry?.coordinates;
+            if (
+              Array.isArray(coordinates) &&
+              coordinates.length >= 2 &&
+              typeof coordinates[0] === "number" &&
+              typeof coordinates[1] === "number"
+            ) {
+              void resolvePublicPhysicalPoint(coordinates[1], coordinates[0])
+                .then((resolved) => {
+                  if (resolved.canonical_path) {
+                    return router.push(resolved.canonical_path);
+                  }
+                  return undefined;
+                })
+                .catch((error) => {
+                  console.error("Failed to resolve physical map point:", error);
+                });
             }
           }
         };
@@ -1898,7 +1913,7 @@ export default function GlobeView() {
     isPhysical,
     mapLoaded,
     latestReports,
-    openReportFromSummary,
+    router,
     selectedTab,
   ]);
 
