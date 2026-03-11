@@ -16,6 +16,9 @@ export interface CaseEscalationTarget {
   contact_url: string;
   social_platform: string;
   social_handle: string;
+  source_url: string;
+  evidence_text: string;
+  verification_level: string;
   target_source: string;
   confidence_score: number;
   rationale: string;

@@ -705,6 +705,11 @@ export default function CaseDetailPage() {
                             <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
                               {formatRoleType(target.role_type)}
                             </span>
+                            {target.verification_level && (
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-700">
+                                {formatVerificationLevel(target.verification_level)}
+                              </span>
+                            )}
                             {target.preview_only && (
                               <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-blue-700">
                                 preview
@@ -755,11 +760,28 @@ export default function CaseDetailPage() {
                                   Source page
                                 </a>
                               )}
+                            {target.source_url &&
+                              target.source_url !== target.contact_url &&
+                              target.source_url !== target.website && (
+                                <a
+                                  href={target.source_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-blue-600 hover:text-blue-500 hover:underline"
+                                >
+                                  Evidence page
+                                </a>
+                              )}
                           </div>
                           <p className="mt-2 text-xs text-slate-500">
                             {target.channel || "contact"} · confidence{" "}
                             {Math.round((target.confidence_score || 0) * 100)}%
                           </p>
+                          {target.evidence_text && (
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              Evidence: {target.evidence_text}
+                            </p>
+                          )}
                           {target.rationale && (
                             <p className="mt-1 text-xs leading-5 text-slate-500">
                               {target.rationale}
@@ -1070,6 +1092,10 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         contact_url: "https://www.schule-adliswil.ch/area_contact",
         social_platform: "",
         social_handle: "",
+        source_url:
+          "https://www.schule-adliswil.ch/schule-adliswil/ueberblick/kontakt/p-183677/",
+        evidence_text: "Schule Adliswil · Kontakt",
+        verification_level: "official_site_page",
         target_source: "web_search",
         confidence_score: 0.93,
         rationale:
@@ -1090,6 +1116,10 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
           "https://andereggpartner.ch/referenzen/objekt/2026-erweiterung-schulanlage-kopfholz-adlisiwl",
         social_platform: "",
         social_handle: "",
+        source_url:
+          "https://andereggpartner.ch/referenzen/objekt/2026-erweiterung-schulanlage-kopfholz-adlisiwl",
+        evidence_text: "Project reference page for Kopfholz school extension",
+        verification_level: "web_search_result",
         target_source: "web_search",
         confidence_score: 0.83,
         rationale:
@@ -1109,6 +1139,9 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         contact_url: "https://contractor.example/referenzen/schulhaus-kopfholz",
         social_platform: "",
         social_handle: "",
+        source_url: "https://contractor.example/referenzen/schulhaus-kopfholz",
+        evidence_text: "Preview contractor reference page",
+        verification_level: "web_search_result",
         target_source: "localhost_preview",
         confidence_score: 0.78,
         rationale:
@@ -1128,6 +1161,9 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         contact_url: "https://www.adliswil.ch/de/verwaltung/bau",
         social_platform: "",
         social_handle: "",
+        source_url: "https://www.adliswil.ch/aemter/13394",
+        evidence_text: "Hochbau · Stadt Adliswil",
+        verification_level: "official_authority_page",
         target_source: "web_search",
         confidence_score: 0.77,
         rationale:
@@ -1219,6 +1255,9 @@ function buildResponsiblePartyCards(
       contact_url: "https://architect.example/projects",
       social_platform: "",
       social_handle: "",
+      source_url: "https://architect.example/projects",
+      evidence_text: "Preview architect project page",
+      verification_level: "web_search_result",
       target_source: "localhost_preview",
       confidence_score: 0.82,
       rationale:
@@ -1239,6 +1278,9 @@ function buildResponsiblePartyCards(
       contact_url: "https://contractor.example/references",
       social_platform: "",
       social_handle: "",
+      source_url: "https://contractor.example/references",
+      evidence_text: "Preview contractor reference page",
+      verification_level: "web_search_result",
       target_source: "localhost_preview",
       confidence_score: 0.79,
       rationale:
@@ -1259,6 +1301,9 @@ function buildResponsiblePartyCards(
       contact_url: "https://municipality.example/emergency-reporting",
       social_platform: "",
       social_handle: "",
+      source_url: "https://municipality.example/emergency-reporting",
+      evidence_text: "Preview municipal building office contact page",
+      verification_level: "official_authority_page",
       target_source: "localhost_preview",
       confidence_score: 0.74,
       rationale:
@@ -1381,10 +1426,46 @@ function formatRoleType(roleType: string): string {
   switch (roleType) {
     case "building_authority":
       return "Building authority";
+    case "fire_authority":
+      return "Fire authority";
     case "facility_manager":
       return "Facility manager";
+    case "operator_admin":
+      return "Operator admin";
+    case "site_leadership":
+      return "Site leadership";
+    case "public_safety":
+      return "Public safety";
+    case "communications":
+      return "Communications";
     default:
       return roleType
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
+function formatVerificationLevel(level: string): string {
+  switch (level) {
+    case "official_site_page":
+      return "Official page";
+    case "official_authority_page":
+      return "Official authority";
+    case "mapped_area_contact":
+      return "Mapped area";
+    case "directory_listing":
+      return "Directory";
+    case "openstreetmap":
+      return "OSM";
+    case "web_search_result":
+      return "Web reference";
+    case "authority_reference":
+      return "Authority ref";
+    case "inferred":
+      return "Inferred";
+    default:
+      return level
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
