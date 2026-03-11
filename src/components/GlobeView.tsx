@@ -41,17 +41,10 @@ import MapTutorialOverlay from "./dashboard/MapTutorialOverlay";
 import { useUserActivityStore } from "@/lib/user-activity-store";
 import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 import { getCanonicalReportPath } from "@/lib/report-links";
-import { usePublicMapDiscovery } from "@/hooks/usePublicMapDiscovery";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
-import { useLiteReports } from "@/hooks/useLiteReports";
-import {
-  resolvePublicDiscoveryToken,
-} from "@/lib/public-discovery-api";
-import {
-  PublicBrandSummary,
-  PublicDiscoveryCard,
-  PublicPhysicalPoint,
-} from "@/types/public-discovery";
+import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
+import { resolvePublicDiscoveryToken } from "@/lib/public-discovery-api";
+import { PublicDiscoveryCard } from "@/types/public-discovery";
 
 type ActiveCaseScope = {
   label: string;
@@ -107,115 +100,6 @@ export interface ReportWithAnalysis {
   analysis: ReportAnalysis[];
 }
 
-type LegacyPhysicalMapPoint = PublicPhysicalPoint & {
-  public_id?: string | null;
-};
-
-type PublicMapItem = LegacyPhysicalMapPoint | PublicBrandSummary;
-
-function toFallbackPhysicalPoints(
-  items: PublicDiscoveryCard[],
-): PublicPhysicalPoint[] {
-  return items
-    .filter(
-      (item) =>
-        item.classification === "physical" &&
-        typeof item.latitude === "number" &&
-        typeof item.longitude === "number",
-    )
-    .map((item) => ({
-      kind: "point" as const,
-      classification: "physical" as const,
-      marker_token: item.discovery_token,
-      latitude: item.latitude as number,
-      longitude: item.longitude as number,
-      severity_level: item.severity_level,
-    }));
-}
-
-function toFallbackDigitalBrands(
-  items: PublicDiscoveryCard[],
-): PublicBrandSummary[] {
-  const brands = new globalThis.Map<string, PublicBrandSummary>();
-
-  for (const item of items) {
-    if (item.classification !== "digital" || !item.brand_name) {
-      continue;
-    }
-
-    const existing = brands.get(item.brand_name);
-    if (existing) {
-      existing.total += 1;
-      if (!existing.brand_display_name && item.brand_display_name) {
-        existing.brand_display_name = item.brand_display_name;
-      }
-      continue;
-    }
-
-    brands.set(item.brand_name, {
-      classification: "digital",
-      discovery_token: item.discovery_token,
-      brand_name: item.brand_name,
-      brand_display_name: item.brand_display_name || item.brand_name,
-      total: 1,
-    });
-  }
-
-  return Array.from(brands.values());
-}
-
-function toLegacyFallbackPhysicalPoints(
-  reports: ReportWithAnalysis[],
-): LegacyPhysicalMapPoint[] {
-  return reports
-    .filter(
-      (item) =>
-        typeof item.report?.latitude === "number" &&
-        typeof item.report?.longitude === "number",
-    )
-    .map((item) => ({
-      kind: "point" as const,
-      classification: "physical" as const,
-      latitude: item.report.latitude,
-      longitude: item.report.longitude,
-      severity_level: item.analysis?.[0]?.severity_level ?? 0,
-      public_id: item.report.public_id ?? null,
-    }));
-}
-
-function toLegacyFallbackDigitalBrands(
-  reports: ReportWithAnalysis[],
-): PublicBrandSummary[] {
-  const brands = new globalThis.Map<string, PublicBrandSummary>();
-
-  for (const item of reports) {
-    const analysis = item.analysis?.[0];
-    const brandName = analysis?.brand_name;
-    if (!brandName) {
-      continue;
-    }
-
-    const existing = brands.get(brandName);
-    if (existing) {
-      existing.total += 1;
-      if (!existing.brand_display_name && analysis.brand_display_name) {
-        existing.brand_display_name = analysis.brand_display_name;
-      }
-      continue;
-    }
-
-    brands.set(brandName, {
-      classification: "digital",
-      discovery_token: "",
-      brand_name: brandName,
-      brand_display_name: analysis.brand_display_name || brandName,
-      total: 1,
-    });
-  }
-
-  return Array.from(brands.values());
-}
-
 // Responsive hook for mobile detection
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -256,7 +140,7 @@ export default function GlobeView() {
   const mapRef = useRef<MapRef | null>(null);
   const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [latestReports, setLatestReports] = useState<PublicMapItem[]>([]);
+  const [latestReports, setLatestReports] = useState<ReportResponse[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
   >([]);
@@ -405,28 +289,11 @@ export default function GlobeView() {
   } = usePublicLatestReports(selectedTab);
 
   const {
-    physicalItems: publicPhysicalItems,
-    digitalItems: publicDigitalItems,
-  } = usePublicMapDiscovery(selectedTab, physicalBBox, mapZoom);
-
-  const { reports: legacyMapFallbackReports } = useLiteReports(selectedTab, {
-    n: 500,
-  });
-
-  const fallbackPublicMapItems = useMemo<PublicMapItem[]>(() => {
-    const legacyItems =
-      selectedTab === "physical"
-        ? toLegacyFallbackPhysicalPoints(legacyMapFallbackReports)
-        : toLegacyFallbackDigitalBrands(legacyMapFallbackReports);
-
-    if (legacyItems.length > 0) {
-      return legacyItems;
-    }
-
-    return selectedTab === "physical"
-      ? toFallbackPhysicalPoints(publicLatestItems)
-      : toFallbackDigitalBrands(publicLatestItems);
-  }, [legacyMapFallbackReports, publicLatestItems, selectedTab]);
+    physicalReports: latestPhysicalReportsV2,
+    digitalReports: latestDigitalReportsV2,
+    appendPhysicalLite: appendPhysicalLiteV2,
+    appendDigitalLite: appendDigitalLiteV2,
+  } = useLiteReportsByTabV2();
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -490,33 +357,6 @@ export default function GlobeView() {
 
   const openPublicDiscoveryItem = useCallback(
     async (item: PublicDiscoveryCard) => {
-      const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
-      if (resolved.canonical_path) {
-        await router.push(resolved.canonical_path);
-      }
-    },
-    [router],
-  );
-
-  const openPublicDiscoveryToken = useCallback(
-    async (token?: string | null) => {
-      if (!token) {
-        return;
-      }
-      const resolved = await resolvePublicDiscoveryToken(token);
-      if (resolved.canonical_path) {
-        await router.push(resolved.canonical_path);
-      }
-    },
-    [router],
-  );
-
-  const openPublicBrandSummary = useCallback(
-    async (item: PublicBrandSummary) => {
-      if (item.brand_name) {
-        await router.push(`/digital/${encodeURIComponent(item.brand_name)}`);
-        return;
-      }
       const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
       if (resolved.canonical_path) {
         await router.push(resolved.canonical_path);
@@ -1893,57 +1733,59 @@ export default function GlobeView() {
 
   // Add report pins to the map when reports are loaded
   useEffect(() => {
-    if (mapLoaded && mapRef.current) {
+    if (mapLoaded && mapRef.current && latestReports.length > 0) {
       const map = mapRef.current.getMap();
       if (map) {
         const reportFeatures = latestReports.map((report, index) => {
-          if (selectedTab === "physical") {
-            const point = report as LegacyPhysicalMapPoint;
-            return {
-              type: "Feature" as const,
-              geometry: {
-                type: "Point" as const,
-                coordinates: [point.longitude, point.latitude],
-              },
-              properties: {
-                color: getColorByValue(point.severity_level),
-                title:
-                  point.kind === "cluster" ? `${point.count || 0} reports` : "",
-                index,
-                severity: point.severity_level,
-                classification: "physical",
-                size:
-                  point.kind === "cluster"
-                    ? 10 + Math.min(14, Math.log2((point.count || 1) + 1) * 4)
-                    : 10,
-                kind: point.kind,
-                count: point.count || 0,
-                markerToken: point.marker_token || "",
-                publicId: point.public_id || "",
-              },
-            };
+          const classification = report.classification;
+
+          let latitude = 0;
+          let longitude = 0;
+          let color = "";
+          let title = "";
+          let size = 10;
+
+          const isDigital = classification === "digital";
+          const isPhysical = classification === "physical";
+
+          if (isPhysical) {
+            latitude = report.latitude;
+            longitude = report.longitude;
+            color = getColorByValue(report.severity_level);
           }
 
-          const brand = report as PublicBrandSummary;
-          const {
-            lat,
-            lon,
-            color: brandColor,
-          } = stringToLatLonColor(brand.brand_name);
+          if (isDigital) {
+            const brandName = report.brand_name;
+            const brandDisplayName = report.brand_display_name;
+
+            if (!brandName) return;
+
+            const {
+              lat,
+              lon,
+              color: brandColor,
+            } = stringToLatLonColor(brandName);
+            color = brandColor;
+            latitude = lat;
+            longitude = lon;
+            title = `${brandDisplayName} (${report.total})`;
+            size = 10 + computeDigitalSizeIncrement(report.total);
+          }
 
           return {
             type: "Feature" as const,
             geometry: {
               type: "Point" as const,
-              coordinates: [lon, lat],
+              coordinates: [longitude, latitude],
             },
             properties: {
-              color: brandColor,
-              title: `${brand.brand_display_name} (${brand.total})`,
+              color,
+              seq: isPhysical ? report.seq : undefined,
+              title,
               index,
-              classification: "digital",
-              size: 10 + computeDigitalSizeIncrement(brand.total),
-              kind: "brand",
+              severity: isPhysical ? report.severity_level : undefined,
+              classification,
+              size,
             },
           };
         });
@@ -1977,8 +1819,6 @@ export default function GlobeView() {
               "circle-radius": [
                 "case",
                 ["==", ["get", "classification"], "digital"],
-                ["get", "size"],
-                ["==", ["get", "kind"], "cluster"],
                 ["get", "size"],
                 [
                   "interpolate",
@@ -2015,22 +1855,10 @@ export default function GlobeView() {
         const handleReportPinClick = (e: any) => {
           if (e.features && e.features[0]) {
             const feature = e.features[0];
-            if (feature.properties?.kind === "cluster") {
-              map.easeTo({
-                center: feature.geometry.coordinates,
-                zoom: Math.min((map.getZoom() || 2.5) + 2, 12),
-                duration: 600,
-              });
-              return;
-            }
-            const markerToken = feature.properties?.markerToken;
-            if (typeof markerToken === "string" && markerToken) {
-              void openPublicDiscoveryToken(markerToken);
-              return;
-            }
-            const publicId = feature.properties?.publicId;
-            if (typeof publicId === "string" && publicId) {
-              openCanonicalReport("physical", publicId);
+            const reportIndex = feature.properties?.index;
+            if (reportIndex !== undefined && latestReports[reportIndex]) {
+              const report = latestReports[reportIndex];
+              void openReportFromSummary(report);
             }
           }
         };
@@ -2070,8 +1898,7 @@ export default function GlobeView() {
     isPhysical,
     mapLoaded,
     latestReports,
-    openCanonicalReport,
-    openPublicDiscoveryToken,
+    openReportFromSummary,
     selectedTab,
   ]);
 
@@ -2379,7 +2206,7 @@ export default function GlobeView() {
       const features = [];
       const digitalReports = latestReports.filter((report) => {
         return report.classification === "digital";
-      }) as PublicBrandSummary[];
+      }) as DigitalReportResponse[];
 
       for (const report of digitalReports) {
         const brandName = report.brand_name;
@@ -2546,12 +2373,9 @@ export default function GlobeView() {
       const brandName = feature.properties?.parentName;
       if (!brandName) return;
 
-      const report = latestReports.find((r) => {
-        return (
-          r.classification === "digital" &&
-          (r as PublicBrandSummary).brand_name === brandName
-        );
-      }) as PublicBrandSummary | undefined;
+      const report = latestReports.find(
+        (r) => r.classification === "digital" && r.brand_name === brandName,
+      ) as DigitalReportResponse | undefined;
 
       if (!report) return;
 
@@ -2563,7 +2387,7 @@ export default function GlobeView() {
         );
         trackBrandSearch(brandName);
       }
-      void openPublicBrandSummary(report);
+      void openReportFromSummary(report as unknown as ReportResponse);
     }
     function setPointer() {
       if (map) map.getCanvas().style.cursor = "pointer";
@@ -2608,24 +2432,100 @@ export default function GlobeView() {
     latestReports,
     mapLoaded,
     mapStyleLoaded,
-    openPublicBrandSummary,
+    openReportFromSummary,
     selectedTab,
     trackBrandSearch,
   ]);
 
-  // Update map content from public discovery endpoints based on selected tab.
   useEffect(() => {
-    const discoveryItems =
-      selectedTab === "physical" ? publicPhysicalItems : publicDigitalItems;
     setLatestReports(
-      discoveryItems.length > 0 ? discoveryItems : fallbackPublicMapItems,
+      selectedTab === "physical"
+        ? latestPhysicalReportsV2
+        : latestDigitalReportsV2,
     );
   }, [
-    fallbackPublicMapItems,
     selectedTab,
-    publicDigitalItems,
-    publicPhysicalItems,
+    latestPhysicalReportsV2,
+    latestDigitalReportsV2,
   ]);
+
+  useEffect(() => {
+    const ws = new WebSocket(
+      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`,
+    );
+
+    ws.onopen = function () {
+      console.log("=== WebSocket Connected ===");
+    };
+
+    ws.onmessage = function (event) {
+      const message = JSON.parse(event.data);
+
+      if (message.type !== "reports") {
+        return;
+      }
+
+      const batch = message.data;
+      const currentLocale = getCurrentLocale();
+      const filteredReports = filterAnalysesByLanguage(
+        batch.reports || [],
+        currentLocale,
+      );
+
+      if (
+        filteredReports.length > 0 &&
+        filteredReports[0].analysis[0] &&
+        selectedTab === filteredReports[0].analysis[0].classification
+      ) {
+        handleNewReport(filteredReports[0]);
+      }
+
+      for (const report of filteredReports) {
+        const firstAnalysis = report.analysis?.[0];
+        if (!firstAnalysis) {
+          continue;
+        }
+
+        if (firstAnalysis.classification === "physical") {
+          appendPhysicalLiteV2([
+            {
+              classification: "physical",
+              seq: report.report.seq,
+              public_id: report.report.public_id ?? "",
+              latitude: report.report.latitude,
+              longitude: report.report.longitude,
+              severity_level: firstAnalysis.severity_level,
+            } as PhysicalReportResponse,
+          ]);
+          continue;
+        }
+
+        appendDigitalLiteV2([
+          {
+            classification: "digital",
+            brand_name: firstAnalysis.brand_name || "other",
+            brand_display_name: firstAnalysis.brand_display_name || "Other",
+            total: firstAnalysis.total || 1,
+            seq: report.report.seq,
+            public_id: report.report.public_id ?? undefined,
+          } as DigitalReportResponse,
+        ]);
+      }
+    };
+
+    ws.onclose = function () {
+      console.log("Disconnected from report listener");
+    };
+
+    ws.onerror = function (error) {
+      console.error("WebSocket error:", error);
+    };
+
+    return () => {
+      console.log("Closing WebSocket connection");
+      ws.close();
+    };
+  }, [appendDigitalLiteV2, appendPhysicalLiteV2, handleNewReport, selectedTab]);
 
   // Removed inline fetch; using hook-based fetching instead
 
@@ -2656,12 +2556,13 @@ export default function GlobeView() {
 
     const timeoutId = setTimeout(() => {
       const normalized = searchTerm.trim().toLowerCase();
-      const match = publicDigitalItems.find((item) => {
+      const match = latestReports.find((item) => {
         return (
-          item.brand_name.toLowerCase().includes(normalized) ||
-          item.brand_display_name.toLowerCase().includes(normalized)
+          item.classification === "digital" &&
+          (item.brand_name?.toLowerCase().includes(normalized) ||
+            item.brand_display_name?.toLowerCase().includes(normalized))
         );
-      });
+      }) as DigitalReportResponse | undefined;
 
       if (match) {
         setMatchingBrand({
@@ -2675,7 +2576,7 @@ export default function GlobeView() {
     }, 200);
 
     return () => clearTimeout(timeoutId);
-  }, [isDigital, publicDigitalItems, searchTerm]);
+  }, [isDigital, latestReports, searchTerm]);
 
   const renderPlaceSearchHit = useCallback(
     (place: PlaceSearchResult, onAfterSelect?: () => void) => (
