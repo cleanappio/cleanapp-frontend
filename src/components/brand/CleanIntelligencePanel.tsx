@@ -296,6 +296,13 @@ export default function CleanIntelligencePanel({
     if (isAuthenticated) return "free";
     return "anonymous";
   }, [subscription?.status, isAuthenticated]);
+  const canUseDeepMode = subscriptionTier !== "anonymous";
+
+  useEffect(() => {
+    if (!canUseDeepMode && qualityMode === "deep") {
+      setQualityMode("fast");
+    }
+  }, [canUseDeepMode, qualityMode]);
 
   async function sendPrompt(prompt: string) {
     const question = prompt.trim();
@@ -549,17 +556,29 @@ export default function CleanIntelligencePanel({
               </button>
               <button
                 type="button"
-                onClick={() => setQualityMode("deep")}
+                onClick={() => {
+                  if (canUseDeepMode) {
+                    setQualityMode("deep");
+                  }
+                }}
+                disabled={!canUseDeepMode}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                   qualityMode === "deep"
                     ? "bg-green-600 text-white"
-                    : "text-green-700 hover:bg-green-50"
+                    : canUseDeepMode
+                      ? "text-green-700 hover:bg-green-50"
+                      : "text-gray-400 cursor-not-allowed"
                 }`}
               >
                 Deep
               </button>
             </div>
           </div>
+          {!canUseDeepMode && (
+            <p className="mt-2 text-xs text-gray-500">
+              Deep mode starts once you sign in. Anonymous usage stays on fast mode.
+            </p>
+          )}
         </div>
       </div>
     </section>

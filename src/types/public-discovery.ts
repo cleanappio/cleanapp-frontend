@@ -44,3 +44,26 @@ export type PublicDiscoveryResolveResponse = {
   brand_name?: string;
   canonical_path: string;
 };
+
+export type PublicLiveAnalysis = {
+  severity_level: number;
+  classification: "physical" | "digital";
+  language: string;
+  title: string;
+  summary: string;
+  brand_name?: string;
+  brand_display_name?: string;
+};
+
+export type PublicLiveReport = {
+  discovery_token: string;
+  timestamp: string;
+  latitude?: number;
+  longitude?: number;
+  analysis: PublicLiveAnalysis[];
+};
+
+export type PublicLiveReportBatch = {
+  reports: PublicLiveReport[];
+  count: number;
+};

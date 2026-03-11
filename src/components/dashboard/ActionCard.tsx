@@ -4,6 +4,7 @@ import { MapPin, Building2, Globe, Search, X, ArrowRight } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { useBackendSearch } from '@/hooks/useBackendSearch';
 import { useUserActivityStore } from '@/lib/user-activity-store';
+import { fetchPublicBrandReports } from '@/lib/public-discovery-api';
 
 interface ActionButtonProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -67,26 +68,16 @@ export default function ActionCard() {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(searchTerm)}&n=1`
-        );
+        const data = await fetchPublicBrandReports(searchTerm, 'en', 1);
 
-        if (!response.ok) {
-          setMatchingBrand(null);
-          return;
-        }
-
-        const data = await response.json();
-
-        if (data.reports && data.reports.length > 0) {
-          const firstReport = data.reports[0];
-          const analysis = firstReport.analysis?.[0];
-          const brandName = analysis?.brand_name || searchTerm;
-          const actualTotal = data.total_count || data.count || data.reports.length;
+        if (data.items && data.items.length > 0) {
+          const firstReport = data.items[0];
+          const brandName = firstReport.brand_name || searchTerm;
+          const actualTotal = data.total_count || data.count || data.items.length;
 
           setMatchingBrand({
             brand_name: brandName,
-            brand_display_name: analysis?.brand_display_name || analysis?.brand_name || searchTerm,
+            brand_display_name: firstReport.brand_display_name || firstReport.brand_name || searchTerm,
             total: actualTotal,
           });
         } else {

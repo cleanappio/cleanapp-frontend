@@ -1,96 +1,240 @@
-import React, { useEffect, useState } from "react";
-import { ReportWithAnalysis } from "./GlobeView";
-import {
-  filterAnalysesByLanguage,
-  getCurrentLocale,
-  useTranslations,
-} from "@/lib/i18n";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { ReportResponse } from "@/types/reports/api";
-import ReportCard from "./RecentReports/ReportCard";
-import BlurredReportCard from "./RecentReports/BlurredReportCard";
+import {
+  fetchPublicBrandReports,
+  fetchPublicLatest,
+  fetchPublicNearbyReports,
+  resolvePublicDiscoveryToken,
+} from "@/lib/public-discovery-api";
+import { PublicDiscoveryCard } from "@/types/public-discovery";
 import LocationsCard from "./RecentReports/LocationsCard";
-import StatisticsCard from "./RecentReports/StatisticsCard";
 import AIInsightsCard from "./RecentReports/AIInsightsCard";
 
 interface RecentReportsProps {
   reportItem?: ReportResponse | null;
 }
 
+const isEmbeddedMode = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true";
+
+function RecentReportsStatsCard({
+  items,
+}: {
+  items: PublicDiscoveryCard[];
+}) {
+  const { t } = useTranslations();
+
+  const stats = useMemo(() => {
+    const highPriority = items.filter((item) => item.severity_level >= 0.7).length;
+    const mediumPriority = items.filter(
+      (item) => item.severity_level >= 0.4 && item.severity_level < 0.7,
+    ).length;
+    return { highPriority, mediumPriority };
+  }, [items]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h1 className="text-base sm:text-lg font-medium text-white">
+          {t("statistics")}
+        </h1>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="text-center">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">
+              {items.length}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-500">
+              {t("totalReports")}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="text-center">
+              <div className="text-base sm:text-lg font-semibold text-red-600">
+                {stats.highPriority}
+              </div>
+              <div className="text-xs text-gray-500">{t("highPriority")}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-base sm:text-lg font-semibold text-yellow-600">
+                {stats.mediumPriority}
+              </div>
+              <div className="text-xs text-gray-500">{t("mediumPriority")}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicRecentReportCard({
+  item,
+  blurred,
+  onOpen,
+}: {
+  item: PublicDiscoveryCard;
+  blurred?: boolean;
+  onOpen: (item: PublicDiscoveryCard) => void;
+}) {
+  const { t } = useTranslations();
+
+  return (
+    <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+      {blurred && !isEmbeddedMode && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="text-center">
+            <p className="text-white text-sm font-medium mb-3">
+              {t("upgradeToPro")}
+            </p>
+            <button
+              className="bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-5 py-2 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm"
+              onClick={() => onOpen(item)}
+            >
+              {t("readReport") || "Read report"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`p-4 flex-1 flex flex-col ${blurred && !isEmbeddedMode ? "blur-[2px]" : ""}`}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 className="font-semibold text-base sm:text-lg mb-1">
+              {item.title || t("report")}
+            </h2>
+            <p className="text-gray-500 text-xs sm:text-sm">
+              {item.timestamp
+                ? new Date(item.timestamp).toLocaleString()
+                : t("unknown")}
+            </p>
+          </div>
+          <span
+            className={`text-white text-xs font-semibold px-3 py-1 rounded-full ${
+              item.severity_level >= 0.7
+                ? "bg-red-500"
+                : item.severity_level >= 0.4
+                  ? "bg-yellow-500"
+                  : "bg-green-500"
+            }`}
+          >
+            {item.severity_level >= 0.7
+              ? t("highPriority")
+              : item.severity_level >= 0.4
+                ? t("mediumPriority")
+                : t("lowPriority")}
+          </span>
+        </div>
+
+        <p className="text-gray-700 text-sm leading-6 line-clamp-4 flex-1">
+          {item.summary || t("noDescriptionAvailable")}
+        </p>
+
+        <div className="flex items-center justify-between mt-4">
+          <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">
+            {(item.brand_display_name || item.brand_name || item.classification).toUpperCase()}
+          </span>
+          {item.classification === "physical" &&
+            item.latitude !== undefined &&
+            item.longitude !== undefined && (
+              <span className="text-xs text-gray-500">
+                {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+              </span>
+            )}
+        </div>
+
+        {!blurred && (
+          <button
+            className="mt-4 bg-gradient-to-r from-green-600 to-green-400 text-white font-semibold px-5 py-3 rounded-lg shadow-md hover:from-green-700 hover:to-green-500 transition-all text-sm"
+            onClick={() => onOpen(item)}
+          >
+            {t("readReport") || "Read report"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
-  const [recentReports, setRecentReports] = useState<ReportWithAnalysis[]>([]);
+  const [recentReports, setRecentReports] = useState<PublicDiscoveryCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslations();
   const locale = getCurrentLocale();
+  const router = useRouter();
 
-  // Create stable key for reportItem to prevent infinite loops
   const reportItemKey = reportItem
     ? reportItem.classification === "digital"
       ? `digital_${reportItem.brand_name}`
-      : `physical_${reportItem.latitude?.toFixed(
-          4
-        )}_${reportItem.longitude?.toFixed(4)}`
+      : `physical_${reportItem.latitude?.toFixed(4)}_${reportItem.longitude?.toFixed(4)}`
     : "default";
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadRecentReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    const fetchRecentReports = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        let url = "";
-        if (
-          reportItem &&
-          reportItem?.classification === "digital" &&
-          reportItem?.brand_name
-        ) {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.brand_name}&n=10&full_data=false`;
-        } else if (reportItem?.classification === "physical") {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`;
-        } else {
-          url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=10&lang=${locale}&full_data=false`;
-        }
-
-        const response = await fetch(url);
-        if (cancelled) return;
-
-        if (response.ok) {
-          const data = await response.json();
-          const filteredReports = filterAnalysesByLanguage(
-            data.reports || [],
-            locale
-          );
-          if (!cancelled) {
-            setRecentReports(filteredReports as ReportWithAnalysis[]);
-          }
-        } else {
-          if (!cancelled) {
-            setError(`${t("failedToFetchReports")}: ${response.status}`);
-          }
-        }
-      } catch (error) {
-        if (cancelled) return;
-        console.error("Error fetching recent reports:", error);
-        if (error instanceof Error) {
-          setError(error.message);
-        } else {
-          setError(t("failedToFetchReports"));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+    try {
+      if (
+        reportItem &&
+        reportItem.classification === "digital" &&
+        reportItem.brand_name
+      ) {
+        const batch = await fetchPublicBrandReports(reportItem.brand_name, locale, 10);
+        setRecentReports(batch.items || []);
+        return;
       }
-    };
 
-    fetchRecentReports();
+      if (
+        reportItem &&
+        reportItem.classification === "physical" &&
+        reportItem.latitude !== undefined &&
+        reportItem.longitude !== undefined
+      ) {
+        const batch = await fetchPublicNearbyReports(
+          reportItem.latitude,
+          reportItem.longitude,
+          locale,
+          0.5,
+          10,
+        );
+        setRecentReports(batch.items || []);
+        return;
+      }
 
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportItemKey, locale]); // Only depend on stable values
+      const fallbackClassification =
+        reportItem?.classification === "digital" ? "digital" : "physical";
+      const batch = await fetchPublicLatest(fallbackClassification, locale, 10);
+      setRecentReports(batch.items || []);
+    } catch (err) {
+      console.error("Error fetching recent reports:", err);
+      setRecentReports([]);
+      setError(err instanceof Error ? err.message : t("failedToFetchReports"));
+    } finally {
+      setLoading(false);
+    }
+  }, [locale, reportItem, t]);
+
+  useEffect(() => {
+    void loadRecentReports();
+  }, [loadRecentReports, reportItemKey]);
+
+  const openItem = useCallback(
+    async (item: PublicDiscoveryCard) => {
+      try {
+        const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
+        if (resolved.canonical_path) {
+          await router.push(resolved.canonical_path);
+        }
+      } catch (err) {
+        console.error("Failed to resolve public discovery token:", err);
+      }
+    },
+    [router],
+  );
 
   if (loading) {
     return (
@@ -125,48 +269,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
             <p className="text-sm text-red-500 mt-1">{error}</p>
             <button
               onClick={() => {
-                const fetchRecentReports = async () => {
-                  setLoading(true);
-                  setError(null);
-                  try {
-                    let url = "";
-                    if (
-                      reportItem &&
-                      reportItem?.classification === "digital" &&
-                      reportItem?.brand_name
-                    ) {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${reportItem.brand_name}&n=10&full_data=false`;
-                    } else if (reportItem?.classification === "physical") {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-latlng?latitude=${reportItem.latitude}&longitude=${reportItem.longitude}&radius_km=0.5&n=10&lang=${locale}&full_data=false`;
-                    } else {
-                      url = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/last?n=100&lang=${locale}&full_data=false`;
-                    }
-
-                    const response = await fetch(url);
-                    if (response.ok) {
-                      const data = await response.json();
-                      const filteredReports = filterAnalysesByLanguage(
-                        data.reports || [],
-                        locale
-                      );
-                      setRecentReports(filteredReports as ReportWithAnalysis[]);
-                    } else {
-                      setError(
-                        `${t("failedToFetchReports")}: ${response.status}`
-                      );
-                    }
-                  } catch (error) {
-                    console.error("Error fetching recent reports:", error);
-                    if (error instanceof Error) {
-                      setError(error.message);
-                    } else {
-                      setError(t("failedToFetchReports"));
-                    }
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                fetchRecentReports();
+                void loadRecentReports();
               }}
               className="mt-4 sm:mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-4 sm:py-2 rounded-md transition-colors text-sm"
             >
@@ -178,7 +281,6 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
     );
   }
 
-  // Only show up to 6 reports (3 clear, 3 blurred)
   const visibleReports = recentReports.slice(0, 6);
   const firstRow = visibleReports.slice(0, 3);
   const secondRow = visibleReports.slice(3, 6);
@@ -189,19 +291,23 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         {t("recentReports")}
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {firstRow.map((item, index) => (
-          <ReportCard
-            key={item.report?.seq || index}
+        {firstRow.map((item) => (
+          <PublicRecentReportCard
+            key={item.discovery_token}
             item={item}
-            index={index}
-            priority={index === 0}
+            onOpen={(nextItem) => {
+              void openItem(nextItem);
+            }}
           />
         ))}
-        {secondRow.map((item, index) => (
-          <BlurredReportCard
-            key={item.report?.seq || index + 3}
+        {secondRow.map((item) => (
+          <PublicRecentReportCard
+            key={item.discovery_token}
             item={item}
-            index={index + 3}
+            blurred={!isEmbeddedMode}
+            onOpen={(nextItem) => {
+              void openItem(nextItem);
+            }}
           />
         ))}
       </div>
@@ -221,10 +327,9 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         </div>
       )}
 
-      {/* AI Insights Card - Keep the premium features section - Mobile responsive */}
       <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <LocationsCard totalReports={recentReports.length} />
-        <StatisticsCard reports={recentReports} />
+        <RecentReportsStatsCard items={recentReports} />
         <AIInsightsCard />
       </div>
     </div>

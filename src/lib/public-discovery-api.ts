@@ -62,6 +62,24 @@ export async function fetchPublicBrandReports(
   );
 }
 
+export async function fetchPublicNearbyReports(
+  latitude: number,
+  longitude: number,
+  lang: string,
+  radiusKm: number = 0.5,
+  n: number = 12,
+): Promise<PublicDiscoveryBatch> {
+  return fetchJson<PublicDiscoveryBatch>(
+    buildUrl("/api/v3/public/discovery/by-latlng", {
+      latitude,
+      longitude,
+      radius_km: radiusKm,
+      lang,
+      n,
+    }),
+  );
+}
+
 export async function fetchPublicDigitalBrandSummaries(
   lang: string,
 ): Promise<PublicBrandSummary[]> {
@@ -107,4 +125,12 @@ export async function resolvePublicPhysicalPoint(
       radius_km: radiusKm,
     }),
   );
+}
+
+export function getPublicLiveSocketUrl(): string {
+  const base =
+    process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL ||
+    process.env.NEXT_PUBLIC_LIVE_API_URL ||
+    "https://live.cleanapp.io";
+  return `${base.replace(/\/$/, "")}/api/v3/public/listen`;
 }

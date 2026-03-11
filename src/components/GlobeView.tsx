@@ -44,10 +44,15 @@ import { getCanonicalReportPath } from "@/lib/report-links";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
 import {
+  getPublicLiveSocketUrl,
   resolvePublicDiscoveryToken,
   resolvePublicPhysicalPoint,
 } from "@/lib/public-discovery-api";
-import { PublicDiscoveryCard } from "@/types/public-discovery";
+import {
+  PublicDiscoveryCard,
+  PublicLiveAnalysis,
+  PublicLiveReport,
+} from "@/types/public-discovery";
 
 type ActiveCaseScope = {
   label: string;
@@ -290,6 +295,9 @@ export default function GlobeView() {
     loading: publicLatestLoading,
     error: publicLatestError,
   } = usePublicLatestReports(selectedTab);
+  const [livePublicLatestItems, setLivePublicLatestItems] = useState<
+    PublicDiscoveryCard[]
+  >([]);
 
   const {
     physicalReports: latestPhysicalReportsV2,
@@ -297,6 +305,10 @@ export default function GlobeView() {
     appendPhysicalLite: appendPhysicalLiteV2,
     appendDigitalLite: appendDigitalLiteV2,
   } = useLiteReportsByTabV2();
+
+  useEffect(() => {
+    setLivePublicLatestItems(publicLatestItems);
+  }, [publicLatestItems]);
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -1917,57 +1929,49 @@ export default function GlobeView() {
     selectedTab,
   ]);
 
-  // Handle new report from WebSocket
-  const handleNewReport = useCallback(
-    (reportWithAnalysis: ReportWithAnalysis) => {
+  const pickPublicLiveAnalysis = useCallback(
+    (analyses: PublicLiveAnalysis[]) => {
+      const locale = getCurrentLocale();
+      return analyses.find((analysis) => analysis.language === locale) || analyses[0];
+    },
+    [],
+  );
+
+  const animateLiveUpdate = useCallback(
+    ({
+      classification,
+      severityLevel,
+      latitude,
+      longitude,
+      brandName,
+      idKey,
+    }: {
+      classification: "physical" | "digital";
+      severityLevel: number;
+      latitude?: number;
+      longitude?: number;
+      brandName?: string;
+      idKey: string;
+    }) => {
       if (!mapRef.current) {
-        console.error("mapRef not found");
         return;
       }
 
       const map = mapRef.current.getMap();
       if (!map) {
-        console.error("map not found");
         return;
       }
 
-      const report = reportWithAnalysis.report;
-      const analysis = reportWithAnalysis.analysis;
-      const severity_level =
-        analysis.length > 0 ? analysis[0].severity_level : 0;
-      const classification =
-        analysis.length > 0 ? analysis[0].classification : "physical";
-      const isPhysical = classification === "physical";
-
-      if (analysis.length == 0) {
-        // console.error("No report analysis found");
+      const isPhysicalUpdate = classification === "physical";
+      const { lat, lon } = stringToLatLonColor(brandName || "other");
+      const pointLatitude = isPhysicalUpdate ? latitude : lat;
+      const pointLongitude = isPhysicalUpdate ? longitude : lon;
+      if (pointLatitude === undefined || pointLongitude === undefined) {
         return;
       }
 
-      const locale = getCurrentLocale();
-      let reportAnalysis = analysis.find(
-        (analysis) => analysis.language === locale,
-      );
-      if (!reportAnalysis) {
-        // console.error("No report analysis with current locale found");
-        reportAnalysis = analysis[0];
-      }
-      const { brandName } = getBrandNameDisplay(reportAnalysis);
-      const { lat, lon } = stringToLatLonColor(brandName);
-      const latLon: [number, number] = isPhysical
-        ? [report.longitude, report.latitude]
-        : [lon, lat];
-
-      if (classification !== selectedTab) {
-        console.log(
-          "Skipping report with classification:",
-          classification,
-          "selectedTab:",
-          selectedTab,
-        );
-        return;
-      }
-      if (!isEmbeddedMode && isPhysical) {
+      const latLon: [number, number] = [pointLongitude, pointLatitude];
+      if (!isEmbeddedMode && isPhysicalUpdate && selectedTab === "physical") {
         map.flyTo({
           center: latLon,
           zoom: map.getZoom() || 2.5,
@@ -1976,17 +1980,9 @@ export default function GlobeView() {
         });
       }
 
-      if (classification === selectedTab) {
-        setLatestReportsWithAnalysis((prev) => {
-          const newReports = [reportWithAnalysis, ...prev];
-          return newReports;
-        });
-      }
+      const sanitizedId = idKey.replace(/[^a-zA-Z0-9_-]/g, "");
+      const animatedPinId = `animated-pin-${sanitizedId}`;
 
-      // Create a temporary animated pin for the new report
-      const animatedPinId = `animated-pin-${report.seq}`;
-
-      // Add animated pin source
       if (!map.getSource(animatedPinId)) {
         map.addSource(animatedPinId, {
           type: "geojson",
@@ -2000,7 +1996,7 @@ export default function GlobeView() {
                   coordinates: latLon,
                 },
                 properties: {
-                  severity: severity_level || 1,
+                  severity: severityLevel || 1,
                 },
               },
             ],
@@ -2008,7 +2004,6 @@ export default function GlobeView() {
         });
       }
 
-      // Add animated pin layer
       if (!map.getLayer(animatedPinId)) {
         map.addLayer({
           id: animatedPinId,
@@ -2042,99 +2037,35 @@ export default function GlobeView() {
         });
       }
 
-      // Animate the pin for 10 seconds
-      let startTime = Date.now();
-      const animationDuration = 10000; // 10 seconds
+      const startTime = Date.now();
+      const animationDuration = 10000;
 
       function animatePin() {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / animationDuration, 1);
-
-        // Create pulsing effect (expand/shrink)
-        const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10); // 5 complete cycles
-        const baseRadius = severity_level && severity_level >= 3 ? 13.2 : 6.6;
+        const pulseScale = 1 + 0.8 * Math.sin(progress * Math.PI * 10);
+        const baseRadius = severityLevel >= 0.7 ? 13.2 : 6.6;
         const currentRadius = baseRadius * pulseScale;
 
-        // Update the pin radius
         map.setPaintProperty(animatedPinId, "circle-radius", currentRadius);
 
-        // Continue animation if not finished
         if (progress < 1) {
           requestAnimationFrame(animatePin);
-        } else {
-          // Remove the animated pin after animation completes
-          if (map.getLayer(animatedPinId)) {
-            map.removeLayer(animatedPinId);
-          }
-          if (map.getSource(animatedPinId)) {
-            map.removeSource(animatedPinId);
-          }
+          return;
+        }
 
-          if (isPhysical) {
-            addReportPinToMap(reportWithAnalysis);
-          }
+        if (map.getLayer(animatedPinId)) {
+          map.removeLayer(animatedPinId);
+        }
+        if (map.getSource(animatedPinId)) {
+          map.removeSource(animatedPinId);
         }
       }
 
-      // Start the animation
       requestAnimationFrame(animatePin);
     },
     [selectedTab],
   );
-
-  // Helper function to add a single report pin to the map
-  const addReportPinToMap = (reportWithAnalysis: ReportWithAnalysis) => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current.getMap();
-    if (!map) return;
-
-    const report = reportWithAnalysis.report;
-    const analysis = reportWithAnalysis.analysis;
-    const locale = getCurrentLocale();
-    const reportAnalysis = analysis.find(
-      (analysis) => analysis.language === locale,
-    );
-    const severity_level = reportAnalysis?.severity_level;
-    const title = reportAnalysis?.title;
-
-    // Get current reports data
-    const currentSource = map.getSource("reports") as any;
-    if (!currentSource) {
-      console.error("❌ Reports source not found when adding new pin");
-      return;
-    }
-
-    const currentData = currentSource._data || {
-      type: "FeatureCollection",
-      features: [],
-    };
-
-    // Create new feature for this report
-    const newFeature = {
-      type: "Feature" as const,
-      geometry: {
-        type: "Point" as const,
-        coordinates: [report.longitude, report.latitude],
-      },
-      properties: {
-        id: report.id,
-        seq: report.seq,
-        title: title,
-        severity: severity_level || 0,
-        index: 0, // New reports are added at index 0
-      },
-    };
-
-    // Add new feature to existing data
-    const updatedData = {
-      ...currentData,
-      features: [...currentData.features, newFeature],
-    };
-
-    // Update the source with new data
-    currentSource.setData(updatedData);
-  };
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -2466,7 +2397,7 @@ export default function GlobeView() {
 
   useEffect(() => {
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL}/api/v3/reports/listen`,
+      getPublicLiveSocketUrl(),
     );
 
     ws.onopen = function () {
@@ -2474,57 +2405,89 @@ export default function GlobeView() {
     };
 
     ws.onmessage = function (event) {
-      const message = JSON.parse(event.data);
+      const chunks = String(event.data)
+        .split("\n")
+        .map((chunk) => chunk.trim())
+        .filter(Boolean);
 
-      if (message.type !== "reports") {
-        return;
-      }
-
-      const batch = message.data;
-      const currentLocale = getCurrentLocale();
-      const filteredReports = filterAnalysesByLanguage(
-        batch.reports || [],
-        currentLocale,
-      );
-
-      if (
-        filteredReports.length > 0 &&
-        filteredReports[0].analysis[0] &&
-        selectedTab === filteredReports[0].analysis[0].classification
-      ) {
-        handleNewReport(filteredReports[0]);
-      }
-
-      for (const report of filteredReports) {
-        const firstAnalysis = report.analysis?.[0];
-        if (!firstAnalysis) {
+      for (const chunk of chunks) {
+        const message = JSON.parse(chunk);
+        if (message.type !== "public_reports") {
           continue;
         }
 
-        if (firstAnalysis.classification === "physical") {
-          appendPhysicalLiteV2([
-            {
-              classification: "physical",
-              seq: report.report.seq,
-              public_id: report.report.public_id ?? "",
-              latitude: report.report.latitude,
-              longitude: report.report.longitude,
-              severity_level: firstAnalysis.severity_level,
-            } as PhysicalReportResponse,
-          ]);
-          continue;
-        }
+        const batch = message.data;
+        const reports = Array.isArray(batch?.reports)
+          ? (batch.reports as PublicLiveReport[])
+          : [];
 
-        appendDigitalLiteV2([
-          {
-            classification: "digital",
-            brand_name: firstAnalysis.brand_name || "other",
-            brand_display_name: firstAnalysis.brand_display_name || "Other",
-            total: firstAnalysis.total || 1,
-            seq: report.report.seq,
-            public_id: report.report.public_id ?? undefined,
-          } as DigitalReportResponse,
-        ]);
+        for (const report of reports) {
+          const selectedAnalysis = pickPublicLiveAnalysis(report.analysis || []);
+          if (!selectedAnalysis) {
+            continue;
+          }
+
+          const classification = selectedAnalysis.classification || "physical";
+          if (classification === "physical") {
+            appendPhysicalLiteV2([
+              {
+                classification: "physical",
+                latitude: report.latitude || 0,
+                longitude: report.longitude || 0,
+                severity_level: selectedAnalysis.severity_level,
+              } as PhysicalReportResponse,
+            ]);
+          } else {
+            appendDigitalLiteV2([
+              {
+                classification: "digital",
+                brand_name: selectedAnalysis.brand_name || "other",
+                brand_display_name:
+                  selectedAnalysis.brand_display_name || "Other",
+                total: 1,
+              } as DigitalReportResponse,
+            ]);
+          }
+
+          animateLiveUpdate({
+            classification,
+            severityLevel: selectedAnalysis.severity_level,
+            latitude: report.latitude,
+            longitude: report.longitude,
+            brandName:
+              selectedAnalysis.brand_display_name ||
+              selectedAnalysis.brand_name ||
+              "other",
+            idKey: report.discovery_token || report.timestamp,
+          });
+
+          if (classification !== selectedTab) {
+            continue;
+          }
+
+          const latestItem: PublicDiscoveryCard = {
+            discovery_token: report.discovery_token,
+            title: selectedAnalysis.title,
+            summary: selectedAnalysis.summary,
+            classification,
+            severity_level: selectedAnalysis.severity_level,
+            timestamp: report.timestamp,
+            brand_name: selectedAnalysis.brand_name,
+            brand_display_name: selectedAnalysis.brand_display_name,
+            latitude: report.latitude,
+            longitude: report.longitude,
+          };
+
+          setLivePublicLatestItems((prev) => {
+            const next = [
+              latestItem,
+              ...prev.filter(
+                (item) => item.discovery_token !== latestItem.discovery_token,
+              ),
+            ];
+            return next.slice(0, 10);
+          });
+        }
       }
     };
 
@@ -2540,7 +2503,13 @@ export default function GlobeView() {
       console.log("Closing WebSocket connection");
       ws.close();
     };
-  }, [appendDigitalLiteV2, appendPhysicalLiteV2, handleNewReport, selectedTab]);
+  }, [
+    animateLiveUpdate,
+    appendDigitalLiteV2,
+    appendPhysicalLiteV2,
+    pickPublicLiveAnalysis,
+    selectedTab,
+  ]);
 
   // Removed inline fetch; using hook-based fetching instead
 
@@ -3609,7 +3578,7 @@ export default function GlobeView() {
         />
       ) : (
         <PublicCollapsibleLatestReports
-          items={publicLatestItems}
+          items={livePublicLatestItems}
           loading={publicLatestLoading}
           error={publicLatestError}
           onItemClick={(item) => {

@@ -206,6 +206,8 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   }, [reportItem, reportWithAnalysis]);
 
   useEffect(() => {
+    const fallbackPublicId =
+      reportWithAnalysis?.report?.public_id || reportItem?.public_id || null;
     if (fullReport) {
       setImageUrl(getDisplayableImage(fullReport.report.image || null));
 
@@ -214,8 +216,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
           (analysis: any) => analysis.language === locale
         )?.title || fullReport.analysis[0].title
       );
+    } else if (fallbackPublicId) {
+      setImageUrl(
+        `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(fallbackPublicId)}`
+      );
     } else if (reportItem) {
-      if (reportItem.classification === "physical" && reportItem?.seq && !reportItem.public_id) {
+      if (reportItem.classification === "physical" && reportItem?.seq) {
         setImageUrl(
           `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/rawimage?seq=${reportItem.seq}`
         );
@@ -230,7 +236,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     } else {
       setImageUrl(null);
     }
-  }, [fullReport, reportItem]);
+  }, [fullReport, locale, reportItem, reportWithAnalysis]);
 
   const report = fullReport?.report ?? reportItem ?? null;
   const analysis = fullReport?.analysis?.find(
