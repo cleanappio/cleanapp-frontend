@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 import PageHeader from "@/components/PageHeader";
 import Footer from "@/components/Footer";
 import {
   casesApiClient,
   CaseDetail,
   CaseEscalationDraftResponse,
+  CaseMatchCandidate,
   CaseEscalationTarget,
 } from "@/lib/cases-api-client";
 import { authApiClient } from "@/lib/auth-api-client";
@@ -19,10 +21,25 @@ import {
   deriveCaseLandmarkLabel,
 } from "@/lib/case-display";
 import { getCanonicalReportPath } from "@/lib/report-links";
+import { bboxToFeature } from "@/lib/place-search";
 
 type ResponsiblePartyCard = CaseEscalationTarget & {
   preview_only?: boolean;
 };
+
+type MiniMapOverlay = {
+  caseId: string;
+  label: string;
+  href: string;
+  polygons: Position[][];
+  point: Position | null;
+  severityScore: number;
+  linkedReportCount: number;
+  matchScore?: number;
+  tone: "current" | "nearby";
+};
+
+type FeatureLike = Feature | FeatureCollection;
 
 function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
   const queryCaseId = router.query.case_id;
@@ -79,6 +96,11 @@ export default function CaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [hasManualDraftEdits, setHasManualDraftEdits] = useState(false);
+  const [nearbyCases, setNearbyCases] = useState<CaseMatchCandidate[]>([]);
+  const [loadingNearbyCases, setLoadingNearbyCases] = useState(false);
+  const [showAllReports, setShowAllReports] = useState(false);
+  const [showAllResponsibleParties, setShowAllResponsibleParties] =
+    useState(false);
   const autoDraftKeyRef = useRef("");
 
   const loadCase = useCallback(async () => {
@@ -171,6 +193,7 @@ export default function CaseDetailPage() {
   );
 
   const caseRecord = detail?.case ?? null;
+  const caseView = detail?.case ?? null;
   const linkedReports = useMemo(
     () =>
       [...(detail?.linked_reports ?? [])].sort((a, b) => {
@@ -247,10 +270,163 @@ export default function CaseDetailPage() {
         activeBannerReport.public_id,
       )}`
     : null;
+  const visibleLinkedReports = useMemo(
+    () => (showAllReports ? linkedReports : linkedReports.slice(0, 3)),
+    [linkedReports, showAllReports],
+  );
+  const visibleResponsibleParties = useMemo(() => {
+    if (showAllResponsibleParties) {
+      return responsibleParties;
+    }
+    const top = responsibleParties.slice(0, 3);
+    const selected = responsibleParties.filter((target) =>
+      selectedTargetIds.includes(target.id),
+    );
+    const deduped = new Map<number, ResponsiblePartyCard>();
+    [...top, ...selected].forEach((target) => {
+      deduped.set(target.id, target);
+    });
+    return [...deduped.values()];
+  }, [
+    responsibleParties,
+    selectedTargetIds,
+    showAllResponsibleParties,
+  ]);
+  const nearbyCaseCards = useMemo(
+    () =>
+      nearbyCases
+        .filter((candidate) => candidate.case_id !== caseId)
+        .slice(0, 5),
+    [caseId, nearbyCases],
+  );
+
+  useEffect(() => {
+    if (!detail || !caseId) {
+      setNearbyCases([]);
+      setLoadingNearbyCases(false);
+      return;
+    }
+
+    if (previewMode) {
+      setNearbyCases(buildMockNearbyCases(caseId));
+      setLoadingNearbyCases(false);
+      return;
+    }
+
+    const geometry = resolveCaseMatchFeature(detail.case);
+    if (!geometry) {
+      setNearbyCases([]);
+      setLoadingNearbyCases(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingNearbyCases(true);
+
+    void casesApiClient
+      .matchCluster({
+        geometry,
+        classification: detail.case.classification,
+        report_seqs: linkedReports.map((report) => report.seq).slice(0, 100),
+        title: detail.case.title,
+        summary: detail.case.summary,
+        n: 12,
+      })
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const deduped = new Map<string, CaseMatchCandidate>();
+        (response.candidate_cases || [])
+          .filter((candidate) => candidate.case_id !== caseId)
+          .forEach((candidate) => {
+            const existing = deduped.get(candidate.case_id);
+            if (!existing || candidate.match_score > existing.match_score) {
+              deduped.set(candidate.case_id, candidate);
+            }
+          });
+        setNearbyCases(
+          [...deduped.values()].sort((a, b) => {
+            if (b.match_score !== a.match_score) {
+              return b.match_score - a.match_score;
+            }
+            return (
+              (b.linked_report_count || 0) - (a.linked_report_count || 0)
+            );
+          }),
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("Failed to load nearby cases", err);
+          setNearbyCases([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingNearbyCases(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId, detail, linkedReports, previewMode]);
+
+  const clusterMapOverlays = useMemo<MiniMapOverlay[]>(() => {
+    const currentFeature = resolveCaseFeature(caseView);
+    const overlays: MiniMapOverlay[] = [];
+
+    if (currentFeature && caseView) {
+      overlays.push({
+        caseId: caseView.case_id,
+        label: displayTitle,
+        href: `/cases/${caseView.case_id}`,
+        polygons: extractPolygonRings(currentFeature),
+        point:
+          typeof caseView.anchor_lng === "number" &&
+          typeof caseView.anchor_lat === "number"
+            ? [caseView.anchor_lng, caseView.anchor_lat]
+            : null,
+        severityScore: caseView.severity_score || 0,
+        linkedReportCount: caseView.linked_report_count || linkedReports.length,
+        tone: "current",
+      });
+    }
+
+    nearbyCaseCards.forEach((candidate) => {
+      const feature = resolveCandidateFeature(candidate);
+      overlays.push({
+        caseId: candidate.case_id,
+        label: candidate.title || "Nearby cluster",
+        href: `/cases/${candidate.case_id}`,
+        polygons: feature ? extractPolygonRings(feature) : [],
+        point:
+          typeof candidate.anchor_lng === "number" &&
+          typeof candidate.anchor_lat === "number"
+            ? [candidate.anchor_lng, candidate.anchor_lat]
+            : null,
+        severityScore:
+          candidate.match_score && candidate.match_score > 0
+            ? candidate.match_score
+            : 0.5,
+        linkedReportCount: candidate.linked_report_count || 0,
+        matchScore: candidate.match_score,
+        tone: "nearby",
+      });
+    });
+
+    return overlays;
+  }, [caseId, caseView, displayTitle, linkedReports.length, nearbyCaseCards]);
 
   useEffect(() => {
     setBannerIndex(0);
   }, [bannerCandidates.length, caseRecord?.case_id]);
+
+  useEffect(() => {
+    setShowAllReports(false);
+    setShowAllResponsibleParties(false);
+  }, [caseId]);
 
   const timelineItems = useMemo(() => {
     if (!detail) return [];
@@ -472,8 +648,6 @@ export default function CaseDetailPage() {
     );
   }
 
-  const caseView = detail.case;
-
   return (
     <div className="min-h-screen bg-slate-50">
       <PageHeader />
@@ -521,17 +695,17 @@ export default function CaseDetailPage() {
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-200 bg-white p-6 md:grid-cols-4">
-            <MetricCard label="Status" value={caseView.status} />
+            <MetricCard label="Status" value={caseView!.status} />
             <MetricCard label="Reports" value={String(linkedReports.length)} />
             <MetricCard
               label="Severity"
-              value={`${Math.round(caseView.severity_score * 100)}%`}
-              tone={scoreTone(caseView.severity_score)}
+              value={`${Math.round(caseView!.severity_score * 100)}%`}
+              tone={scoreTone(caseView!.severity_score)}
             />
             <MetricCard
               label="Urgency"
-              value={`${Math.round(caseView.urgency_score * 100)}%`}
-              tone={scoreTone(caseView.urgency_score)}
+              value={`${Math.round(caseView!.urgency_score * 100)}%`}
+              tone={scoreTone(caseView!.urgency_score)}
             />
             {bannerCandidates.length > 1 && (
               <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
@@ -560,7 +734,7 @@ export default function CaseDetailPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900">
-                    Holistic summary
+                    Summary
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-slate-700">
                     {holisticSummary}
@@ -575,11 +749,24 @@ export default function CaseDetailPage() {
             </section>
 
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4">
-                Linked reports
-              </h2>
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Linked reports
+                </h2>
+                {linkedReports.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllReports((current) => !current)}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-900"
+                  >
+                    {showAllReports
+                      ? "Show fewer"
+                      : `Show all ${linkedReports.length}`}
+                  </button>
+                )}
+              </div>
               <div className="space-y-3">
-                {linkedReports.map((report) => (
+                {visibleLinkedReports.map((report) => (
                   <div
                     key={`${report.case_id}-${report.seq}`}
                     className="rounded-xl border border-slate-200 px-4 py-3"
@@ -665,15 +852,98 @@ export default function CaseDetailPage() {
           <div className="space-y-6">
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Cluster area
+              </h2>
+              <div className="grid gap-4 xl:grid-cols-[1fr,1.1fr]">
+                <CaseClusterMiniMap
+                  overlays={clusterMapOverlays}
+                  onSelectCase={(nextCaseId) => router.push(`/cases/${nextCaseId}`)}
+                />
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-sm font-medium text-slate-900">
+                      Current case footprint
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {caseView!.cluster_count} cluster
+                      {caseView!.cluster_count === 1 ? "" : "s"} ·{" "}
+                      {linkedReports.length} linked report
+                      {linkedReports.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Nearby clusters
+                      </p>
+                      {loadingNearbyCases && (
+                        <span className="text-xs text-slate-500">
+                          Loading...
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {nearbyCaseCards.length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+                          No nearby open clusters matched this area yet.
+                        </p>
+                      ) : (
+                        nearbyCaseCards.map((candidate) => (
+                          <Link
+                            key={candidate.case_id}
+                            href={`/cases/${candidate.case_id}`}
+                            className="block rounded-xl border border-slate-200 px-4 py-3 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-900">
+                                  {candidate.title || "Nearby cluster"}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-600">
+                                  {candidate.linked_report_count} reports ·
+                                  match {Math.round(candidate.match_score * 100)}
+                                  %
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
+                                Open
+                              </span>
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Responsible parties
               </h2>
+              {responsibleParties.length > 3 && (
+                <div className="mb-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowAllResponsibleParties((current) => !current)
+                    }
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-900"
+                  >
+                    {showAllResponsibleParties
+                      ? "Show fewer"
+                      : `Show all ${responsibleParties.length}`}
+                  </button>
+                </div>
+              )}
               <div className="space-y-3">
                 {responsibleParties.length === 0 ? (
                   <p className="text-slate-600">
                     No responsible parties identified yet.
                   </p>
                 ) : (
-                  responsibleParties.map((target) => {
+                  visibleResponsibleParties.map((target) => {
                     const selectable = !!target.email && !target.preview_only;
                     const checked = selectable
                       ? selectedTargetIds.includes(target.id)
@@ -925,6 +1195,118 @@ export default function CaseDetailPage() {
         </div>
       </div>
       <Footer />
+    </div>
+  );
+}
+
+function CaseClusterMiniMap({
+  overlays,
+  onSelectCase,
+}: {
+  overlays: MiniMapOverlay[];
+  onSelectCase: (caseId: string) => void;
+}) {
+  const canvasWidth = 320;
+  const canvasHeight = 220;
+  const bounds = computeOverlayBounds(overlays);
+
+  if (!bounds) {
+    return (
+      <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+        No mappable case geometry is available yet.
+      </div>
+    );
+  }
+
+  const projected = overlays.map((overlay) => ({
+    ...overlay,
+    projectedPolygons: overlay.polygons.map((ring) =>
+      ring.map((position) =>
+        projectPosition(position, bounds, canvasWidth, canvasHeight),
+      ),
+    ),
+    projectedPoint: overlay.point
+      ? projectPosition(overlay.point, bounds, canvasWidth, canvasHeight)
+      : null,
+  }));
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_35%),linear-gradient(180deg,_#f8fafc,_#eef2ff)]">
+      <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Area thumbnail</p>
+          <p className="text-xs text-slate-500">
+            Current case in green. Nearby clusters are clickable.
+          </p>
+        </div>
+      </div>
+      <svg
+        viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+        className="block h-[220px] w-full"
+        role="img"
+        aria-label="Case area overview with nearby clusters"
+      >
+        <defs>
+          <pattern
+            id="case-grid"
+            width="28"
+            height="28"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 28 0 L 0 0 0 28"
+              fill="none"
+              stroke="rgba(148,163,184,0.2)"
+              strokeWidth="1"
+            />
+          </pattern>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width={canvasWidth}
+          height={canvasHeight}
+          fill="url(#case-grid)"
+        />
+        {projected.map((overlay) => {
+          const isCurrent = overlay.tone === "current";
+          const fill = isCurrent
+            ? "rgba(16, 185, 129, 0.18)"
+            : "rgba(59, 130, 246, 0.10)";
+          const stroke = isCurrent
+            ? "rgba(5, 150, 105, 0.95)"
+            : "rgba(37, 99, 235, 0.85)";
+          return (
+            <g key={overlay.caseId}>
+              {overlay.projectedPolygons.map((ring, index) => (
+                <path
+                  key={`${overlay.caseId}-${index}`}
+                  d={ringToPath(ring)}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={isCurrent ? 3 : 2}
+                  className={!isCurrent ? "cursor-pointer" : undefined}
+                  onClick={
+                    isCurrent ? undefined : () => onSelectCase(overlay.caseId)
+                  }
+                />
+              ))}
+              {overlay.projectedPoint && (
+                <circle
+                  cx={overlay.projectedPoint[0]}
+                  cy={overlay.projectedPoint[1]}
+                  r={isCurrent ? 5.5 : 4}
+                  fill={stroke}
+                  className={!isCurrent ? "cursor-pointer" : undefined}
+                  onClick={
+                    isCurrent ? undefined : () => onSelectCase(overlay.caseId)
+                  }
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
@@ -1217,6 +1599,53 @@ function buildMockCaseEscalationDraft(
   };
 }
 
+function buildMockNearbyCases(caseId: string): CaseMatchCandidate[] {
+  return [
+    {
+      case_id: "case_preview_nearby_1",
+      slug: "falling-debris-at-adjacent-playground",
+      title: "Falling debris at adjacent playground",
+      status: "open",
+      classification: "physical",
+      summary: "Potential overlap with the same masonry-failure zone.",
+      geometry_json:
+        '{"type":"Polygon","coordinates":[[[8.53395,47.30862],[8.53429,47.30851],[8.53419,47.30818],[8.53382,47.30828],[8.53395,47.30862]]]}',
+      aggregate_geometry_json: "",
+      aggregate_bbox_json: "[8.53382,47.30818,8.53429,47.30862]",
+      anchor_report_seq: 1160312,
+      anchor_lat: 47.30843,
+      anchor_lng: 8.53404,
+      cluster_count: 1,
+      linked_report_count: 4,
+      shared_report_count: 2,
+      match_score: 0.74,
+      match_reasons: ["overlapping area", "similar structural language"],
+      updated_at: "2026-03-11T18:47:29Z",
+    },
+    {
+      case_id: "case_preview_nearby_2",
+      slug: "turnhalle-kopfholz-facade-cracking",
+      title: "Turnhalle Kopfholz facade cracking",
+      status: "investigating",
+      classification: "physical",
+      summary: "Related facade concerns on the same campus edge.",
+      geometry_json:
+        '{"type":"Polygon","coordinates":[[[8.53332,47.30815],[8.53377,47.30805],[8.53358,47.30779],[8.53318,47.30793],[8.53332,47.30815]]]}',
+      aggregate_geometry_json: "",
+      aggregate_bbox_json: "[8.53318,47.30779,8.53377,47.30815]",
+      anchor_report_seq: 14036,
+      anchor_lat: 47.30798,
+      anchor_lng: 8.53349,
+      cluster_count: 1,
+      linked_report_count: 3,
+      shared_report_count: 1,
+      match_score: 0.61,
+      match_reasons: ["same location"],
+      updated_at: "2026-03-11T17:30:00Z",
+    },
+  ].filter((candidate) => candidate.case_id !== caseId);
+}
+
 function buildResponsiblePartyCards(
   targets: CaseEscalationTarget[],
   linkedReports: CaseDetail["linked_reports"],
@@ -1228,7 +1657,7 @@ function buildResponsiblePartyCards(
   );
   const base = preferred.length > 0 ? preferred : targets;
   if (!previewMode || !looksStructuralCase(linkedReports)) {
-    return base;
+    return sortResponsibleParties(base);
   }
   const hasStructuralStakeholder = base.some((target) =>
     ["architect", "contractor", "engineer", "building_authority"].includes(
@@ -1236,11 +1665,11 @@ function buildResponsiblePartyCards(
     ),
   );
   if (hasStructuralStakeholder) {
-    return base;
+    return sortResponsibleParties(base);
   }
 
   const label = landmarkLabel || "the affected site";
-  return [
+  return sortResponsibleParties([
     ...base,
     {
       id: -101,
@@ -1311,7 +1740,236 @@ function buildResponsiblePartyCards(
       created_at: "",
       preview_only: true,
     },
+  ]);
+}
+
+function sortResponsibleParties(
+  targets: ResponsiblePartyCard[],
+): ResponsiblePartyCard[] {
+  return [...targets].sort((a, b) => {
+    const roleDelta = responsibleRolePriority(b.role_type) -
+      responsibleRolePriority(a.role_type);
+    if (roleDelta !== 0) {
+      return roleDelta;
+    }
+    const confidenceDelta =
+      (b.confidence_score || 0) - (a.confidence_score || 0);
+    if (confidenceDelta !== 0) {
+      return confidenceDelta;
+    }
+    return (a.display_name || a.organization || "").localeCompare(
+      b.display_name || b.organization || "",
+    );
+  });
+}
+
+function responsibleRolePriority(roleType: string): number {
+  switch (roleType) {
+    case "operator":
+    case "operator_admin":
+    case "site_leadership":
+      return 6;
+    case "public_safety":
+    case "building_authority":
+    case "fire_authority":
+      return 5;
+    case "facility_manager":
+      return 4;
+    case "architect":
+    case "engineer":
+    case "contractor":
+      return 3;
+    default:
+      return 1;
+  }
+}
+
+function resolveCaseFeature(
+  caseView: CaseDetail["case"] | null | undefined,
+): FeatureLike | null {
+  if (!caseView) {
+    return null;
+  }
+  return (
+    parseFeatureLike(caseView.aggregate_geometry_json) ||
+    parseFeatureLike(caseView.geometry_json) ||
+    parseBBoxFeature(caseView.aggregate_bbox_json)
+  );
+}
+
+function resolveCaseMatchFeature(
+  caseView: CaseDetail["case"] | null | undefined,
+): Feature | null {
+  if (!caseView) {
+    return null;
+  }
+  return (
+    (parseFeatureLike(caseView.geometry_json) as Feature | null) ||
+    (parseBBoxFeature(caseView.aggregate_bbox_json) as Feature | null)
+  );
+}
+
+function resolveCandidateFeature(
+  candidate: CaseMatchCandidate,
+): FeatureLike | null {
+  return (
+    parseFeatureLike(candidate.aggregate_geometry_json) ||
+    parseFeatureLike(candidate.geometry_json) ||
+    parseBBoxFeature(candidate.aggregate_bbox_json)
+  );
+}
+
+function parseBBoxFeature(value?: string | null): FeatureLike | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === 4 &&
+      parsed.every((item) => typeof item === "number")
+    ) {
+      return bboxToFeature(parsed as [number, number, number, number]);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function parseFeatureLike(value?: string | null): FeatureLike | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    if (parsed.type === "Feature") {
+      return parsed as Feature;
+    }
+    if (parsed.type === "FeatureCollection") {
+      return parsed as FeatureCollection;
+    }
+    if (typeof parsed.type === "string") {
+      return {
+        type: "Feature",
+        properties: {},
+        geometry: parsed as Geometry,
+      };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function extractPolygonRings(feature: FeatureLike): Position[][] {
+  return walkFeatureGeometry(feature).flatMap((geometry) => {
+    if (geometry.type === "Polygon") {
+      return geometry.coordinates[0] ? [geometry.coordinates[0]] : [];
+    }
+    if (geometry.type === "MultiPolygon") {
+      return geometry.coordinates
+        .map((polygon) => polygon[0])
+        .filter(Boolean) as Position[][];
+    }
+    return [];
+  });
+}
+
+function walkFeatureGeometry(feature: FeatureLike): Geometry[] {
+  const source =
+    feature.type === "FeatureCollection"
+      ? feature.features
+          .map((item) => item.geometry)
+          .filter((geometry): geometry is Geometry => Boolean(geometry))
+      : feature.geometry
+        ? [feature.geometry]
+        : [];
+
+  const geometries: Geometry[] = [];
+  source.forEach((geometry) => {
+    geometries.push(...flattenGeometry(geometry));
+  });
+  return geometries;
+}
+
+function flattenGeometry(geometry: Geometry): Geometry[] {
+  if (geometry.type === "GeometryCollection") {
+    return geometry.geometries.flatMap(flattenGeometry);
+  }
+  return [geometry];
+}
+
+function computeOverlayBounds(
+  overlays: MiniMapOverlay[],
+): [number, number, number, number] | null {
+  let west = Number.POSITIVE_INFINITY;
+  let south = Number.POSITIVE_INFINITY;
+  let east = Number.NEGATIVE_INFINITY;
+  let north = Number.NEGATIVE_INFINITY;
+
+  overlays.forEach((overlay) => {
+    overlay.polygons.forEach((ring) => {
+      ring.forEach(([lng, lat]) => {
+        west = Math.min(west, lng);
+        south = Math.min(south, lat);
+        east = Math.max(east, lng);
+        north = Math.max(north, lat);
+      });
+    });
+    if (overlay.point) {
+      west = Math.min(west, overlay.point[0]);
+      south = Math.min(south, overlay.point[1]);
+      east = Math.max(east, overlay.point[0]);
+      north = Math.max(north, overlay.point[1]);
+    }
+  });
+
+  if (
+    !Number.isFinite(west) ||
+    !Number.isFinite(south) ||
+    !Number.isFinite(east) ||
+    !Number.isFinite(north)
+  ) {
+    return null;
+  }
+
+  const lngPadding = Math.max((east - west) * 0.1, 0.0004);
+  const latPadding = Math.max((north - south) * 0.1, 0.0004);
+  return [
+    west - lngPadding,
+    south - latPadding,
+    east + lngPadding,
+    north + latPadding,
   ];
+}
+
+function projectPosition(
+  position: Position,
+  bounds: [number, number, number, number],
+  width: number,
+  height: number,
+): [number, number] {
+  const [west, south, east, north] = bounds;
+  const lngSpan = Math.max(east - west, 0.0001);
+  const latSpan = Math.max(north - south, 0.0001);
+  const x = ((position[0] - west) / lngSpan) * width;
+  const y = height - ((position[1] - south) / latSpan) * height;
+  return [x, y];
+}
+
+function ringToPath(ring: [number, number][]): string {
+  if (ring.length === 0) {
+    return "";
+  }
+  return ring
+    .map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x} ${y}`)
+    .join(" ")
+    .concat(" Z");
 }
 
 function buildHolisticClusterSummary(

@@ -179,6 +179,8 @@ export interface CaseDetail {
     aggregate_geometry_json: string;
     aggregate_bbox_json: string;
     anchor_report_seq?: number;
+    anchor_lat?: number;
+    anchor_lng?: number;
     severity_score: number;
     urgency_score: number;
     confidence_score: number;
