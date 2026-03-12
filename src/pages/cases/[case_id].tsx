@@ -33,6 +33,8 @@ type ResponsiblePartySection = {
   title: string;
   description: string;
   targets: ResponsiblePartyCard[];
+  hiddenCount: number;
+  hiddenOrganizationCount: number;
 };
 
 type MiniMapOverlay = {
@@ -1234,6 +1236,12 @@ export default function CaseDetailPage() {
                         <p className="mt-1 text-sm text-slate-600">
                           {section.description}
                         </p>
+                        {!showAllResponsibleParties &&
+                        responsiblePartyBackupSummary(section) ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {responsiblePartyBackupSummary(section)}
+                          </p>
+                        ) : null}
                       </div>
                       {section.targets.length === 0 ? (
                         <p className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
@@ -2397,45 +2405,144 @@ function buildResponsiblePartySections(
       !authorities.some((authority) => authority.id === target.id),
   );
   return [
-    {
-      key: "notify-now",
-      title: "Notify now",
-      description:
-        "These are the smallest set of actors the routing engine thinks should be contacted first.",
-      targets: visibleResponsiblePartyTargets(notifyNow, selectedIds, showAll),
-    },
-    {
-      key: "authorities",
-      title: "Authorities & oversight",
-      description:
-        "Official regulators, safety, and oversight stakeholders relevant to the case if escalation broadens.",
-      targets: visibleResponsiblePartyTargets(authorities, selectedIds, showAll),
-    },
-    {
-      key: "other-stakeholders",
-      title: "Other stakeholders",
-      description:
-        "Additional project, owner, or context-specific stakeholders that may matter if the first wave is insufficient.",
-      targets: visibleResponsiblePartyTargets(others, selectedIds, showAll),
-    },
+    buildResponsiblePartySection(
+      "notify-now",
+      "Notify now",
+      "These are the smallest set of actors the routing engine thinks should be contacted first.",
+      notifyNow,
+      selectedIds,
+      showAll,
+    ),
+    buildResponsiblePartySection(
+      "authorities",
+      "Authorities & oversight",
+      "Official regulators, safety, and oversight stakeholders relevant to the case if escalation broadens.",
+      authorities,
+      selectedIds,
+      showAll,
+    ),
+    buildResponsiblePartySection(
+      "other-stakeholders",
+      "Other stakeholders",
+      "Additional project, owner, or context-specific stakeholders that may matter if the first wave is insufficient.",
+      others,
+      selectedIds,
+      showAll,
+    ),
   ];
+}
+
+function buildResponsiblePartySection(
+  key: string,
+  title: string,
+  description: string,
+  targets: ResponsiblePartyCard[],
+  selectedTargetIds: Set<number>,
+  showAll: boolean,
+): ResponsiblePartySection {
+  const visible = visibleResponsiblePartyTargets(
+    targets,
+    selectedTargetIds,
+    showAll,
+  );
+  return {
+    key,
+    title,
+    description,
+    targets: visible.targets,
+    hiddenCount: visible.hiddenCount,
+    hiddenOrganizationCount: visible.hiddenOrganizationCount,
+  };
 }
 
 function visibleResponsiblePartyTargets(
   targets: ResponsiblePartyCard[],
   selectedTargetIds: Set<number>,
   showAll: boolean,
-): ResponsiblePartyCard[] {
+): {
+  targets: ResponsiblePartyCard[];
+  hiddenCount: number;
+  hiddenOrganizationCount: number;
+} {
   if (showAll || targets.length <= 3) {
-    return targets;
+    return {
+      targets,
+      hiddenCount: 0,
+      hiddenOrganizationCount: 0,
+    };
   }
-  const top = targets.slice(0, 3);
-  const selected = targets.filter((target) => selectedTargetIds.has(target.id));
-  const deduped = new Map<number, ResponsiblePartyCard>();
-  [...top, ...selected].forEach((target) => {
-    deduped.set(target.id, target);
-  });
-  return [...deduped.values()];
+  const visibleByID = new Map<number, ResponsiblePartyCard>();
+  const seenGroups = new Set<string>();
+  targets
+    .filter((target) => selectedTargetIds.has(target.id))
+    .forEach((target) => {
+      visibleByID.set(target.id, target);
+      seenGroups.add(responsiblePartyGroupKey(target));
+    });
+  for (const target of targets) {
+    if (visibleByID.has(target.id)) {
+      continue;
+    }
+    const groupKey = responsiblePartyGroupKey(target);
+    if (seenGroups.has(groupKey)) {
+      continue;
+    }
+    visibleByID.set(target.id, target);
+    seenGroups.add(groupKey);
+    if (visibleByID.size >= 3) {
+      break;
+    }
+  }
+  const visibleTargets = [...visibleByID.values()];
+  const hiddenTargets = targets.filter((target) => !visibleByID.has(target.id));
+  const hiddenOrganizations = new Set(
+    hiddenTargets.map((target) => responsiblePartyGroupKey(target)).filter(Boolean),
+  );
+  return {
+    targets: visibleTargets,
+    hiddenCount: hiddenTargets.length,
+    hiddenOrganizationCount: hiddenOrganizations.size,
+  };
+}
+
+function responsiblePartyGroupKey(target: ResponsiblePartyCard): string {
+  const organization = (
+    target.organization ||
+    target.display_name ||
+    target.website ||
+    target.source_url ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+  if (organization.length > 0) {
+    return organization;
+  }
+  if (target.email) {
+    const [, domain = target.email.toLowerCase()] = target.email
+      .toLowerCase()
+      .split("@");
+    return domain;
+  }
+  return `${target.role_type}:${target.id}`;
+}
+
+function responsiblePartyBackupSummary(
+  section: ResponsiblePartySection,
+): string | null {
+  if (section.hiddenCount <= 0) {
+    return null;
+  }
+  if (section.hiddenOrganizationCount > 0) {
+    return `${section.hiddenCount} backup contact${
+      section.hiddenCount === 1 ? "" : "s"
+    } across ${section.hiddenOrganizationCount} additional org${
+      section.hiddenOrganizationCount === 1 ? "" : "s"
+    } are held in reserve.`;
+  }
+  return `${section.hiddenCount} backup contact${
+    section.hiddenCount === 1 ? "" : "s"
+  } are held in reserve.`;
 }
 
 function responsibleRolePriority(roleType: string): number {

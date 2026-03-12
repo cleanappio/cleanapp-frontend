@@ -33,6 +33,8 @@ type StrategySection = {
   title: string;
   description: string;
   targets: CaseEscalationTarget[];
+  hiddenCount: number;
+  hiddenOrganizationCount: number;
 };
 
 type ExecutionTaskPayload = {
@@ -96,27 +98,30 @@ export default function ReportContactStrategyPanel({
     );
 
     return [
-      {
-        key: "notify-now",
-        title: "Notify now",
-        description:
-          "Primary operators or owners who can act immediately on this report.",
-        targets: visibleTargets(notifyNow, showAll),
-      },
-      {
-        key: "authorities",
-        title: "Authorities & oversight",
-        description:
-          "Regulators, safety authorities, or municipal oversight stakeholders.",
-        targets: visibleTargets(authorities, showAll),
-      },
-      {
-        key: "others",
-        title: "Other stakeholders",
-        description:
-          "Additional project-chain or contextual stakeholders discovered for this report.",
-        targets: visibleTargets(others, showAll),
-      },
+      buildStrategySection(
+        "notify-now",
+        "Notify now",
+        "Primary operators or owners who can act immediately on this report.",
+        notifyNow,
+        selectedTargetIds,
+        showAll,
+      ),
+      buildStrategySection(
+        "authorities",
+        "Authorities & oversight",
+        "Regulators, safety authorities, or municipal oversight stakeholders.",
+        authorities,
+        selectedTargetIds,
+        showAll,
+      ),
+      buildStrategySection(
+        "others",
+        "Other stakeholders",
+        "Additional project-chain or contextual stakeholders discovered for this report.",
+        others,
+        selectedTargetIds,
+        showAll,
+      ),
     ].filter((section) => section.targets.length > 0);
   }, [selectedTargetIds, showAll, strategy?.escalation_targets]);
 
@@ -309,6 +314,11 @@ function StrategySectionCard({
           {section.title}
         </h3>
         <p className="mt-1 text-sm text-slate-600">{section.description}</p>
+        {section.hiddenCount > 0 ? (
+          <p className="mt-1 text-xs text-slate-500">
+            {strategySectionBackupSummary(section)}
+          </p>
+        ) : null}
       </div>
       <div className="space-y-3">
         {section.targets.map((target) => {
@@ -417,11 +427,108 @@ function StrategySectionCard({
   );
 }
 
-function visibleTargets(targets: CaseEscalationTarget[], showAll: boolean) {
+function buildStrategySection(
+  key: string,
+  title: string,
+  description: string,
+  targets: CaseEscalationTarget[],
+  selectedTargetIds: Set<number>,
+  showAll: boolean,
+): StrategySection {
+  const visible = visibleTargets(targets, selectedTargetIds, showAll);
+  return {
+    key,
+    title,
+    description,
+    targets: visible.targets,
+    hiddenCount: visible.hiddenCount,
+    hiddenOrganizationCount: visible.hiddenOrganizationCount,
+  };
+}
+
+function visibleTargets(
+  targets: CaseEscalationTarget[],
+  selectedTargetIds: Set<number>,
+  showAll: boolean,
+): {
+  targets: CaseEscalationTarget[];
+  hiddenCount: number;
+  hiddenOrganizationCount: number;
+} {
   if (showAll || targets.length <= 3) {
-    return targets;
+    return {
+      targets,
+      hiddenCount: 0,
+      hiddenOrganizationCount: 0,
+    };
   }
-  return targets.slice(0, 3);
+  const visibleByID = new Map<number, CaseEscalationTarget>();
+  const seenGroups = new Set<string>();
+  targets
+    .filter((target) => selectedTargetIds.has(target.id))
+    .forEach((target) => {
+      visibleByID.set(target.id, target);
+      seenGroups.add(strategyTargetGroupKey(target));
+    });
+  for (const target of targets) {
+    if (visibleByID.has(target.id)) {
+      continue;
+    }
+    const groupKey = strategyTargetGroupKey(target);
+    if (seenGroups.has(groupKey)) {
+      continue;
+    }
+    visibleByID.set(target.id, target);
+    seenGroups.add(groupKey);
+    if (visibleByID.size >= 3) {
+      break;
+    }
+  }
+  const visibleItems = [...visibleByID.values()];
+  const hiddenTargets = targets.filter((target) => !visibleByID.has(target.id));
+  const hiddenOrganizations = new Set(
+    hiddenTargets.map((target) => strategyTargetGroupKey(target)).filter(Boolean),
+  );
+  return {
+    targets: visibleItems,
+    hiddenCount: hiddenTargets.length,
+    hiddenOrganizationCount: hiddenOrganizations.size,
+  };
+}
+
+function strategyTargetGroupKey(target: CaseEscalationTarget): string {
+  const organization = (
+    target.organization ||
+    target.display_name ||
+    target.website ||
+    target.source_url ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+  if (organization.length > 0) {
+    return organization;
+  }
+  if (target.email) {
+    const [, domain = target.email.toLowerCase()] = target.email
+      .toLowerCase()
+      .split("@");
+    return domain;
+  }
+  return `${target.role_type}:${target.id}`;
+}
+
+function strategySectionBackupSummary(section: StrategySection): string {
+  if (section.hiddenOrganizationCount > 0) {
+    return `${section.hiddenCount} backup contact${
+      section.hiddenCount === 1 ? "" : "s"
+    } across ${section.hiddenOrganizationCount} additional org${
+      section.hiddenOrganizationCount === 1 ? "" : "s"
+    } are held in reserve.`;
+  }
+  return `${section.hiddenCount} backup contact${
+    section.hiddenCount === 1 ? "" : "s"
+  } are held in reserve.`;
 }
 
 function formatRoleLabel(role: string) {
