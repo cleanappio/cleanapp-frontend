@@ -47,6 +47,24 @@ type MiniMapOverlay = {
   tone: "current" | "nearby";
 };
 
+type ExecutionTaskPayload = {
+  target_id?: number;
+  organization?: string;
+  display_name?: string;
+  reason?: string;
+  channel?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  contact_url?: string;
+  social_platform?: string;
+  social_handle?: string;
+  source_url?: string;
+  action_url?: string;
+  channel_value?: string;
+  channel_label?: string;
+};
+
 type FeatureLike = Feature | FeatureCollection;
 
 const INITIAL_CASE_LOAD_BUDGET_MS = 12000;
@@ -160,6 +178,7 @@ export default function CaseDetailPage() {
   const [loadingElapsedMs, setLoadingElapsedMs] = useState(0);
   const [drafting, setDrafting] = useState(false);
   const [sending, setSending] = useState(false);
+  const [taskActionBusyId, setTaskActionBusyId] = useState<number | null>(null);
   const [refreshingEscalationData, setRefreshingEscalationData] =
     useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +196,9 @@ export default function CaseDetailPage() {
       nextCaseId: string,
       currentTargets: CaseEscalationTarget[],
       currentNotifyPlan?: CaseNotifyPlan | null,
+      options?: {
+        refreshTargets?: boolean;
+      },
     ) => {
       if (previewMode) {
         return;
@@ -185,9 +207,7 @@ export default function CaseDetailPage() {
       try {
         const nextEscalations = await casesApiClient.getCaseEscalations(
           nextCaseId,
-          {
-            refreshTargets: true,
-          },
+          options?.refreshTargets ? { refreshTargets: true } : undefined,
         );
         setDetail((current) => {
           if (!current || current.case.case_id !== nextCaseId) {
@@ -271,6 +291,7 @@ export default function CaseDetailPage() {
         caseId,
         data.escalation_targets,
         data.notify_plan ?? null,
+        { refreshTargets: true },
       );
     } catch (err) {
       console.error("Failed to load case", err);
@@ -290,6 +311,44 @@ export default function CaseDetailPage() {
       setLoading(false);
     }
   }, [caseId, previewMode, refreshEscalationData, router]);
+
+  const handleRecordExecutionTaskOutcome = useCallback(
+    async (taskId: number, outcomeType: string) => {
+      if (!caseId) {
+        return;
+      }
+      setTaskActionBusyId(taskId);
+      setError(null);
+      try {
+        await casesApiClient.recordCaseExecutionTaskOutcome(caseId, taskId, {
+          outcome_type: outcomeType,
+        });
+        const nextEscalations = await casesApiClient.getCaseEscalations(caseId);
+        setDetail((current) => {
+          if (!current || current.case.case_id !== caseId) {
+            return current;
+          }
+          return {
+            ...current,
+            escalation_targets: nextEscalations.targets,
+            contact_observations: nextEscalations.observations,
+            notify_plan: nextEscalations.notify_plan ?? null,
+            routing_profile: nextEscalations.routing_profile ?? null,
+            execution_tasks: nextEscalations.execution_tasks,
+            notify_outcomes: nextEscalations.notify_outcomes,
+            escalation_actions: nextEscalations.actions,
+            email_deliveries: nextEscalations.deliveries,
+          };
+        });
+      } catch (err) {
+        console.error("Failed to record execution task outcome", err);
+        setError("Failed to record execution outcome");
+      } finally {
+        setTaskActionBusyId(null);
+      }
+    },
+    [caseId],
+  );
 
   useEffect(() => {
     loadCase();
@@ -1345,28 +1404,73 @@ export default function CaseDetailPage() {
                     No pending execution tasks.
                   </p>
                 ) : (
-                  executionTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="rounded-xl border border-slate-200 px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-medium text-slate-900">
-                            {task.summary || "Follow-up task"}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Wave {task.wave_number} · {formatExecutionMode(task.execution_mode)} · {formatTaskStatus(task.task_status)}
+                  executionTasks.map((task) => {
+                    const payload = parseExecutionTaskPayload(task.payload_json);
+                    const primaryAction = resolveExecutionTaskPrimaryAction(task, payload);
+                    const isBusy = taskActionBusyId === task.id;
+                    return (
+                      <div
+                        key={task.id}
+                        className="rounded-xl border border-slate-200 px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {task.summary || "Follow-up task"}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">
+                              Wave {task.wave_number} · {formatExecutionMode(task.execution_mode)} · {formatTaskStatus(task.task_status)}
+                            </p>
+                            {payload?.reason ? (
+                              <p className="mt-2 text-xs leading-5 text-slate-500">
+                                {payload.reason}
+                              </p>
+                            ) : null}
+                            {payload?.channel_value ? (
+                              <p className="mt-1 text-xs text-slate-500">
+                                {payload.channel_label || "Channel"}: {payload.channel_value}
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="shrink-0 text-xs text-slate-500">
+                            {task.due_at
+                              ? `Due ${new Date(task.due_at).toLocaleString()}`
+                              : "Queued"}
                           </p>
                         </div>
-                        <p className="shrink-0 text-xs text-slate-500">
-                          {task.due_at
-                            ? `Due ${new Date(task.due_at).toLocaleString()}`
-                            : "Queued"}
-                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {primaryAction ? (
+                            <a
+                              href={primaryAction.href}
+                              target={primaryAction.external ? "_blank" : undefined}
+                              rel={primaryAction.external ? "noreferrer" : undefined}
+                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              {primaryAction.label}
+                            </a>
+                          ) : null}
+                          {[
+                            { key: "acknowledged", label: "Acknowledged" },
+                            { key: "fixed", label: "Fixed" },
+                            { key: "misrouted", label: "Misrouted" },
+                            { key: "no_response", label: "No response" },
+                          ].map((action) => (
+                            <button
+                              key={action.key}
+                              type="button"
+                              disabled={isBusy || task.task_status === "completed"}
+                              onClick={() =>
+                                handleRecordExecutionTaskOutcome(task.id, action.key)
+                              }
+                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isBusy ? "Saving..." : action.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -2974,6 +3078,123 @@ function parseEventPayload(payload: unknown) {
       : null;
   } catch {
     return null;
+  }
+}
+
+function parseExecutionTaskPayload(payload: unknown): ExecutionTaskPayload | null {
+  const parsed = parseEventPayload(payload);
+  if (!parsed) {
+    return null;
+  }
+  const channel = typeof parsed.channel === "string" ? parsed.channel : "";
+  const email = typeof parsed.email === "string" ? parsed.email : "";
+  const phone = typeof parsed.phone === "string" ? parsed.phone : "";
+  const website = typeof parsed.website === "string" ? parsed.website : "";
+  const contactUrl =
+    typeof parsed.contact_url === "string" ? parsed.contact_url : "";
+  const sourceUrl =
+    typeof parsed.source_url === "string" ? parsed.source_url : "";
+  const actionUrl =
+    typeof parsed.action_url === "string" ? parsed.action_url : "";
+  const payloadMap: ExecutionTaskPayload = {
+    target_id:
+      typeof parsed.target_id === "number" ? parsed.target_id : undefined,
+    organization:
+      typeof parsed.organization === "string" ? parsed.organization : undefined,
+    display_name:
+      typeof parsed.display_name === "string" ? parsed.display_name : undefined,
+    reason: typeof parsed.reason === "string" ? parsed.reason : undefined,
+    channel,
+    email,
+    phone,
+    website,
+    contact_url: contactUrl,
+    social_platform:
+      typeof parsed.social_platform === "string"
+        ? parsed.social_platform
+        : undefined,
+    social_handle:
+      typeof parsed.social_handle === "string"
+        ? parsed.social_handle
+        : undefined,
+    source_url: sourceUrl,
+    action_url: actionUrl,
+  };
+  switch (channel) {
+    case "phone":
+      payloadMap.channel_value = phone;
+      payloadMap.channel_label = "Phone";
+      break;
+    case "website":
+      payloadMap.channel_value = contactUrl || website || sourceUrl;
+      payloadMap.channel_label = "Form";
+      break;
+    case "social":
+      payloadMap.channel_value =
+        payloadMap.social_handle || contactUrl || sourceUrl || "";
+      payloadMap.channel_label = "Profile";
+      break;
+    default:
+      payloadMap.channel_value = email || actionUrl || sourceUrl;
+      payloadMap.channel_label = "Channel";
+      break;
+  }
+  return payloadMap;
+}
+
+function resolveExecutionTaskPrimaryAction(
+  task: {
+    channel_type?: string;
+  },
+  payload: ExecutionTaskPayload | null,
+):
+  | {
+      href: string;
+      label: string;
+      external: boolean;
+    }
+  | null {
+  if (!payload) {
+    return null;
+  }
+  const channel = payload.channel || task.channel_type || "";
+  switch (channel) {
+    case "phone":
+      if (payload.action_url || payload.phone) {
+        return {
+          href: payload.action_url || `tel:${payload.phone}`,
+          label: "Call now",
+          external: false,
+        };
+      }
+      return null;
+    case "website":
+      if (payload.action_url || payload.contact_url || payload.website) {
+        return {
+          href: payload.action_url || payload.contact_url || payload.website || "",
+          label: "Open form",
+          external: true,
+        };
+      }
+      return null;
+    case "social":
+      if (payload.action_url || payload.contact_url) {
+        return {
+          href: payload.action_url || payload.contact_url || "",
+          label: "Open profile",
+          external: true,
+        };
+      }
+      return null;
+    default:
+      if (payload.source_url) {
+        return {
+          href: payload.source_url,
+          label: "Open source",
+          external: true,
+        };
+      }
+      return null;
   }
 }
 

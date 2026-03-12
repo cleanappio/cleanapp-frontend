@@ -127,6 +127,23 @@ export interface NotifyExecutionTask {
   updated_at: string;
 }
 
+export interface RecordNotifyExecutionTaskOutcomeResponse {
+  task: NotifyExecutionTask;
+  outcome: NotifyOutcome;
+  endpoint_memory?: {
+    endpoint_key: string;
+    last_result: string;
+    success_count: number;
+    bounce_count: number;
+    ack_count: number;
+    fix_count: number;
+    misroute_count: number;
+    no_response_count: number;
+    cooldown_until?: string;
+    updated_at: string;
+  } | null;
+}
+
 export interface NotifyOutcome {
   id: number;
   subject_kind: string;
@@ -586,6 +603,22 @@ class CasesApiClient {
   ): Promise<CaseEscalationSendResponse> {
     const { data } = await this.axios.post<CaseEscalationSendResponse>(
       `/api/v3/cases/${caseId}/escalations/send`,
+      payload,
+    );
+    return data;
+  }
+
+  async recordCaseExecutionTaskOutcome(
+    caseId: string,
+    taskId: number,
+    payload: {
+      outcome_type: string;
+      note?: string;
+      actor_user_id?: string;
+    },
+  ): Promise<RecordNotifyExecutionTaskOutcomeResponse> {
+    const { data } = await this.axios.post<RecordNotifyExecutionTaskOutcomeResponse>(
+      `/api/v3/cases/${caseId}/execution-tasks/${taskId}/outcome`,
       payload,
     );
     return data;

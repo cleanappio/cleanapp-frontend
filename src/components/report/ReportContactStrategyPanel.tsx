@@ -35,6 +35,19 @@ type StrategySection = {
   targets: CaseEscalationTarget[];
 };
 
+type ExecutionTaskPayload = {
+  channel?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  contact_url?: string;
+  social_platform?: string;
+  social_handle?: string;
+  source_url?: string;
+  action_url?: string;
+  reason?: string;
+};
+
 export default function ReportContactStrategyPanel({
   strategy,
   loading,
@@ -193,17 +206,7 @@ export default function ReportContactStrategyPanel({
               </h3>
               <div className="mt-3 space-y-2">
                 {strategy?.execution_tasks?.map((task) => (
-                  <div
-                    key={task.id}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2"
-                  >
-                    <p className="font-medium text-slate-900">
-                      {task.summary || "Follow-up task"}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Wave {task.wave_number} · {formatTokenLabel(task.execution_mode)} · {formatTokenLabel(task.task_status)}
-                    </p>
-                  </div>
+                  <ExecutionTaskCard key={task.id} task={task} />
                 ))}
               </div>
             </div>
@@ -242,6 +245,53 @@ export default function ReportContactStrategyPanel({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function ExecutionTaskCard({ task }: { task: NotifyExecutionTask }) {
+  const payload = parseExecutionTaskPayload(task.payload_json);
+  const primaryAction = resolveExecutionTaskPrimaryAction(payload);
+  const channelValue =
+    payload.email ||
+    payload.phone ||
+    payload.contact_url ||
+    payload.website ||
+    payload.social_handle ||
+    payload.source_url;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+      <p className="font-medium text-slate-900">
+        {task.summary || "Follow-up task"}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        Wave {task.wave_number} · {formatTokenLabel(task.execution_mode)} ·{" "}
+        {formatTokenLabel(task.task_status)}
+      </p>
+      {payload.reason ? (
+        <p className="mt-1 text-xs text-slate-500">{payload.reason}</p>
+      ) : null}
+      {channelValue ? (
+        <p className="mt-1 text-xs text-slate-500">
+          {formatTokenLabel(task.channel_type)}: {channelValue}
+        </p>
+      ) : null}
+      {primaryAction ? (
+        <a
+          href={primaryAction.href}
+          target={
+            primaryAction.href.startsWith("tel:") ||
+            primaryAction.href.startsWith("mailto:")
+              ? undefined
+              : "_blank"
+          }
+          rel="noreferrer"
+          className="mt-2 inline-flex text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          {primaryAction.label}
+        </a>
+      ) : null}
+    </div>
   );
 }
 
@@ -382,4 +432,41 @@ function formatTokenLabel(value: string) {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function parseExecutionTaskPayload(payloadJSON: string): ExecutionTaskPayload {
+  try {
+    const parsed = JSON.parse(payloadJSON || "{}");
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+    return parsed as ExecutionTaskPayload;
+  } catch {
+    return {};
+  }
+}
+
+function resolveExecutionTaskPrimaryAction(payload: ExecutionTaskPayload): {
+  href: string;
+  label: string;
+} | null {
+  if (payload.action_url) {
+    if (payload.action_url.startsWith("tel:")) {
+      return { href: payload.action_url, label: "Call now" };
+    }
+    if (payload.action_url.startsWith("mailto:")) {
+      return { href: payload.action_url, label: "Open email" };
+    }
+    return { href: payload.action_url, label: "Open task channel" };
+  }
+  if (payload.contact_url) {
+    return { href: payload.contact_url, label: "Open contact form" };
+  }
+  if (payload.website) {
+    return { href: payload.website, label: "Open website" };
+  }
+  if (payload.source_url) {
+    return { href: payload.source_url, label: "Open source" };
+  }
+  return null;
 }
