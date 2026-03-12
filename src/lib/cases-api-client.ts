@@ -8,6 +8,8 @@ export interface CaseEscalationTarget {
   case_id: string;
   role_type: string;
   decision_scope: string;
+  endpoint_key?: string;
+  organization_key?: string;
   organization: string;
   display_name: string;
   channel: string;
@@ -23,9 +25,16 @@ export interface CaseEscalationTarget {
   attribution_class: string;
   target_source: string;
   confidence_score: number;
+  site_match_score?: number;
+  source_quality_score?: number;
+  role_fit_score?: number;
+  channel_quality_score?: number;
+  outcome_memory_score?: number;
   actionability_score: number;
   notify_tier: number;
   send_eligibility: string;
+  execution_mode?: string;
+  cooldown_until?: string;
   reason_selected: string;
   rationale: string;
   created_at: string;
@@ -81,6 +90,54 @@ export interface CaseNotifyPlan {
   created_at: string;
   updated_at: string;
   items: CaseNotifyPlanItem[];
+}
+
+export interface SubjectRoutingProfile {
+  id: number;
+  subject_kind: string;
+  subject_ref: string;
+  classification: string;
+  defect_class: string;
+  defect_mode: string;
+  asset_class: string;
+  jurisdiction_key: string;
+  exposure_mode: string;
+  severity_band: string;
+  urgency_band: string;
+  context_json: string;
+  refreshed_at: string;
+}
+
+export interface NotifyExecutionTask {
+  id: number;
+  subject_kind: string;
+  subject_ref: string;
+  target_id?: number;
+  wave_number: number;
+  role_type: string;
+  channel_type: string;
+  execution_mode: string;
+  task_status: string;
+  summary: string;
+  payload_json: string;
+  assigned_user_id: string;
+  due_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotifyOutcome {
+  id: number;
+  subject_kind: string;
+  subject_ref: string;
+  target_id?: number;
+  endpoint_key: string;
+  outcome_type: string;
+  source_type: string;
+  source_ref: string;
+  evidence_json: string;
+  recorded_at: string;
 }
 
 export interface ClusterIncidentHypothesis {
@@ -260,6 +317,9 @@ export interface CaseDetail {
   escalation_targets: CaseEscalationTarget[];
   contact_observations: CaseContactObservation[];
   notify_plan?: CaseNotifyPlan | null;
+  routing_profile?: SubjectRoutingProfile | null;
+  execution_tasks: NotifyExecutionTask[];
+  notify_outcomes: NotifyOutcome[];
   escalation_actions: CaseEscalationAction[];
   email_deliveries: CaseEmailDelivery[];
   resolution_signals: Array<Record<string, unknown>>;
@@ -289,6 +349,9 @@ export interface CaseEscalationsResponse {
   targets: CaseEscalationTarget[];
   observations: CaseContactObservation[];
   notify_plan?: CaseNotifyPlan | null;
+  routing_profile?: SubjectRoutingProfile | null;
+  execution_tasks: NotifyExecutionTask[];
+  notify_outcomes: NotifyOutcome[];
   actions: CaseEscalationAction[];
   deliveries: CaseEmailDelivery[];
   linked_count: number;
@@ -346,6 +409,8 @@ function normalizeCaseDetail(data: CaseDetail): CaseDetail {
           items: asArray(data.notify_plan.items),
         }
       : null,
+    execution_tasks: asArray(data?.execution_tasks),
+    notify_outcomes: asArray(data?.notify_outcomes),
     escalation_actions: asArray(data?.escalation_actions),
     email_deliveries: asArray(data?.email_deliveries),
     resolution_signals: asArray(data?.resolution_signals).map((signal) =>
@@ -486,6 +551,9 @@ class CasesApiClient {
             items: asArray(data.notify_plan.items),
           }
         : null,
+      routing_profile: data?.routing_profile ?? null,
+      execution_tasks: asArray(data?.execution_tasks),
+      notify_outcomes: asArray(data?.notify_outcomes),
       actions: asArray(data?.actions),
       deliveries: asArray(data?.deliveries),
     };

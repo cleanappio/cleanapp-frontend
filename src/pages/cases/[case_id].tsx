@@ -198,6 +198,9 @@ export default function CaseDetailPage() {
             escalation_targets: nextEscalations.targets,
             contact_observations: nextEscalations.observations,
             notify_plan: nextEscalations.notify_plan ?? null,
+            routing_profile: nextEscalations.routing_profile ?? null,
+            execution_tasks: nextEscalations.execution_tasks,
+            notify_outcomes: nextEscalations.notify_outcomes,
             escalation_actions: nextEscalations.actions,
             email_deliveries: nextEscalations.deliveries,
           };
@@ -350,6 +353,18 @@ export default function CaseDetailPage() {
   );
   const escalationTargets = useMemo(
     () => detail?.escalation_targets ?? [],
+    [detail],
+  );
+  const routingProfile = useMemo(
+    () => detail?.routing_profile ?? null,
+    [detail],
+  );
+  const executionTasks = useMemo(
+    () => detail?.execution_tasks ?? [],
+    [detail],
+  );
+  const notifyOutcomes = useMemo(
+    () => detail?.notify_outcomes ?? [],
     [detail],
   );
   const landmarkLabel = useMemo(
@@ -575,6 +590,7 @@ export default function CaseDetailPage() {
     const auditEvents = detail.audit_events ?? [];
     const escalationActions = detail.escalation_actions ?? [];
     const emailDeliveries = detail.email_deliveries ?? [];
+    const notifyOutcomes = detail.notify_outcomes ?? [];
     const resolutionSignals = detail.resolution_signals ?? [];
 
     try {
@@ -606,6 +622,16 @@ export default function CaseDetailPage() {
             ? `${delivery.delivery_source} · ${delivery.provider || "email"}`
             : delivery.provider || "email",
           kind: "delivery" as const,
+        })),
+        ...notifyOutcomes.map((outcome) => ({
+          key: `outcome-${outcome.id}`,
+          ts: outcome.recorded_at,
+          title: humanizeOutcomeType(outcome.outcome_type),
+          description:
+            outcome.source_ref ||
+            outcome.endpoint_key ||
+            summarizePayload(outcome.evidence_json),
+          kind: "outcome" as const,
         })),
         ...resolutionSignals.map((signal: any, index) => ({
           key: `resolution-${index}`,
@@ -915,6 +941,14 @@ export default function CaseDetailPage() {
                   <h2 className="text-xl font-semibold text-slate-900">
                     Summary
                   </h2>
+                  {routingProfile && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <RouteBadge>{formatRoutingBadge(routingProfile.defect_class)}</RouteBadge>
+                      <RouteBadge>{formatRoutingBadge(routingProfile.asset_class)}</RouteBadge>
+                      <RouteBadge>{formatRoutingBadge(routingProfile.exposure_mode)}</RouteBadge>
+                      <RouteBadge>{formatRoutingBadge(routingProfile.urgency_band)}</RouteBadge>
+                    </div>
+                  )}
                   <p className="mt-3 text-sm leading-7 text-slate-700">
                     {holisticSummary}
                   </p>
@@ -995,7 +1029,7 @@ export default function CaseDetailPage() {
 
             <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
-                Case timeline
+                Outcome timeline
               </h2>
               {timelineItems.length === 0 ? (
                 <p className="text-slate-600">No case activity recorded yet.</p>
@@ -1287,6 +1321,50 @@ export default function CaseDetailPage() {
                           );
                         })
                       )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Execution queue
+                </h2>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+                  {executionTasks.length} task{executionTasks.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Structured follow-ups for channels that should be reviewed or handled manually.
+              </p>
+              <div className="mt-4 space-y-3">
+                {executionTasks.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+                    No pending execution tasks.
+                  </p>
+                ) : (
+                  executionTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="rounded-xl border border-slate-200 px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {task.summary || "Follow-up task"}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Wave {task.wave_number} · {formatExecutionMode(task.execution_mode)} · {formatTaskStatus(task.task_status)}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs text-slate-500">
+                          {task.due_at
+                            ? `Due ${new Date(task.due_at).toLocaleString()}`
+                            : "Queued"}
+                        </p>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1887,6 +1965,56 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         },
       ],
     },
+    routing_profile: {
+      id: 4001,
+      subject_kind: "case",
+      subject_ref: caseId,
+      classification: "physical",
+      defect_class: "physical_structural",
+      defect_mode: "emergency",
+      asset_class: "school",
+      jurisdiction_key: "adliswil",
+      exposure_mode: "public_exposure",
+      severity_band: "critical",
+      urgency_band: "immediate",
+      context_json:
+        '{"structural":true,"severe":true,"urgent":true,"immediate_danger":true}',
+      refreshed_at: "2026-03-11T18:47:29Z",
+    },
+    execution_tasks: [
+      {
+        id: 7101,
+        subject_kind: "case",
+        subject_ref: caseId,
+        target_id: 102,
+        wave_number: 3,
+        role_type: "architect",
+        channel_type: "website",
+        execution_mode: "task",
+        task_status: "pending",
+        summary: "Review architect contact path",
+        payload_json:
+          '{"target_id":102,"organization":"Anderegg Partner AG","channel":"website"}',
+        assigned_user_id: "",
+        created_at: "2026-03-11T18:47:29Z",
+        updated_at: "2026-03-11T18:47:29Z",
+      },
+    ],
+    notify_outcomes: [
+      {
+        id: 7201,
+        subject_kind: "case",
+        subject_ref: caseId,
+        target_id: 101,
+        endpoint_key: "email:schulverwaltung@adliswil.ch",
+        outcome_type: "sent",
+        source_type: "case_email_delivery",
+        source_ref: "schulverwaltung@adliswil.ch",
+        evidence_json:
+          '{"recipient_email":"schulverwaltung@adliswil.ch","delivery_status":"sent"}',
+        recorded_at: "2026-03-11T18:16:12Z",
+      },
+    ],
     escalation_actions: [],
     email_deliveries: [
       {
@@ -2627,6 +2755,69 @@ function formatTargetSourceLabel(source: string): string {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
   }
+}
+
+function formatRoutingBadge(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatExecutionMode(mode: string): string {
+  switch (mode) {
+    case "auto":
+      return "Auto";
+    case "task":
+      return "Task";
+    case "review":
+      return "Review";
+    case "hold":
+      return "Hold";
+    default:
+      return formatRoutingBadge(mode || "pending");
+  }
+}
+
+function formatTaskStatus(status: string): string {
+  switch (status) {
+    case "pending":
+      return "Pending";
+    case "in_progress":
+      return "In progress";
+    case "completed":
+      return "Completed";
+    default:
+      return formatRoutingBadge(status || "pending");
+  }
+}
+
+function humanizeOutcomeType(outcomeType: string): string {
+  switch (outcomeType) {
+    case "sent":
+      return "Contact delivered";
+    case "bounced":
+      return "Contact bounced";
+    case "acknowledged":
+      return "Acknowledged";
+    case "fixed":
+      return "Marked fixed";
+    case "misrouted":
+      return "Misrouted";
+    case "no_response":
+      return "No response";
+    default:
+      return formatRoutingBadge(outcomeType || "outcome");
+  }
+}
+
+function RouteBadge({ children }: { children: string }) {
+  return (
+    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-600">
+      {children}
+    </span>
+  );
 }
 
 function humanizeAuditEvent(eventType: string) {

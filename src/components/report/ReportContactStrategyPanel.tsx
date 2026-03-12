@@ -2,6 +2,9 @@ import type {
   CaseContactObservation,
   CaseEscalationTarget,
   CaseNotifyPlan,
+  NotifyExecutionTask,
+  NotifyOutcome,
+  SubjectRoutingProfile,
 } from "@/lib/cases-api-client";
 import { useMemo, useState } from "react";
 
@@ -11,6 +14,9 @@ export type ReportContactStrategyResponse = {
   escalation_targets: CaseEscalationTarget[];
   contact_observations: CaseContactObservation[];
   notify_plan: CaseNotifyPlan | null;
+  routing_profile?: SubjectRoutingProfile | null;
+  execution_tasks?: NotifyExecutionTask[];
+  notify_outcomes?: NotifyOutcome[];
   refreshed: boolean;
   contact_strategy_stale?: boolean;
 };
@@ -127,6 +133,25 @@ export default function ReportContactStrategyPanel({
               {strategy.notify_plan.summary}
             </p>
           ) : null}
+          {strategy?.routing_profile ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                strategy.routing_profile.defect_class,
+                strategy.routing_profile.asset_class,
+                strategy.routing_profile.exposure_mode,
+                strategy.routing_profile.urgency_band,
+              ]
+                .filter(Boolean)
+                .map((token) => (
+                  <span
+                    key={token}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600"
+                  >
+                    {formatTokenLabel(token)}
+                  </span>
+                ))}
+            </div>
+          ) : null}
         </div>
         {strategy?.contact_strategy_stale ? (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
@@ -161,6 +186,50 @@ export default function ReportContactStrategyPanel({
               selectedTargetIds={selectedTargetIds}
             />
           ))}
+          {(strategy?.execution_tasks?.length ?? 0) > 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Execution queue
+              </h3>
+              <div className="mt-3 space-y-2">
+                {strategy?.execution_tasks?.map((task) => (
+                  <div
+                    key={task.id}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                  >
+                    <p className="font-medium text-slate-900">
+                      {task.summary || "Follow-up task"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Wave {task.wave_number} · {formatTokenLabel(task.execution_mode)} · {formatTokenLabel(task.task_status)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {(strategy?.notify_outcomes?.length ?? 0) > 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Recent outcomes
+              </h3>
+              <div className="mt-3 space-y-2">
+                {strategy?.notify_outcomes?.slice(0, 5).map((outcome) => (
+                  <div
+                    key={outcome.id}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                  >
+                    <p className="font-medium text-slate-900">
+                      {formatTokenLabel(outcome.outcome_type)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {outcome.source_ref || outcome.endpoint_key || "Recorded outcome"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {(hiddenCount > 0 || (strategy?.escalation_targets?.length ?? 0) > 3) ? (
             <button
               type="button"
@@ -307,4 +376,10 @@ function visibleTargets(targets: CaseEscalationTarget[], showAll: boolean) {
 
 function formatRoleLabel(role: string) {
   return role.replace(/_/g, " ");
+}
+
+function formatTokenLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
