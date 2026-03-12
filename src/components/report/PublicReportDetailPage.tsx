@@ -4,6 +4,9 @@ import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import { ReportWithAnalysis } from "@/components/GlobeView";
 import ImageDisplay from "@/components/ImageDisplay";
+import ReportContactStrategyPanel, {
+  ReportContactStrategyResponse,
+} from "@/components/report/ReportContactStrategyPanel";
 import { getDisplayableImage } from "@/lib/image-utils";
 import { getCurrentLocale, useTranslations } from "@/lib/i18n";
 import { getCanonicalReportPath } from "@/lib/report-links";
@@ -30,6 +33,10 @@ export default function PublicReportDetailPage({
   const [report, setReport] = useState<ReportWithAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contactStrategy, setContactStrategy] =
+    useState<ReportContactStrategyResponse | null>(null);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isReady || !publicId) {
@@ -104,6 +111,52 @@ export default function PublicReportDetailPage({
   const brandDisplay = matchingAnalysis
     ? getBrandNameDisplay(matchingAnalysis).brandDisplayName
     : "";
+
+  useEffect(() => {
+    if (!isReady || !publicId || !report?.report?.public_id) {
+      return;
+    }
+
+    const resolvedPublicId = report.report.public_id || publicId;
+    let cancelled = false;
+
+    const loadContacts = async () => {
+      setContactsLoading(true);
+      setContactsError(null);
+      setContactStrategy(null);
+      try {
+        const response = await fetch(
+          `/api/reports/contact-strategy?public_id=${encodeURIComponent(resolvedPublicId)}`,
+        );
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data =
+          (await response.json()) as ReportContactStrategyResponse;
+        if (!cancelled) {
+          setContactStrategy(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setContactsError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load responsible parties",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setContactsLoading(false);
+        }
+      }
+    };
+
+    loadContacts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isReady, publicId, report?.report?.public_id]);
 
   if (isLoading) {
     return (
@@ -230,6 +283,12 @@ export default function PublicReportDetailPage({
             </div>
           </div>
         </div>
+
+        <ReportContactStrategyPanel
+          strategy={contactStrategy}
+          loading={contactsLoading}
+          error={contactsError}
+        />
 
         <div className="flex gap-4">
           <button

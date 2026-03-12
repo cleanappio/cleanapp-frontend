@@ -20,6 +20,9 @@ import {
   casesApiClient,
   CaseSummary,
 } from "@/lib/cases-api-client";
+import ReportContactStrategyPanel, {
+  ReportContactStrategyResponse,
+} from "@/components/report/ReportContactStrategyPanel";
 
 interface ReportOverviewProps {
   reportItem?: ReportResponse | null;
@@ -53,6 +56,12 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
   const [caseContextLoading, setCaseContextLoading] = useState(false);
   const [caseContextError, setCaseContextError] = useState<string | null>(null);
   const [creatingCase, setCreatingCase] = useState(false);
+  const [contactStrategy, setContactStrategy] =
+    useState<ReportContactStrategyResponse | null>(null);
+  const [contactStrategyLoading, setContactStrategyLoading] = useState(false);
+  const [contactStrategyError, setContactStrategyError] = useState<string | null>(
+    null,
+  );
 
   // Classification
   useEffect(() => {
@@ -247,6 +256,11 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
     reportWithAnalysis?.report?.seq ??
     (reportItem?.classification === "physical" ? reportItem.seq : null);
   const authToken = authApiClient.getAuthToken();
+  const selectedPublicId =
+    fullReport?.report?.public_id ??
+    reportWithAnalysis?.report?.public_id ??
+    reportItem?.public_id ??
+    null;
 
   useEffect(() => {
     let cancelled = false;
@@ -281,6 +295,55 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
       cancelled = true;
     };
   }, [selectedSeq]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadContactStrategy = async () => {
+      const query = selectedPublicId
+        ? `public_id=${encodeURIComponent(selectedPublicId)}`
+        : selectedSeq
+          ? `seq=${encodeURIComponent(String(selectedSeq))}`
+          : null;
+      if (!query) {
+        setContactStrategy(null);
+        setContactStrategyError(null);
+        setContactStrategyLoading(false);
+        return;
+      }
+
+      setContactStrategyLoading(true);
+      setContactStrategyError(null);
+      setContactStrategy(null);
+      try {
+        const response = await fetch(`/api/reports/contact-strategy?${query}`);
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data =
+          (await response.json()) as ReportContactStrategyResponse;
+        if (!cancelled) {
+          setContactStrategy(data);
+        }
+      } catch (err) {
+        console.error("Failed to load report contact strategy", err);
+        if (!cancelled) {
+          setContactStrategy(null);
+          setContactStrategyError("Failed to load responsible parties");
+        }
+      } finally {
+        if (!cancelled) {
+          setContactStrategyLoading(false);
+        }
+      }
+    };
+
+    loadContactStrategy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPublicId, selectedSeq]);
 
   const createCaseFromReport = useCallback(async () => {
     if (!selectedSeq || !report) {
@@ -678,6 +741,13 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               authenticated={!!authToken}
               onCreateCase={createCaseFromReport}
             />
+
+            <ReportContactStrategyPanel
+              strategy={contactStrategy}
+              loading={contactStrategyLoading}
+              error={contactStrategyError}
+              compact
+            />
           </div>
         </div>
       </div>
@@ -830,6 +900,15 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             onCreateCase={createCaseFromReport}
             compact
           />
+
+          <div className="mt-8">
+            <ReportContactStrategyPanel
+              strategy={contactStrategy}
+              loading={contactStrategyLoading}
+              error={contactStrategyError}
+              compact
+            />
+          </div>
         </div>
       </div>
     </div>
