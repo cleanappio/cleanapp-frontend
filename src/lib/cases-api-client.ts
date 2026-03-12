@@ -224,6 +224,14 @@ export interface CaseEscalationSendResponse {
   deliveries: CaseEmailDelivery[];
 }
 
+export interface CaseEscalationsResponse {
+  case_id: string;
+  targets: CaseEscalationTarget[];
+  actions: CaseEscalationAction[];
+  deliveries: CaseEmailDelivery[];
+  linked_count: number;
+}
+
 function asArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
@@ -379,19 +387,25 @@ class CasesApiClient {
   async getCase(caseId: string): Promise<CaseDetail> {
     const { data } = await this.axios.get<CaseDetail>(
       `/api/v3/cases/${caseId}`,
+      {
+        timeout: 8000,
+      },
     );
     return normalizeCaseDetail(data);
   }
 
-  async getCaseEscalations(caseId: string): Promise<{
-    case_id: string;
-    targets: CaseEscalationTarget[];
-    actions: CaseEscalationAction[];
-    deliveries: CaseEmailDelivery[];
-    linked_count: number;
-  }> {
-    const { data } = await this.axios.get(
+  async getCaseEscalations(
+    caseId: string,
+    options?: {
+      refreshTargets?: boolean;
+    },
+  ): Promise<CaseEscalationsResponse> {
+    const { data } = await this.axios.get<CaseEscalationsResponse>(
       `/api/v3/cases/${caseId}/escalations`,
+      {
+        params: options?.refreshTargets ? { refresh_targets: "1" } : undefined,
+        timeout: options?.refreshTargets ? 8000 : 5000,
+      },
     );
     return data;
   }

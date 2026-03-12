@@ -41,6 +41,9 @@ type MiniMapOverlay = {
 
 type FeatureLike = Feature | FeatureCollection;
 
+const INITIAL_CASE_LOAD_BUDGET_MS = 12000;
+const CASE_LOADING_TICK_MS = 100;
+
 function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
   const queryCaseId = router.query.case_id;
   if (typeof queryCaseId === "string" && queryCaseId.trim()) {
@@ -62,6 +65,46 @@ function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
   } catch {
     return match[1];
   }
+}
+
+function deriveSelectableTargetIds(
+  targets: CaseEscalationTarget[] | null | undefined,
+): number[] {
+  return (targets ?? [])
+    .filter((target) => !!target.email)
+    .map((target) => target.id)
+    .sort((left, right) => left - right);
+}
+
+function sameIdSet(left: number[], right: number[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value === right[index]);
+}
+
+function reconcileSelectedTargetIds(
+  currentSelectedIds: number[],
+  previousTargets: CaseEscalationTarget[],
+  nextTargets: CaseEscalationTarget[],
+): number[] {
+  const previousAutoSelection = deriveSelectableTargetIds(previousTargets);
+  const nextAutoSelection = deriveSelectableTargetIds(nextTargets);
+  const normalizedCurrentSelection = [...currentSelectedIds].sort(
+    (left, right) => left - right,
+  );
+  if (sameIdSet(normalizedCurrentSelection, previousAutoSelection)) {
+    return nextAutoSelection;
+  }
+
+  const nextTargetIds = new Set(nextTargets.map((target) => target.id));
+  const preservedSelection = normalizedCurrentSelection.filter((targetId) =>
+    nextTargetIds.has(targetId),
+  );
+  if (preservedSelection.length > 0) {
+    return preservedSelection;
+  }
+  return nextAutoSelection;
 }
 
 export default function CaseDetailPage() {
@@ -91,8 +134,11 @@ export default function CaseDetailPage() {
   const [ccInput, setCCInput] = useState("");
   const [selectedTargetIds, setSelectedTargetIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingElapsedMs, setLoadingElapsedMs] = useState(0);
   const [drafting, setDrafting] = useState(false);
   const [sending, setSending] = useState(false);
+  const [refreshingEscalationData, setRefreshingEscalationData] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [hasManualDraftEdits, setHasManualDraftEdits] = useState(false);
@@ -102,6 +148,46 @@ export default function CaseDetailPage() {
   const [showAllResponsibleParties, setShowAllResponsibleParties] =
     useState(false);
   const autoDraftKeyRef = useRef("");
+
+  const refreshEscalationData = useCallback(
+    async (nextCaseId: string, currentTargets: CaseEscalationTarget[]) => {
+      if (previewMode) {
+        return;
+      }
+      setRefreshingEscalationData(true);
+      try {
+        const nextEscalations = await casesApiClient.getCaseEscalations(
+          nextCaseId,
+          {
+            refreshTargets: true,
+          },
+        );
+        setDetail((current) => {
+          if (!current || current.case.case_id !== nextCaseId) {
+            return current;
+          }
+          return {
+            ...current,
+            escalation_targets: nextEscalations.targets,
+            escalation_actions: nextEscalations.actions,
+            email_deliveries: nextEscalations.deliveries,
+          };
+        });
+        setSelectedTargetIds((currentSelectedIds) =>
+          reconcileSelectedTargetIds(
+            currentSelectedIds,
+            currentTargets,
+            nextEscalations.targets,
+          ),
+        );
+      } catch (err) {
+        console.error("Failed to refresh case escalation data", err);
+      } finally {
+        setRefreshingEscalationData(false);
+      }
+    },
+    [previewMode],
+  );
 
   const loadCase = useCallback(async () => {
     if (!caseId) {
@@ -119,11 +205,7 @@ export default function CaseDetailPage() {
         setCCInput("");
         setHasManualDraftEdits(false);
         autoDraftKeyRef.current = "";
-        setSelectedTargetIds(
-          data.escalation_targets
-            .filter((target) => !!target.email)
-            .map((target) => target.id),
-        );
+        setSelectedTargetIds(deriveSelectableTargetIds(data.escalation_targets));
         return;
       }
 
@@ -144,10 +226,9 @@ export default function CaseDetailPage() {
       setCCInput("");
       setHasManualDraftEdits(false);
       autoDraftKeyRef.current = "";
-      const ids = data.escalation_targets
-        .filter((target) => !!target.email)
-        .map((target) => target.id);
+      const ids = deriveSelectableTargetIds(data.escalation_targets);
       setSelectedTargetIds(ids);
+      void refreshEscalationData(caseId, data.escalation_targets);
     } catch (err) {
       console.error("Failed to load case", err);
       const status = (err as any)?.response?.status;
@@ -165,7 +246,7 @@ export default function CaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [caseId, previewMode, router]);
+  }, [caseId, previewMode, refreshEscalationData, router]);
 
   useEffect(() => {
     loadCase();
@@ -180,6 +261,22 @@ export default function CaseDetailPage() {
       setError("Case not found");
     }
   }, [caseId, router.isReady]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingElapsedMs(0);
+      return;
+    }
+    const startedAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    setLoadingElapsedMs(0);
+    const timerId = window.setInterval(() => {
+      const now =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      setLoadingElapsedMs(now - startedAt);
+    }, CASE_LOADING_TICK_MS);
+    return () => window.clearInterval(timerId);
+  }, [caseId, loading]);
 
   const selectedTargets = useMemo(() => {
     if (!detail) return [];
@@ -616,12 +713,50 @@ export default function CaseDetailPage() {
     }
   };
 
+  const loadingCountdownSeconds = Math.max(
+    0,
+    Math.ceil((INITIAL_CASE_LOAD_BUDGET_MS - loadingElapsedMs) / 1000),
+  );
+  const loadingElapsedSeconds = (loadingElapsedMs / 1000).toFixed(1);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-6 py-10 text-slate-700">
-          Loading case...
+        <div className="max-w-4xl mx-auto px-6 py-10">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.24em] text-emerald-600">
+              Loading case
+            </p>
+            <div className="mt-4 flex flex-wrap items-end gap-8">
+              <div>
+                <p className="text-4xl font-semibold text-slate-900">
+                  {loadingCountdownSeconds}s
+                </p>
+                <p className="text-sm text-slate-500">budget remaining</p>
+              </div>
+              <div>
+                <p className="text-3xl font-semibold text-slate-700">
+                  {loadingElapsedSeconds}s
+                </p>
+                <p className="text-sm text-slate-500">elapsed</p>
+              </div>
+            </div>
+            <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-600">
+              Core case details load first. Responsible parties and escalation
+              context continue to refresh after the case opens, so you do not
+              have to wait on slower enrichment.
+            </p>
+            <div className="mt-6 space-y-3">
+              <div className="h-4 w-48 animate-pulse rounded-full bg-slate-200" />
+              <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+                <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+                <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -922,6 +1057,11 @@ export default function CaseDetailPage() {
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Responsible parties
               </h2>
+              {refreshingEscalationData && (
+                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Refreshing official contacts and escalation routes...
+                </p>
+              )}
               {responsibleParties.length > 3 && (
                 <div className="mb-4 flex justify-end">
                   <button
@@ -1078,6 +1218,12 @@ export default function CaseDetailPage() {
                   {drafting ? "Drafting..." : "Draft"}
                 </button>
               </div>
+              {refreshingEscalationData && (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Updating contacts in the background. New recipients will appear
+                  here as they are verified.
+                </p>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
