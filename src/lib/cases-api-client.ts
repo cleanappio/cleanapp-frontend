@@ -7,6 +7,7 @@ export interface CaseEscalationTarget {
   id: number;
   case_id: string;
   role_type: string;
+  decision_scope: string;
   organization: string;
   display_name: string;
   channel: string;
@@ -19,10 +20,67 @@ export interface CaseEscalationTarget {
   source_url: string;
   evidence_text: string;
   verification_level: string;
+  attribution_class: string;
   target_source: string;
   confidence_score: number;
+  actionability_score: number;
+  notify_tier: number;
+  send_eligibility: string;
+  reason_selected: string;
   rationale: string;
   created_at: string;
+}
+
+export interface CaseContactObservation {
+  id: number;
+  case_id: string;
+  role_type: string;
+  decision_scope: string;
+  organization_name: string;
+  person_name: string;
+  channel_type: string;
+  channel_value: string;
+  email: string;
+  phone: string;
+  website: string;
+  contact_url: string;
+  social_platform: string;
+  social_handle: string;
+  source_url: string;
+  evidence_text: string;
+  verification_level: string;
+  attribution_class: string;
+  confidence_score: number;
+  target_source: string;
+  discovered_at: string;
+}
+
+export interface CaseNotifyPlanItem {
+  id: number;
+  plan_id: number;
+  target_id?: number;
+  observation_id?: number;
+  wave_number: number;
+  priority_rank: number;
+  role_type: string;
+  decision_scope: string;
+  actionability_score: number;
+  send_eligibility: string;
+  reason_selected: string;
+  selected: boolean;
+  created_at: string;
+}
+
+export interface CaseNotifyPlan {
+  id: number;
+  case_id: string;
+  plan_version: number;
+  hazard_mode: string;
+  status: string;
+  summary: string;
+  created_at: string;
+  updated_at: string;
+  items: CaseNotifyPlanItem[];
 }
 
 export interface ClusterIncidentHypothesis {
@@ -200,6 +258,8 @@ export interface CaseDetail {
   linked_reports: CaseReportLink[];
   clusters: SavedCluster[];
   escalation_targets: CaseEscalationTarget[];
+  contact_observations: CaseContactObservation[];
+  notify_plan?: CaseNotifyPlan | null;
   escalation_actions: CaseEscalationAction[];
   email_deliveries: CaseEmailDelivery[];
   resolution_signals: Array<Record<string, unknown>>;
@@ -227,6 +287,8 @@ export interface CaseEscalationSendResponse {
 export interface CaseEscalationsResponse {
   case_id: string;
   targets: CaseEscalationTarget[];
+  observations: CaseContactObservation[];
+  notify_plan?: CaseNotifyPlan | null;
   actions: CaseEscalationAction[];
   deliveries: CaseEmailDelivery[];
   linked_count: number;
@@ -277,6 +339,13 @@ function normalizeCaseDetail(data: CaseDetail): CaseDetail {
     linked_reports: asArray(data?.linked_reports),
     clusters: asArray(data?.clusters),
     escalation_targets: asArray(data?.escalation_targets),
+    contact_observations: asArray(data?.contact_observations),
+    notify_plan: data?.notify_plan
+      ? {
+          ...data.notify_plan,
+          items: asArray(data.notify_plan.items),
+        }
+      : null,
     escalation_actions: asArray(data?.escalation_actions),
     email_deliveries: asArray(data?.email_deliveries),
     resolution_signals: asArray(data?.resolution_signals).map((signal) =>
@@ -407,7 +476,19 @@ class CasesApiClient {
         timeout: options?.refreshTargets ? 8000 : 5000,
       },
     );
-    return data;
+    return {
+      ...data,
+      targets: asArray(data?.targets),
+      observations: asArray(data?.observations),
+      notify_plan: data?.notify_plan
+        ? {
+            ...data.notify_plan,
+            items: asArray(data.notify_plan.items),
+          }
+        : null,
+      actions: asArray(data?.actions),
+      deliveries: asArray(data?.deliveries),
+    };
   }
 
   async draftCaseEscalation(

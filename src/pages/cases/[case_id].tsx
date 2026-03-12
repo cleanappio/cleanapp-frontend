@@ -13,6 +13,7 @@ import {
   CaseEscalationDraftResponse,
   CaseMatchCandidate,
   CaseEscalationTarget,
+  CaseNotifyPlan,
 } from "@/lib/cases-api-client";
 import { authApiClient } from "@/lib/auth-api-client";
 import {
@@ -25,6 +26,13 @@ import { bboxToFeature } from "@/lib/place-search";
 
 type ResponsiblePartyCard = CaseEscalationTarget & {
   preview_only?: boolean;
+};
+
+type ResponsiblePartySection = {
+  key: string;
+  title: string;
+  description: string;
+  targets: ResponsiblePartyCard[];
 };
 
 type MiniMapOverlay = {
@@ -69,9 +77,19 @@ function resolveCaseId(router: ReturnType<typeof useRouter>): string | null {
 
 function deriveSelectableTargetIds(
   targets: CaseEscalationTarget[] | null | undefined,
+  notifyPlan?: CaseNotifyPlan | null,
 ): number[] {
-  return (targets ?? [])
-    .filter((target) => !!target.email)
+  const availableTargets = (targets ?? []).filter((target) => !!target.email);
+  const availableIds = new Set(availableTargets.map((target) => target.id));
+  const plannedIds = (notifyPlan?.items ?? [])
+    .filter((item) => item.selected && typeof item.target_id === "number")
+    .map((item) => item.target_id as number)
+    .filter((targetId) => availableIds.has(targetId))
+    .sort((left, right) => left - right);
+  if (plannedIds.length > 0) {
+    return plannedIds;
+  }
+  return availableTargets
     .map((target) => target.id)
     .sort((left, right) => left - right);
 }
@@ -86,10 +104,15 @@ function sameIdSet(left: number[], right: number[]): boolean {
 function reconcileSelectedTargetIds(
   currentSelectedIds: number[],
   previousTargets: CaseEscalationTarget[],
+  previousNotifyPlan: CaseNotifyPlan | null | undefined,
   nextTargets: CaseEscalationTarget[],
+  nextNotifyPlan: CaseNotifyPlan | null | undefined,
 ): number[] {
-  const previousAutoSelection = deriveSelectableTargetIds(previousTargets);
-  const nextAutoSelection = deriveSelectableTargetIds(nextTargets);
+  const previousAutoSelection = deriveSelectableTargetIds(
+    previousTargets,
+    previousNotifyPlan,
+  );
+  const nextAutoSelection = deriveSelectableTargetIds(nextTargets, nextNotifyPlan);
   const normalizedCurrentSelection = [...currentSelectedIds].sort(
     (left, right) => left - right,
   );
@@ -150,7 +173,11 @@ export default function CaseDetailPage() {
   const autoDraftKeyRef = useRef("");
 
   const refreshEscalationData = useCallback(
-    async (nextCaseId: string, currentTargets: CaseEscalationTarget[]) => {
+    async (
+      nextCaseId: string,
+      currentTargets: CaseEscalationTarget[],
+      currentNotifyPlan?: CaseNotifyPlan | null,
+    ) => {
       if (previewMode) {
         return;
       }
@@ -169,6 +196,8 @@ export default function CaseDetailPage() {
           return {
             ...current,
             escalation_targets: nextEscalations.targets,
+            contact_observations: nextEscalations.observations,
+            notify_plan: nextEscalations.notify_plan ?? null,
             escalation_actions: nextEscalations.actions,
             email_deliveries: nextEscalations.deliveries,
           };
@@ -177,7 +206,9 @@ export default function CaseDetailPage() {
           reconcileSelectedTargetIds(
             currentSelectedIds,
             currentTargets,
+            currentNotifyPlan,
             nextEscalations.targets,
+            nextEscalations.notify_plan ?? null,
           ),
         );
       } catch (err) {
@@ -203,10 +234,12 @@ export default function CaseDetailPage() {
         setSubject("");
         setBody("");
         setCCInput("");
-        setHasManualDraftEdits(false);
-        autoDraftKeyRef.current = "";
-        setSelectedTargetIds(deriveSelectableTargetIds(data.escalation_targets));
-        return;
+      setHasManualDraftEdits(false);
+      autoDraftKeyRef.current = "";
+      setSelectedTargetIds(
+        deriveSelectableTargetIds(data.escalation_targets, data.notify_plan),
+      );
+      return;
       }
 
       authApiClient.loadTokenFromStorage();
@@ -226,9 +259,16 @@ export default function CaseDetailPage() {
       setCCInput("");
       setHasManualDraftEdits(false);
       autoDraftKeyRef.current = "";
-      const ids = deriveSelectableTargetIds(data.escalation_targets);
+      const ids = deriveSelectableTargetIds(
+        data.escalation_targets,
+        data.notify_plan,
+      );
       setSelectedTargetIds(ids);
-      void refreshEscalationData(caseId, data.escalation_targets);
+      void refreshEscalationData(
+        caseId,
+        data.escalation_targets,
+        data.notify_plan ?? null,
+      );
     } catch (err) {
       console.error("Failed to load case", err);
       const status = (err as any)?.response?.status;
@@ -328,11 +368,18 @@ export default function CaseDetailPage() {
     () =>
       buildResponsiblePartyCards(
         escalationTargets,
+        detail?.notify_plan ?? null,
         linkedReports,
         landmarkLabel,
         previewMode,
       ),
-    [escalationTargets, linkedReports, landmarkLabel, previewMode],
+    [
+      detail?.notify_plan,
+      escalationTargets,
+      linkedReports,
+      landmarkLabel,
+      previewMode,
+    ],
   );
   const holisticSummary = useMemo(
     () =>
@@ -371,24 +418,21 @@ export default function CaseDetailPage() {
     () => (showAllReports ? linkedReports : linkedReports.slice(0, 3)),
     [linkedReports, showAllReports],
   );
-  const visibleResponsibleParties = useMemo(() => {
-    if (showAllResponsibleParties) {
-      return responsibleParties;
-    }
-    const top = responsibleParties.slice(0, 3);
-    const selected = responsibleParties.filter((target) =>
-      selectedTargetIds.includes(target.id),
-    );
-    const deduped = new Map<number, ResponsiblePartyCard>();
-    [...top, ...selected].forEach((target) => {
-      deduped.set(target.id, target);
-    });
-    return [...deduped.values()];
-  }, [
-    responsibleParties,
-    selectedTargetIds,
-    showAllResponsibleParties,
-  ]);
+  const responsiblePartySections = useMemo(
+    () =>
+      buildResponsiblePartySections(
+        responsibleParties,
+        detail?.notify_plan ?? null,
+        selectedTargetIds,
+        showAllResponsibleParties,
+      ),
+    [
+      detail?.notify_plan,
+      responsibleParties,
+      selectedTargetIds,
+      showAllResponsibleParties,
+    ],
+  );
   const nearbyCaseCards = useMemo(
     () =>
       nearbyCases
@@ -1057,6 +1101,11 @@ export default function CaseDetailPage() {
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Responsible parties
               </h2>
+              {detail?.notify_plan?.summary && (
+                <p className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {detail.notify_plan.summary}
+                </p>
+              )}
               {refreshingEscalationData && (
                 <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                   Refreshing official contacts and escalation routes...
@@ -1083,124 +1132,163 @@ export default function CaseDetailPage() {
                     No responsible parties identified yet.
                   </p>
                 ) : (
-                  visibleResponsibleParties.map((target) => {
-                    const selectable = !!target.email && !target.preview_only;
-                    const checked = selectable
-                      ? selectedTargetIds.includes(target.id)
-                      : false;
-                    return (
-                      <label
-                        key={target.id}
-                        className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-                          selectable
-                            ? "cursor-pointer border-slate-200"
-                            : "border-slate-100 bg-slate-50/70"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!selectable}
-                          onChange={() => toggleTarget(target)}
-                          className="mt-1"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium text-slate-900">
-                              {target.display_name ||
-                                target.organization ||
-                                target.email ||
-                                target.website}
-                            </p>
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
-                              {formatRoleType(target.role_type)}
-                            </span>
-                            {target.verification_level && (
-                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-700">
-                                {formatVerificationLevel(target.verification_level)}
-                              </span>
-                            )}
-                            {target.preview_only && (
-                              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-blue-700">
-                                preview
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {target.organization &&
-                            target.organization !== target.display_name
-                              ? target.organization
-                              : formatTargetSourceLabel(target.target_source)}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-sm">
-                            {target.email && (
-                              <a
-                                href={`mailto:${target.email}`}
-                                className="text-blue-600 hover:text-blue-500 hover:underline"
-                              >
-                                {target.email}
-                              </a>
-                            )}
-                            {target.phone && (
-                              <a
-                                href={`tel:${target.phone}`}
-                                className="text-blue-600 hover:text-blue-500 hover:underline"
-                              >
-                                {target.phone}
-                              </a>
-                            )}
-                            {target.website && (
-                              <a
-                                href={target.website}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 hover:text-blue-500 hover:underline"
-                              >
-                                Official site
-                              </a>
-                            )}
-                            {target.contact_url &&
-                              target.contact_url !== target.website && (
-                                <a
-                                  href={target.contact_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-blue-600 hover:text-blue-500 hover:underline"
-                                >
-                                  Source page
-                                </a>
-                              )}
-                            {target.source_url &&
-                              target.source_url !== target.contact_url &&
-                              target.source_url !== target.website && (
-                                <a
-                                  href={target.source_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-blue-600 hover:text-blue-500 hover:underline"
-                                >
-                                  Evidence page
-                                </a>
-                              )}
-                          </div>
-                          <p className="mt-2 text-xs text-slate-500">
-                            {target.channel || "contact"} · confidence{" "}
-                            {Math.round((target.confidence_score || 0) * 100)}%
-                          </p>
-                          {target.evidence_text && (
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                              Evidence: {target.evidence_text}
-                            </p>
-                          )}
-                          {target.rationale && (
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                              {target.rationale}
-                            </p>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })
+                  responsiblePartySections.map((section) => (
+                    <div key={section.key} className="space-y-3">
+                      <div className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          {section.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {section.description}
+                        </p>
+                      </div>
+                      {section.targets.length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+                          No contacts routed into this bucket yet.
+                        </p>
+                      ) : (
+                        section.targets.map((target) => {
+                          const selectable = !!target.email && !target.preview_only;
+                          const checked = selectable
+                            ? selectedTargetIds.includes(target.id)
+                            : false;
+                          return (
+                            <label
+                              key={`${section.key}-${target.id}`}
+                              className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+                                selectable
+                                  ? "cursor-pointer border-slate-200"
+                                  : "border-slate-100 bg-slate-50/70"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={!selectable}
+                                onChange={() => toggleTarget(target)}
+                                className="mt-1"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium text-slate-900">
+                                    {target.display_name ||
+                                      target.organization ||
+                                      target.email ||
+                                      target.website}
+                                  </p>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                                    {formatRoleType(target.role_type)}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                                    {formatDecisionScope(target.decision_scope)}
+                                  </span>
+                                  {target.send_eligibility && (
+                                    <span
+                                      className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${
+                                        target.send_eligibility === "auto"
+                                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                          : target.send_eligibility === "review"
+                                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                                            : "border-slate-200 bg-slate-50 text-slate-600"
+                                      }`}
+                                    >
+                                      {target.send_eligibility}
+                                    </span>
+                                  )}
+                                  {target.verification_level && (
+                                    <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-blue-700">
+                                      {formatVerificationLevel(target.verification_level)}
+                                    </span>
+                                  )}
+                                  {target.preview_only && (
+                                    <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-blue-700">
+                                      preview
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-1 text-sm text-slate-600">
+                                  {target.organization &&
+                                  target.organization !== target.display_name
+                                    ? target.organization
+                                    : formatTargetSourceLabel(target.target_source)}
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                                  {target.email && (
+                                    <a
+                                      href={`mailto:${target.email}`}
+                                      className="text-blue-600 hover:text-blue-500 hover:underline"
+                                    >
+                                      {target.email}
+                                    </a>
+                                  )}
+                                  {target.phone && (
+                                    <a
+                                      href={`tel:${target.phone}`}
+                                      className="text-blue-600 hover:text-blue-500 hover:underline"
+                                    >
+                                      {target.phone}
+                                    </a>
+                                  )}
+                                  {target.website && (
+                                    <a
+                                      href={target.website}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-blue-600 hover:text-blue-500 hover:underline"
+                                    >
+                                      Official site
+                                    </a>
+                                  )}
+                                  {target.contact_url &&
+                                    target.contact_url !== target.website && (
+                                      <a
+                                        href={target.contact_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-600 hover:text-blue-500 hover:underline"
+                                      >
+                                        Source page
+                                      </a>
+                                    )}
+                                  {target.source_url &&
+                                    target.source_url !== target.contact_url &&
+                                    target.source_url !== target.website && (
+                                      <a
+                                        href={target.source_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-600 hover:text-blue-500 hover:underline"
+                                      >
+                                        Evidence page
+                                      </a>
+                                    )}
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">
+                                  {target.channel || "contact"} · {formatAttributionClass(target.attribution_class)} · confidence{" "}
+                                  {Math.round((target.confidence_score || 0) * 100)}%
+                                </p>
+                                {target.reason_selected && (
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    {target.reason_selected}
+                                  </p>
+                                )}
+                                {target.evidence_text && (
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    Evidence: {target.evidence_text}
+                                  </p>
+                                )}
+                                {target.rationale && (
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    {target.rationale}
+                                  </p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
             </section>
@@ -1611,6 +1699,7 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         id: 101,
         case_id: caseId,
         role_type: "operator",
+        decision_scope: "site_ops",
         organization: "Schulhaus Kopfholz",
         display_name: "Schulverwaltung Adliswil",
         channel: "email",
@@ -1624,8 +1713,14 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
           "https://www.schule-adliswil.ch/schule-adliswil/ueberblick/kontakt/p-183677/",
         evidence_text: "Schule Adliswil · Kontakt",
         verification_level: "official_site_page",
+        attribution_class: "official_direct",
         target_source: "web_search",
         confidence_score: 0.93,
+        actionability_score: 0.96,
+        notify_tier: 1,
+        send_eligibility: "auto",
+        reason_selected:
+          "School administration can act directly at the site and was identified from an official contact page.",
         rationale:
           "Official school administration contact identified from the school website for the affected campus.",
         created_at: "2026-03-11T18:47:29Z",
@@ -1634,6 +1729,7 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         id: 102,
         case_id: caseId,
         role_type: "architect",
+        decision_scope: "project_party",
         organization: "Anderegg Partner AG",
         display_name: "Anderegg Partner AG",
         channel: "website",
@@ -1648,8 +1744,14 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
           "https://andereggpartner.ch/referenzen/objekt/2026-erweiterung-schulanlage-kopfholz-adlisiwl",
         evidence_text: "Project reference page for Kopfholz school extension",
         verification_level: "web_search_result",
+        attribution_class: "heuristic",
         target_source: "web_search",
         confidence_score: 0.83,
+        actionability_score: 0.47,
+        notify_tier: 3,
+        send_eligibility: "review",
+        reason_selected:
+          "Project-chain stakeholder relevant for a structural hazard, but requires review before outreach.",
         rationale:
           "Project-page search result links the firm to the Kopfholz school extension and points to its official contact surface.",
         created_at: "2026-03-11T18:47:29Z",
@@ -1658,6 +1760,7 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         id: 103,
         case_id: caseId,
         role_type: "contractor",
+        decision_scope: "project_party",
         organization: "Example Bauunternehmung AG",
         display_name: "Example Bauunternehmung AG",
         channel: "website",
@@ -1670,8 +1773,14 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         source_url: "https://contractor.example/referenzen/schulhaus-kopfholz",
         evidence_text: "Preview contractor reference page",
         verification_level: "web_search_result",
+        attribution_class: "heuristic",
         target_source: "localhost_preview",
         confidence_score: 0.78,
+        actionability_score: 0.43,
+        notify_tier: 3,
+        send_eligibility: "review",
+        reason_selected:
+          "Project-chain stakeholder relevant for a structural hazard, but requires review before outreach.",
         rationale:
           "Preview contractor card showing how a construction stakeholder would render when discovered from project references.",
         created_at: "2026-03-11T18:47:29Z",
@@ -1680,6 +1789,7 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         id: 104,
         case_id: caseId,
         role_type: "building_authority",
+        decision_scope: "regulator",
         organization: "Stadt Adliswil",
         display_name: "Adliswil building office",
         channel: "website",
@@ -1692,13 +1802,91 @@ function buildMockCaseDetail(caseId: string): CaseDetail {
         source_url: "https://www.adliswil.ch/aemter/13394",
         evidence_text: "Hochbau · Stadt Adliswil",
         verification_level: "official_authority_page",
+        attribution_class: "official_direct",
         target_source: "web_search",
         confidence_score: 0.77,
+        actionability_score: 0.79,
+        notify_tier: 2,
+        send_eligibility: "review",
+        reason_selected:
+          "Structural hazard warrants authority oversight even if the first notify wave stays narrower.",
         rationale:
           "Municipal building authority identified from the city administration website for local structural-hazard escalation.",
         created_at: "2026-03-11T18:47:29Z",
       },
     ],
+    contact_observations: [
+      {
+        id: 7001,
+        case_id: caseId,
+        role_type: "operator",
+        decision_scope: "site_ops",
+        organization_name: "Schulhaus Kopfholz",
+        person_name: "Schulverwaltung Adliswil",
+        channel_type: "email",
+        channel_value: "schulverwaltung@adliswil.ch",
+        email: "schulverwaltung@adliswil.ch",
+        phone: "+41447112020",
+        website: "https://www.schule-adliswil.ch/",
+        contact_url:
+          "https://www.schule-adliswil.ch/schule-adliswil/ueberblick/kontakt/p-183677/",
+        social_platform: "",
+        social_handle: "",
+        source_url:
+          "https://www.schule-adliswil.ch/schule-adliswil/ueberblick/kontakt/p-183677/",
+        evidence_text: "Schule Adliswil · Kontakt",
+        verification_level: "official_site_page",
+        attribution_class: "official_direct",
+        confidence_score: 0.93,
+        target_source: "web_search",
+        discovered_at: "2026-03-11T18:47:29Z",
+      },
+    ],
+    notify_plan: {
+      id: 5001,
+      case_id: caseId,
+      plan_version: 1,
+      hazard_mode: "emergency",
+      status: "active",
+      summary:
+        "Immediate-response plan prioritizes 1 direct operators/owners first, with 1 authority targets ready in the next wave.",
+      created_at: "2026-03-11T18:47:29Z",
+      updated_at: "2026-03-11T18:47:29Z",
+      items: [
+        {
+          id: 6001,
+          plan_id: 5001,
+          target_id: 101,
+          observation_id: 7001,
+          wave_number: 1,
+          priority_rank: 1,
+          role_type: "operator",
+          decision_scope: "site_ops",
+          actionability_score: 0.96,
+          send_eligibility: "auto",
+          reason_selected:
+            "School administration can act directly at the site and was identified from an official contact page.",
+          selected: true,
+          created_at: "2026-03-11T18:47:29Z",
+        },
+        {
+          id: 6002,
+          plan_id: 5001,
+          target_id: 104,
+          observation_id: undefined,
+          wave_number: 2,
+          priority_rank: 1,
+          role_type: "building_authority",
+          decision_scope: "regulator",
+          actionability_score: 0.79,
+          send_eligibility: "review",
+          reason_selected:
+            "Structural hazard warrants authority oversight even if the first notify wave stays narrower.",
+          selected: false,
+          created_at: "2026-03-11T18:47:29Z",
+        },
+      ],
+    },
     escalation_actions: [],
     email_deliveries: [
       {
@@ -1794,16 +1982,22 @@ function buildMockNearbyCases(caseId: string): CaseMatchCandidate[] {
 
 function buildResponsiblePartyCards(
   targets: CaseEscalationTarget[],
+  notifyPlan: CaseNotifyPlan | null,
   linkedReports: CaseDetail["linked_reports"],
   landmarkLabel: string | null,
   previewMode: boolean,
 ): ResponsiblePartyCard[] {
+  const selectedTargetIds = new Set(
+    (notifyPlan?.items ?? [])
+      .filter((item) => item.selected && typeof item.target_id === "number")
+      .map((item) => item.target_id as number),
+  );
   const preferred = targets.filter(
     (target) => target.target_source !== "inferred_contact",
   );
   const base = preferred.length > 0 ? preferred : targets;
   if (!previewMode || !looksStructuralCase(linkedReports)) {
-    return sortResponsibleParties(base);
+    return sortResponsibleParties(base, selectedTargetIds);
   }
   const hasStructuralStakeholder = base.some((target) =>
     ["architect", "contractor", "engineer", "building_authority"].includes(
@@ -1811,7 +2005,7 @@ function buildResponsiblePartyCards(
     ),
   );
   if (hasStructuralStakeholder) {
-    return sortResponsibleParties(base);
+    return sortResponsibleParties(base, selectedTargetIds);
   }
 
   const label = landmarkLabel || "the affected site";
@@ -1821,6 +2015,7 @@ function buildResponsiblePartyCards(
       id: -101,
       case_id: "",
       role_type: "architect",
+      decision_scope: "project_party",
       organization: `Project architect for ${label}`,
       display_name: `${label} design architect`,
       channel: "website",
@@ -1833,8 +2028,14 @@ function buildResponsiblePartyCards(
       source_url: "https://architect.example/projects",
       evidence_text: "Preview architect project page",
       verification_level: "web_search_result",
+      attribution_class: "heuristic",
       target_source: "localhost_preview",
       confidence_score: 0.82,
+      actionability_score: 0.44,
+      notify_tier: 3,
+      send_eligibility: "review",
+      reason_selected:
+        "Project-chain stakeholder relevant for structural hazard review.",
       rationale:
         "Preview-only localhost card for a structurally relevant architect stakeholder.",
       created_at: "",
@@ -1844,6 +2045,7 @@ function buildResponsiblePartyCards(
       id: -102,
       case_id: "",
       role_type: "contractor",
+      decision_scope: "project_party",
       organization: `General contractor for ${label}`,
       display_name: `${label} build contractor`,
       channel: "website",
@@ -1856,8 +2058,14 @@ function buildResponsiblePartyCards(
       source_url: "https://contractor.example/references",
       evidence_text: "Preview contractor reference page",
       verification_level: "web_search_result",
+      attribution_class: "heuristic",
       target_source: "localhost_preview",
       confidence_score: 0.79,
+      actionability_score: 0.41,
+      notify_tier: 3,
+      send_eligibility: "review",
+      reason_selected:
+        "Project-chain stakeholder relevant for structural hazard review.",
       rationale:
         "Preview-only localhost card for a structurally relevant contractor stakeholder.",
       created_at: "",
@@ -1867,6 +2075,7 @@ function buildResponsiblePartyCards(
       id: -103,
       case_id: "",
       role_type: "building_authority",
+      decision_scope: "regulator",
       organization: `${label} municipal building office`,
       display_name: "Local building authority",
       channel: "website",
@@ -1879,24 +2088,45 @@ function buildResponsiblePartyCards(
       source_url: "https://municipality.example/emergency-reporting",
       evidence_text: "Preview municipal building office contact page",
       verification_level: "official_authority_page",
+      attribution_class: "official_direct",
       target_source: "localhost_preview",
       confidence_score: 0.74,
+      actionability_score: 0.62,
+      notify_tier: 2,
+      send_eligibility: "review",
+      reason_selected:
+        "Authority oversight is relevant for structural defects affecting the public.",
       rationale:
         "Preview-only localhost card showing how a municipal authority would appear.",
       created_at: "",
       preview_only: true,
     },
-  ]);
+  ], selectedTargetIds);
 }
 
 function sortResponsibleParties(
   targets: ResponsiblePartyCard[],
+  selectedTargetIds: Set<number>,
 ): ResponsiblePartyCard[] {
   return [...targets].sort((a, b) => {
+    const selectedDelta =
+      Number(selectedTargetIds.has(b.id)) - Number(selectedTargetIds.has(a.id));
+    if (selectedDelta !== 0) {
+      return selectedDelta;
+    }
+    const tierDelta = (a.notify_tier || 99) - (b.notify_tier || 99);
+    if (tierDelta !== 0) {
+      return tierDelta;
+    }
     const roleDelta = responsibleRolePriority(b.role_type) -
       responsibleRolePriority(a.role_type);
     if (roleDelta !== 0) {
       return roleDelta;
+    }
+    const actionabilityDelta =
+      (b.actionability_score || 0) - (a.actionability_score || 0);
+    if (actionabilityDelta !== 0) {
+      return actionabilityDelta;
     }
     const confidenceDelta =
       (b.confidence_score || 0) - (a.confidence_score || 0);
@@ -1907,6 +2137,73 @@ function sortResponsibleParties(
       b.display_name || b.organization || "",
     );
   });
+}
+
+function buildResponsiblePartySections(
+  targets: ResponsiblePartyCard[],
+  notifyPlan: CaseNotifyPlan | null,
+  selectedTargetIds: number[],
+  showAll: boolean,
+): ResponsiblePartySection[] {
+  const selectedIds = new Set(selectedTargetIds);
+  const planSelectedIds = new Set(
+    (notifyPlan?.items ?? [])
+      .filter((item) => item.selected && typeof item.target_id === "number")
+      .map((item) => item.target_id as number),
+  );
+  const notifyNow = targets.filter(
+    (target) => planSelectedIds.has(target.id) || selectedIds.has(target.id),
+  );
+  const authorities = targets.filter(
+    (target) =>
+      !notifyNow.some((selected) => selected.id === target.id) &&
+      target.decision_scope === "regulator",
+  );
+  const others = targets.filter(
+    (target) =>
+      !notifyNow.some((selected) => selected.id === target.id) &&
+      !authorities.some((authority) => authority.id === target.id),
+  );
+  return [
+    {
+      key: "notify-now",
+      title: "Notify now",
+      description:
+        "These are the smallest set of actors the routing engine thinks should be contacted first.",
+      targets: visibleResponsiblePartyTargets(notifyNow, selectedIds, showAll),
+    },
+    {
+      key: "authorities",
+      title: "Authorities & oversight",
+      description:
+        "Official regulators, safety, and oversight stakeholders relevant to the case if escalation broadens.",
+      targets: visibleResponsiblePartyTargets(authorities, selectedIds, showAll),
+    },
+    {
+      key: "other-stakeholders",
+      title: "Other stakeholders",
+      description:
+        "Additional project, owner, or context-specific stakeholders that may matter if the first wave is insufficient.",
+      targets: visibleResponsiblePartyTargets(others, selectedIds, showAll),
+    },
+  ];
+}
+
+function visibleResponsiblePartyTargets(
+  targets: ResponsiblePartyCard[],
+  selectedTargetIds: Set<number>,
+  showAll: boolean,
+): ResponsiblePartyCard[] {
+  if (showAll || targets.length <= 3) {
+    return targets;
+  }
+  const top = targets.slice(0, 3);
+  const selected = targets.filter((target) => selectedTargetIds.has(target.id));
+  const deduped = new Map<number, ResponsiblePartyCard>();
+  [...top, ...selected].forEach((target) => {
+    deduped.set(target.id, target);
+  });
+  return [...deduped.values()];
 }
 
 function responsibleRolePriority(roleType: string): number {
@@ -2250,6 +2547,24 @@ function formatRoleType(roleType: string): string {
   }
 }
 
+function formatDecisionScope(scope: string): string {
+  switch (scope) {
+    case "site_ops":
+      return "Site ops";
+    case "asset_owner":
+      return "Owner";
+    case "regulator":
+      return "Authority";
+    case "project_party":
+      return "Project party";
+    default:
+      return scope
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
 function formatVerificationLevel(level: string): string {
   switch (level) {
     case "official_site_page":
@@ -2270,6 +2585,22 @@ function formatVerificationLevel(level: string): string {
       return "Inferred";
     default:
       return level
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
+function formatAttributionClass(attributionClass: string): string {
+  switch (attributionClass) {
+    case "official_direct":
+      return "Official direct";
+    case "official_registry":
+      return "Official registry";
+    case "heuristic":
+      return "Heuristic";
+    default:
+      return attributionClass
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
