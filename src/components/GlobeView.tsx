@@ -353,11 +353,15 @@ export default function GlobeView() {
     };
 
     window.addEventListener("message", handleMessage);
-    // document.addEventListener("message", handleMessage); // Sometimes needed for Android
+    if (typeof document !== "undefined") {
+      document.addEventListener("message", handleMessage as EventListener);
+    }
 
     return () => {
       window.removeEventListener("message", handleMessage);
-      // document.removeEventListener("message", handleMessage);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("message", handleMessage as EventListener);
+      }
     };
   }, [isReactNativeWebView]);
 
@@ -3415,8 +3419,9 @@ export default function GlobeView() {
                       console.warn(
                         "User location not yet available via native bridge",
                       );
-                      // Optionally trigger a request to native
-                      // window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "REQUEST_LOCATION" }));
+                      window.ReactNativeWebView?.postMessage(
+                        JSON.stringify({ type: "REQUEST_LOCATION" }),
+                      );
                     }
                   }}
                 >
