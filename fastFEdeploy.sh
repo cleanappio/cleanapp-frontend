@@ -150,12 +150,19 @@ for MODE in ${MODES}; do
     NEXT_PUBLIC_EMBEDDED_MODE="false"
     CONTAINER_NAME="cleanapp_frontend"
     PORT="3001"
+    MODE_NEXT_PUBLIC_RENDERER_API_URL="${NEXT_PUBLIC_RENDERER_API_URL}"
   else
     DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image-embedded"
     NEXT_PUBLIC_EMBEDDED_MODE="true"
     CONTAINER_NAME="cleanapp_frontend_embedded"
     PORT="3002"
+    if [ "${OPT}" == "prod" ]; then
+      MODE_NEXT_PUBLIC_RENDERER_API_URL="https://embed.cleanapp.io"
+    else
+      MODE_NEXT_PUBLIC_RENDERER_API_URL="https://devembed.cleanapp.io"
+    fi
   fi
+  ESCAPED_MODE_NEXT_PUBLIC_RENDERER_API_URL=$(echo ${MODE_NEXT_PUBLIC_RENDERER_API_URL} | sed 's/\//\\\//g')
   DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
 
   echo ""
@@ -185,7 +192,7 @@ for MODE in ${MODES}; do
   sed "s/{{NEXT_PUBLIC_EMAIL_API_URL}}/${ESCAPED_NEXT_PUBLIC_EMAIL_API_URL}/" | \
   sed "s/{{NEXT_PUBLIC_WEBSITE_URL}}/${ESCAPED_NEXT_PUBLIC_WEBSITE_URL}/" | \
   sed "s/{{NEXT_PUBLIC_REPORT_COUNT_URL}}/${ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL}/" | \
-  sed "s/{{NEXT_PUBLIC_RENDERER_API_URL}}/${ESCAPED_NEXT_PUBLIC_RENDERER_API_URL}/" \
+  sed "s/{{NEXT_PUBLIC_RENDERER_API_URL}}/${ESCAPED_MODE_NEXT_PUBLIC_RENDERER_API_URL}/" \
   > Dockerfile
 
   # Build and push using Cloud Build

@@ -110,8 +110,14 @@ set -e
 for MODE in "full" "embedded"; do
   if [ "${MODE}" == "full" ]; then
     DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image"
+    MODE_NEXT_PUBLIC_RENDERER_API_URL="${NEXT_PUBLIC_RENDERER_API_URL}"
   else
     DOCKER_IMAGE="cleanapp-docker-repo/cleanapp-frontend-image-embedded"
+    if [ "${OPT}" == "prod" ]; then
+      MODE_NEXT_PUBLIC_RENDERER_API_URL="https://embed.cleanapp.io"
+    else
+      MODE_NEXT_PUBLIC_RENDERER_API_URL="https://devembed.cleanapp.io"
+    fi
   fi
   DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
 
@@ -134,7 +140,7 @@ for MODE in "full" "embedded"; do
   ESCAPED_NEXT_PUBLIC_EMAIL_API_URL=$(echo ${NEXT_PUBLIC_EMAIL_API_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_WEBSITE_URL=$(echo ${NEXT_PUBLIC_WEBSITE_URL} | sed 's/\//\\\//g')
   ESCAPED_NEXT_PUBLIC_REPORT_COUNT_URL=$(echo ${NEXT_PUBLIC_REPORT_COUNT_URL} | sed 's/\//\\\//g')
-  ESCAPED_NEXT_PUBLIC_RENDERER_API_URL=$(echo ${NEXT_PUBLIC_RENDERER_API_URL} | sed 's/\//\\\//g')
+  ESCAPED_NEXT_PUBLIC_RENDERER_API_URL=$(echo ${MODE_NEXT_PUBLIC_RENDERER_API_URL} | sed 's/\//\\\//g')
   if [ "${MODE}" == "full" ]; then
     NEXT_PUBLIC_EMBEDDED_MODE="false"
   else

@@ -33,8 +33,15 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
 
   const fetchAll = useCallback(async () => {
     const locale = getCurrentLocale();
+    const embeddedApiUrl =
+      process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true" &&
+      typeof window !== "undefined"
+        ? window.location.origin
+        : null;
     const apiUrl =
-      process.env.NEXT_PUBLIC_RENDERER_API_URL || "http://localhost:8080";
+      embeddedApiUrl ||
+      process.env.NEXT_PUBLIC_RENDERER_API_URL ||
+      "http://localhost:8080";
 
     setLoading({ physical: true, digital: true });
     setErrors({ physical: null, digital: null });
