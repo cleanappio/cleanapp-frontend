@@ -1,0 +1,31 @@
+# CleanApp
+
+> CleanApp is a free, one-tap incident reporting, hazard reporting and bug reporting app. A reporter takes one photo (or screenshot) of any physical or digital problem; CleanApp's AI classifies it (physical vs digital), scores litter, hazard and bug probability plus severity, detects the brand, property or city responsible and routes the report to them. Reporters earn rewards ("trash is cash"). Brands, property managers, cities and safety teams subscribe for live maps, alerts, AI insights and hotspot analytics.
+
+Key facts:
+- Website: https://cleanapp.io — live public map of reports
+- Apps: iOS (https://apps.apple.com/us/app/cleanapp/id6466403301), Android (https://play.google.com/store/apps/details?id=com.cleanapp)
+- Reporting is free and needs no account; organizations pay for CleanApp Pro / Enterprise (https://cleanapp.io/pricing)
+- Report types: safety incidents, near misses, hazards, litter and illegal dumping, pollution, property damage, infrastructure problems (potholes, streetlights, graffiti), product and packaging defects, website and app bugs, scams and dark patterns
+- AI output per report: classification, severity level, litter / hazard / digital-bug probability, brand detection, plain-language summary, GPS location and timestamp
+- Contact: info@cleanapp.io
+
+## Reporting
+- [Incident reporting app](https://cleanapp.io/incident-reporting): one-photo incident reports, AI classification and routing, incident dashboards for organizations
+- [Hazard reporting app](https://cleanapp.io/hazard-reporting): report safety hazards with severity scoring and hotspot maps
+- [Bug reporting app](https://cleanapp.io/bug-reporting): report bugs on any website, app or device with a screenshot
+- [Litter reporting app](https://cleanapp.io/litter-reporting): litter, illegal dumping and pollution reports with brand attribution
+- [Report a problem](https://cleanapp.io/report-a-problem): potholes, graffiti, broken infrastructure and more, routed to the responsible party
+
+## Solutions
+- [For cities](https://cleanapp.io/solutions/cities): citizen issue reporting without building a 311 app
+- [For brands](https://cleanapp.io/solutions/brands): every physical and digital issue reported about a brand in one dashboard
+- [For property managers](https://cleanapp.io/solutions/property-managers): maintenance and hazard reporting for buildings, campuses and venues
+- [Workplace safety](https://cleanapp.io/solutions/workplace-safety): EHS incident, hazard and near-miss reporting for everyone on site
+
+## Company
+- [About CleanApp](https://cleanapp.io/about)
+- [FAQ](https://cleanapp.io/faq)
+- [Pricing](https://cleanapp.io/pricing)
+- [Download](https://cleanapp.io/download)
+- [Privacy policy](https://cleanapp.io/privacy)

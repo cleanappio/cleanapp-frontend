@@ -36,6 +36,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>CleanApp - Dashboard</title>
+        <meta name="robots" content="noindex, nofollow" key="robots" />
       </Head>
       <PageHeader />
 

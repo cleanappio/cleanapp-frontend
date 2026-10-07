@@ -469,6 +469,8 @@ export const translations: {
 
     // GlobeView specific
     installAndroid: "Install Android",
+    aboutCleanApp: "About",
+    reportAProblem: "Report a Problem",
     installIOS: "Install iOS",
     cleanAppGPT: "CleanAppGPT",
     physical: "PHYSICAL",
@@ -974,6 +976,8 @@ export const translations: {
 
     // GlobeView specific
     installAndroid: "Instaliraj Android",
+    aboutCleanApp: "O nama",
+    reportAProblem: "Prijavi problem",
     installIOS: "Instaliraj iOS",
     cleanAppGPT: "CleanAppGPT",
     physical: "FIZIČKI",

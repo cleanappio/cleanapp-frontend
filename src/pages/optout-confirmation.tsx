@@ -21,6 +21,7 @@ export default function OptoutConfirmation() {
       <Head>
         <title>CleanApp Opt Out Confirmation</title>
         <meta name="description" content="CleanApp email opt out confirmation" />
+        <meta name="robots" content="noindex, nofollow" key="robots" />
       </Head>
       
       <div style={{ textAlign: 'center', padding: '50px' }}>

@@ -1,9 +1,16 @@
 import React from "react";
 import { useTranslations } from '@/lib/i18n';
+import Seo from "@/components/Seo";
 
 const Privacy = () => {
   const { t } = useTranslations();
   return (
+    <>
+      <Seo
+        title="CleanApp Privacy Policy"
+        description="How CleanApp collects, uses and shares data from incident, hazard and bug reports, and the choices reporters and organizations have."
+        path="/privacy"
+      />
     <div className="max-w-7xl mx-auto p-4 flex flex-col gap-4 md:gap-8">
       <h4 className="text-2xl font-bold">{t('privacyPolicyTitle')}</h4>
       <p>{t('privacyPolicyIntro')}</p>
@@ -26,6 +33,7 @@ const Privacy = () => {
       <h5 className="text-xl font-bold">{t('contactUs')}</h5>
       <p>{t('privacyPolicyContactUs')}</p>
     </div>
+    </>
   );
 };
 
