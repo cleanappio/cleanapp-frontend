@@ -1,0 +1,72 @@
+name: Deploy frontend
+
+# Every merge to main builds the frontend image with Cloud Build and restarts
+# the container on the prod VM, using the same fastFEdeploy.sh that was
+# previously run by hand. Manual runs can target dev instead.
+#
+# Required repository secret:
+#   GCP_SA_KEY  - JSON key for github-deployer@cleanup-mysql-v2.iam.gserviceaccount.com
+#                 (Cloud Build Editor, Artifact Registry Writer, Storage Object Admin,
+#                  Compute Instance Admin v1, Service Account User, Secret Manager Secret Accessor)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [prod, dev]
+        default: prod
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'prod' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Needed so the .version bump below can be pushed back.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: cleanup-mysql-v2
+
+      - name: Build image and deploy to VM
+        run: |
+          chmod +x fastFEdeploy.sh
+          ./fastFEdeploy.sh -e "$TARGET_ENV"
+
+      - name: Commit version bump
+        if: env.TARGET_ENV == 'prod'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .version
+          git diff --cached --quiet || git commit -m "chore: bump frontend version after deploy [skip ci]"
+          git push
+
+      - name: Smoke test
+        if: env.TARGET_ENV == 'prod'
+        run: |
+          sleep 20
+          for path in / /incident-reporting /sitemap.xml /robots.txt; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://cleanapp.io$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done
