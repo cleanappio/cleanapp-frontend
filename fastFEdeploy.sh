@@ -238,11 +238,25 @@ for MODE in ${MODES}; do
   > Dockerfile
 
   # Build and push using Cloud Build
+  # Submit asynchronously and poll: a synchronous submit tries to read the
+  # Cloud Build log bucket, which needs project Viewer and fails for the CI
+  # deploy service account. Polling only needs cloudbuild.builds.get.
   BUILD_ID=$(gcloud builds submit \
     --project="${PROJECT_NAME}" \
     --region="${CLOUD_REGION}" \
     --tag="${DOCKER_TAG}:${BUILD_VERSION}" \
-    --suppress-logs --format='value(id)')
+    --async --format='value(id)')
+  echo "   Cloud Build ${BUILD_ID} submitted; waiting..."
+  while :; do
+    BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" \
+      --project="${PROJECT_NAME}" --region="${CLOUD_REGION}" --format='value(status)')
+    case "$BUILD_STATUS" in
+      SUCCESS) echo "   Cloud Build ${BUILD_ID}: SUCCESS"; break ;;
+      FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+        echo "   Cloud Build ${BUILD_ID}: ${BUILD_STATUS}" >&2; exit 1 ;;
+      *) sleep 15 ;;
+    esac
+  done
   gcloud builds describe "$BUILD_ID" \
     --project="${PROJECT_NAME}" --region="${CLOUD_REGION}" \
     --format='json(id,status,source.storageSource,results.images)' \
