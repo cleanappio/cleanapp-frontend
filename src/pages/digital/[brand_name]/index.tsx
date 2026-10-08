@@ -9,11 +9,12 @@ import { useRouter } from "next/router";
 import { getBrandNameDisplay } from "@/lib/util";
 import { ReportAnalysis, ReportWithAnalysis } from "@/components/GlobeView";
 import PublicBrandDashboard from "@/components/brand/PublicBrandDashboard";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import SubscribedBrandDashboard from "@/components/brand/SubscribedBrandDashboard";
 import AIInsights from "@/components/AIInsights";
 import { useAuthStore } from "@/lib/auth-store";
 import CleanIntelligencePanel from "@/components/brand/CleanIntelligencePanel";
+import { EmbeddedReportBackBar } from "@/components/report/PublicReportDetailPage";
 
 export default function DigitalBrandPage() {
   const router = useRouter();
@@ -27,6 +28,21 @@ export default function DigitalBrandPage() {
   const { t } = useTranslations();
 
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isNativeWebView, setIsNativeWebView] = useState(false);
+  const isEmbedded = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true" || isNativeWebView;
+
+  useEffect(() => {
+    setIsNativeWebView(Boolean(window.ReactNativeWebView));
+  }, []);
+
+  const renderWithBackBar = (content: ReactNode) => isEmbedded ? (
+    <div className="min-h-screen bg-gray-50">
+      <EmbeddedReportBackBar onBack={() => {
+        void router.push({ pathname: "/", query: { tab: "digital" } });
+      }} />
+      {content}
+    </div>
+  ) : content;
 
   const {
     brandReports,
@@ -64,7 +80,7 @@ export default function DigitalBrandPage() {
   const mediumPriority = isSubscribed ? subscribedMediumPriority : publicMediumPriority;
 
   if (isLoading) {
-    return (
+    return renderWithBackBar(
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
         <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
           {t("recentReports")}
@@ -82,7 +98,7 @@ export default function DigitalBrandPage() {
   }
 
   if (error) {
-    return (
+    return renderWithBackBar(
       <div className="max-w-7xl mx-auto my-6 sm:my-8">
         <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
           {t("recentReports")}
@@ -134,9 +150,9 @@ export default function DigitalBrandPage() {
       getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName
     : publicBrandDisplayName || (brand_name as string);
 
-  return (
+  return renderWithBackBar(
     <div className="bg-gray-50">
-      <PageHeader />
+      {!isEmbedded && <PageHeader />}
       <div className="max-w-7xl mx-auto my-6 sm:my-8 px-6 md:px-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-4">
           {pageBrandDisplayName}
@@ -157,7 +173,7 @@ export default function DigitalBrandPage() {
         <AIInsights brandReports={brandReports} totalCount={totalCount} highPriority={highPriority} mediumPriority={mediumPriority} />
       </div>
 
-      <Footer />
+      {!isEmbedded && <Footer />}
     </div>
   );
 }

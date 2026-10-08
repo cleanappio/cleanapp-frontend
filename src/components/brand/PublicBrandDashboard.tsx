@@ -1,27 +1,52 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useTranslations } from "@/lib/i18n";
 import { resolvePublicDiscoveryToken } from "@/lib/public-discovery-api";
-import { PublicDiscoveryCard } from "@/types/public-discovery";
+import { PublicDiscoveryCard, PublicDiscoveryResolveResponse } from "@/types/public-discovery";
 
 type PublicBrandDashboardProps = {
   items: PublicDiscoveryCard[];
+  onOpenReport?: (resolved: PublicDiscoveryResolveResponse) => void;
 };
 
 export default function PublicBrandDashboard({
   items,
+  onOpenReport,
 }: PublicBrandDashboardProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [openError, setOpenError] = useState(false);
+  const resolveGeneration = useRef(0);
+
+  useEffect(() => () => {
+    // A late resolver response must not reopen a dismissed preview.
+    resolveGeneration.current += 1;
+  }, []);
 
   const handleOpen = async (item: PublicDiscoveryCard) => {
-    const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
-    if (resolved.canonical_path) {
-      await router.push(resolved.canonical_path);
+    const generation = ++resolveGeneration.current;
+    setOpenError(false);
+    try {
+      const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
+      if (generation !== resolveGeneration.current) {
+        return;
+      }
+      if (onOpenReport) {
+        onOpenReport(resolved);
+        return;
+      }
+      if (resolved.canonical_path) {
+        await router.push(resolved.canonical_path);
+      }
+    } catch (error) {
+      if (generation === resolveGeneration.current) {
+        setOpenError(true);
+        console.warn("Failed to resolve public brand report:", error);
+      }
     }
   };
 
@@ -43,6 +68,7 @@ export default function PublicBrandDashboard({
 
   return (
     <>
+      {openError && <p role="alert" className="mb-4 text-red-600">{t("failedToFetchReport")}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {items.slice(0, 6).map((item) => (
           <div
@@ -95,7 +121,7 @@ export default function PublicBrandDashboard({
                   void handleOpen(item);
                 }}
               >
-                {t("readReport") || "Read report"}
+                {t("viewReport")}
               </button>
             </div>
           </div>
