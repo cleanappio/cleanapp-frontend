@@ -624,6 +624,7 @@ function CheckoutForm({ planType, billingCycle, displayPrice }: CheckoutFormProp
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
       <Head>
         <title>CleanApp - Checkout</title>
+        <meta name="robots" content="noindex, nofollow" key="robots" />
       </Head>
       {/* Auth Status Box */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">

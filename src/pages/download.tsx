@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from '@/lib/i18n';
 import PageHeader from '@/components/PageHeader';
+import Seo from '@/components/Seo';
 import { Apple, Play } from 'lucide-react';
 
 const ANDROID_URL = process.env.NEXT_PUBLIC_PLAYSTORE_URL || 'https://play.google.com/store/apps/details?id=com.cleanapp';
@@ -178,6 +179,11 @@ export default function DownloadPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Seo
+        title="Download CleanApp – Free Incident, Hazard & Bug Reporting App for iOS & Android"
+        description="Get CleanApp free on the App Store and Google Play. Report incidents, hazards, litter and bugs with one photo and earn rewards."
+        path="/download"
+      />
       <PageHeader />
       <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="bg-white rounded-lg shadow-lg p-8">
