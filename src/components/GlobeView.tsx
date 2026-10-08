@@ -30,6 +30,9 @@ import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
+import EmbeddedPublicReportDialog, {
+  EmbeddedPublicReportSelection,
+} from "./report/EmbeddedPublicReportDialog";
 import { PhysicalReportResponse } from "@/types/reports/api/physical";
 import { useMapboxDraw } from "@/hooks/useMapboxDraw";
 import AreaCreationModal from "./AreaCreationModal";
@@ -52,6 +55,7 @@ import {
 } from "@/lib/public-discovery-api";
 import {
   PublicDiscoveryCard,
+  PublicDiscoveryResolveResponse,
   PublicLiveAnalysis,
   PublicLiveReport,
 } from "@/types/public-discovery";
@@ -239,6 +243,8 @@ export default function GlobeView() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCleanAppProOpen, setIsCleanAppProOpen] = useState(false);
+  const [embeddedPublicReport, setEmbeddedPublicReport] =
+    useState<EmbeddedPublicReportSelection | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportResponse | null>(
     null,
   );
@@ -472,26 +478,55 @@ export default function GlobeView() {
     [router, setSelectedTabOriginal, seq, selectedBrandName],
   );
 
+  const openResolvedPublicReport = useCallback(
+    (resolved: PublicDiscoveryResolveResponse) => {
+      if (isEmbeddedMode || isReactNativeWebView) {
+        if (resolved.kind === "report" && resolved.public_id) {
+          setEmbeddedPublicReport({
+            kind: "report",
+            publicId: resolved.public_id,
+            classification: resolved.classification,
+          });
+          return;
+        }
+        if (resolved.kind === "brand" && resolved.brand_name) {
+          setEmbeddedPublicReport({
+            kind: "brand",
+            brandName: resolved.brand_name,
+          });
+          return;
+        }
+      }
+      if (resolved.canonical_path) {
+        void router.push(resolved.canonical_path);
+      }
+    },
+    [isReactNativeWebView, router],
+  );
+
   const openCanonicalReport = useCallback(
     (classification: "physical" | "digital", publicId?: string | null) => {
       const target = getCanonicalReportPath(classification, publicId);
       if (!target) {
         return false;
       }
-      void router.push(target);
+      openResolvedPublicReport({
+        kind: "report",
+        classification,
+        public_id: publicId || undefined,
+        canonical_path: target,
+      });
       return true;
     },
-    [router],
+    [openResolvedPublicReport],
   );
 
   const openPublicDiscoveryItem = useCallback(
     async (item: PublicDiscoveryCard) => {
       const resolved = await resolvePublicDiscoveryToken(item.discovery_token);
-      if (resolved.canonical_path) {
-        await router.push(resolved.canonical_path);
-      }
+      openResolvedPublicReport(resolved);
     },
-    [router],
+    [openResolvedPublicReport],
   );
 
   const openReportFromSummary = useCallback(
@@ -520,6 +555,16 @@ export default function GlobeView() {
 
       if (!report.brand_name) {
         return false;
+      }
+
+      if (isEmbeddedMode || isReactNativeWebView) {
+        openResolvedPublicReport({
+          kind: "brand",
+          classification: "digital",
+          brand_name: report.brand_name,
+          canonical_path: `/digital/${encodeURIComponent(report.brand_name)}`,
+        });
+        return true;
       }
 
       if (shouldUseSeqForDigital(report.brand_name)) {
@@ -556,7 +601,7 @@ export default function GlobeView() {
       );
       return true;
     },
-    [openCanonicalReport, router, shouldUseSeqForDigital],
+    [isReactNativeWebView, openCanonicalReport, openResolvedPublicReport, router, shouldUseSeqForDigital],
   );
 
   const openReportFromAnalysis = useCallback(
@@ -2010,12 +2055,7 @@ export default function GlobeView() {
               typeof coordinates[1] === "number"
             ) {
               void resolvePublicPhysicalPoint(coordinates[1], coordinates[0])
-                .then((resolved) => {
-                  if (resolved.canonical_path) {
-                    return router.push(resolved.canonical_path);
-                  }
-                  return undefined;
-                })
+                .then(openResolvedPublicReport)
                 .catch((error) => {
                   console.error("Failed to resolve physical map point:", error);
                 });
@@ -2054,7 +2094,7 @@ export default function GlobeView() {
         };
       }
     }
-  }, [isPhysical, mapLoaded, latestReports, router, selectedTab]);
+  }, [isPhysical, mapLoaded, latestReports, openResolvedPublicReport, selectedTab]);
 
   const pickPublicLiveAnalysis = useCallback(
     (analyses: PublicLiveAnalysis[]) => {
@@ -3896,6 +3936,12 @@ export default function GlobeView() {
       >
         <ReportCounter selectedTab={selectedTab} />
       </div>
+
+      <EmbeddedPublicReportDialog
+        report={embeddedPublicReport}
+        onClose={() => setEmbeddedPublicReport(null)}
+        onOpenReport={openResolvedPublicReport}
+      />
 
       <CleanAppProModalV2
         isOpen={isCleanAppProOpen}
