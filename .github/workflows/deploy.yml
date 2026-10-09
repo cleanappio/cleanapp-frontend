@@ -64,9 +64,13 @@ jobs:
       - name: Smoke test
         if: env.TARGET_ENV == 'prod'
         run: |
-          sleep 20
+          # The container needs a little time after restart; retry for up to ~2 minutes.
           for path in / /incident-reporting /sitemap.xml /robots.txt; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "https://cleanapp.io$path")
+            for attempt in $(seq 1 12); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "https://cleanapp.io$path")
+              [ "$code" = "200" ] && break
+              sleep 10
+            done
             echo "$path -> $code"
             [ "$code" = "200" ] || exit 1
           done
