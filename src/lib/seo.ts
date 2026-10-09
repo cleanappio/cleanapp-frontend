@@ -5,7 +5,7 @@
  * never drift apart.
  */
 
-export const SITE_URL = "https://cleanapp.io";
+export const SITE_URL = "https://www.cleanapp.io";
 export const SITE_NAME = "CleanApp";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/cleanapp-social-card.png`;
 export const TWITTER_HANDLE = "@cleanapp";
@@ -20,7 +20,7 @@ export const DEFAULT_TITLE =
 export const DEFAULT_DESCRIPTION =
   "CleanApp is the one-tap incident reporting app for physical hazards and digital bugs. Snap a photo, AI classifies and routes it to the brand, property owner or city responsible. Free for reporters; live risk maps and dashboards for organizations.";
 
-/** Absolute URL for a site path ("/about" -> "https://cleanapp.io/about"). */
+/** Absolute URL for a site path ("/about" -> "https://www.cleanapp.io/about"). */
 export function absoluteUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
   const clean = path.startsWith("/") ? path : `/${path}`;

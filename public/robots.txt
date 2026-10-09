@@ -31,4 +31,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://cleanapp.io/sitemap.xml
+Sitemap: https://www.cleanapp.io/sitemap.xml
