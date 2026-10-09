@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useTranslations } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import PageHeader from '@/components/PageHeader';
+import LoginExplainer from '@/components/LoginExplainer';
 
 interface LoginForm {
   email: string;
@@ -96,13 +97,14 @@ export default function LoginPage() {
         <meta name="robots" content="noindex, nofollow" key="robots" />
       </Head>
       <PageHeader />
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 py-12 lg:py-20 px-4 sm:px-6 lg:px-8">
+        <LoginExplainer />
+        <div className="order-first lg:order-last max-w-md w-full mx-auto lg:mx-0 lg:justify-self-end self-center space-y-8 bg-white rounded-xl border border-gray-200 shadow-sm p-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900">
               {t('diveIntoInsights')}
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600">
               {t('or')}{' '}
               <Link href="/signup" className="font-medium text-green-600 hover:text-green-500">
                 {t('startFreeTrial')}

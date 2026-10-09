@@ -87,6 +87,18 @@ export const translations: {
     signingUp: "Signing up...",
     signOut: "Sign out",
     startFreeTrial: "start your free trial",
+    loginHeadline: "See what the world is reporting about your brand and your places.",
+    loginSubhead: "Photos from customers, guests and passers-by, classified by AI and delivered to the team that can act.",
+    loginPointBrandTitle: "Your brand, everywhere",
+    loginPointBrandBody: "Every report that shows your products, packaging, storefronts or apps, in one feed.",
+    loginPointPlacesTitle: "Your places, live",
+    loginPointPlacesBody: "Draw your stores, venues or sites on the map. Anything reported inside them routes to you.",
+    loginPointSignalTitle: "Signal, not noise",
+    loginPointSignalBody: "Severity scores, hotspots and trends, so you act on what matters first.",
+    loginSampleLabel: "Example report",
+    loginSampleTitle: "Broken self-checkout, aisle 4",
+    loginSampleMeta: "Brand detected · Severity high · Routed to store ops",
+    loginSampleTime: "2 min ago",
     or: "Or",
 
     // Forms
@@ -589,6 +601,8 @@ export const translations: {
     signingUp: "Registracija...",
     signOut: "Odjavi se",
     startFreeTrial: "započnite besplatnu probu",
+    loginHeadline: "Pogledajte šta svijet prijavljuje o vašem brendu i vašim lokacijama.",
+    loginSubhead: "Fotografije kupaca, gostiju i prolaznika, klasifikovane AI-jem i dostavljene timu koji može da reaguje.",
     or: "Ili",
 
     // Forms
