@@ -96,8 +96,8 @@ export const translations: {
     loginPointSignalTitle: "Signal, not noise",
     loginPointSignalBody: "Severity scores, hotspots and trends, so you act on what matters first.",
     loginSampleLabel: "Example report",
-    loginSampleTitle: "Broken self-checkout, aisle 4",
-    loginSampleMeta: "Brand detected · Severity high · Routed to store ops",
+    loginSampleTitle: "Checkout fails on the web store",
+    loginSampleMeta: "Brand detected · Severity high · Routed to product team",
     loginSampleTime: "2 min ago",
     or: "Or",
 

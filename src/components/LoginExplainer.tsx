@@ -1,4 +1,5 @@
-import { Building2, MapPin, Radar, Camera } from "lucide-react";
+import Image from "next/image";
+import { Building2, MapPin, Radar } from "lucide-react";
 import { useTranslations } from "@/lib/i18n";
 
 /**
@@ -23,14 +24,19 @@ export default function LoginExplainer() {
 
       {/* Illustrative report card: photo in, structured signal out. */}
       <div className="mt-8 max-w-sm rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="relative h-28 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300">
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-            <Camera className="h-7 w-7" aria-hidden="true" />
-          </div>
-          <span className="absolute top-2 left-2 text-[11px] font-medium uppercase tracking-wide text-gray-500 bg-white/80 rounded px-1.5 py-0.5">
+        <div className="relative aspect-[3/2]">
+          <Image
+            src="/login-example-checkout.jpg"
+            alt="Laptop screen showing a 'Checkout failed' error dialog"
+            fill
+            sizes="(min-width: 1024px) 384px, 100vw"
+            className="object-cover"
+            priority
+          />
+          <span className="absolute top-2 left-2 text-[11px] font-medium uppercase tracking-wide text-gray-600 bg-white/90 rounded px-1.5 py-0.5">
             {t("loginSampleLabel")}
           </span>
-          <span className="absolute top-2 right-2 text-[11px] text-gray-500 bg-white/80 rounded px-1.5 py-0.5">
+          <span className="absolute top-2 right-2 text-[11px] text-gray-600 bg-white/90 rounded px-1.5 py-0.5">
             {t("loginSampleTime")}
           </span>
         </div>
