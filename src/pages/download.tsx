@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from '@/lib/i18n';
 import PageHeader from '@/components/PageHeader';
+import Image from 'next/image';
+import Link from 'next/link';
+import Footer from '@/components/Footer';
 import Seo from '@/components/Seo';
 import { Apple, Play } from 'lucide-react';
 
@@ -185,18 +188,26 @@ export default function DownloadPage() {
         path="/download"
       />
       <PageHeader />
-      <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Download CleanApp</h1>
-            <p className="text-gray-600">
-              {os 
-                ? `Detected ${os === 'android' ? 'Android' : 'iOS'} device`
-                : 'Choose your platform to download the CleanApp mobile application'
-              }
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="relative aspect-[3/2] rounded-2xl overflow-hidden shadow-lg">
+          <Image
+            src="/hero-you-spot.jpg"
+            alt="CleanApp capturing a cracked wall and a failed checkout screen"
+            fill
+            sizes="(min-width: 1024px) 560px, 100vw"
+            className="object-cover"
+            priority
+          />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Get CleanApp</h1>
+            <p className="text-gray-600 leading-relaxed">
+              {os
+                ? `We detected ${os === 'android' ? 'an Android' : 'an iOS'} device.`
+                : 'One photo reports anything, physical or digital. Free on iOS and Android.'}
             </p>
           </div>
-
           {os ? (
             // Show detected OS button
             <div className="space-y-6">
@@ -276,15 +287,15 @@ export default function DownloadPage() {
                 </button>
               </div>
 
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800 text-center">
-                  Can&apos;t determine your device? Select your platform above to download the app.
-                </p>
-              </div>
+              <p className="mt-6 text-sm text-gray-500">
+                No account needed to report. Organizations can{' '}
+                <Link href="/pricing" className="text-green-700 hover:underline">see plans</Link>.
+              </p>
             </>
           )}
         </div>
       </div>
+      <Footer />
     </div>
   );
-} 
+}

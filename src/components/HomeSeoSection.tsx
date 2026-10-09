@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { LANDING_PAGES } from "@/content/landing-pages";
@@ -22,21 +23,33 @@ export default function HomeSeoSection() {
 
   return (
     <div className="bg-white">
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
-          The one-tap incident, hazard and bug reporting app
-        </h1>
-        <p className="mt-5 text-lg text-gray-700 leading-relaxed">
-          CleanApp turns a single photo into a structured report. Snap a safety hazard, litter,
-          a broken product or a software bug; CleanApp&apos;s AI classifies it, scores its
-          severity, identifies the brand, property owner or city responsible and routes it to
-          them. The map above shows reports arriving from around the world in real time.
-        </p>
-        <p className="mt-4 text-lg text-gray-700 leading-relaxed">
-          Reporting is free and needs no account. Reporters earn rewards for verified reports.
-          Brands, property managers, cities and safety teams subscribe for live alerts, AI
-          insights and incident hotspot tracking.
-        </p>
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+              The one-tap incident, hazard and bug reporting app
+            </h1>
+            <p className="mt-5 text-lg text-gray-700 leading-relaxed">
+              CleanApp turns a single photo into a structured report. Snap a safety hazard, a
+              broken product or a software bug; AI classifies it, scores its severity, identifies
+              the brand or place responsible and routes it to them. The map above shows reports
+              arriving from around the world in real time.
+            </p>
+            <p className="mt-4 text-lg text-gray-700 leading-relaxed">
+              Reporting is free and needs no account. Brands, property managers and operators
+              subscribe for live alerts, AI insights and incident hotspot tracking.
+            </p>
+          </div>
+          <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-lg">
+            <Image
+              src="/hero-one-button.jpg"
+              alt="One button for every problem: CleanApp capturing a pothole and a failed checkout"
+              fill
+              sizes="(min-width: 1024px) 560px, 100vw"
+              className="object-cover"
+            />
+          </div>
+        </div>
 
         <div className="mt-10 grid sm:grid-cols-2 gap-8">
           <div>

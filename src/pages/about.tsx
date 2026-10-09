@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
@@ -42,6 +43,16 @@ export default function AboutPage() {
             property or city responsible and delivers it to them. Reporters earn rewards.
             Organizations get ground truth about the problems the public sees first.
           </p>
+          <div className="relative mt-10 aspect-[16/9] rounded-2xl overflow-hidden shadow-lg">
+            <Image
+              src="/hero-one-button.jpg"
+              alt="One button for every problem: CleanApp capturing a pothole and a failed checkout"
+              fill
+              sizes="(min-width: 1024px) 896px, 100vw"
+              className="object-cover"
+              priority
+            />
+          </div>
 
           <section className="mt-12">
             <h2 className="text-2xl font-bold text-gray-900">Our mission</h2>

@@ -76,13 +76,13 @@ export default function SignupPage() {
         <meta name="robots" content="noindex, nofollow" key="robots" />
       </Head>
       <PageHeader />
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+      <div className="flex items-center justify-center py-12 lg:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white rounded-xl border border-gray-200 shadow-sm p-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900">
               {t('createYourAccount')}
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600">
               {t('or')}{' '}
               <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
                 {t('signInToExistingAccount')}
@@ -175,6 +175,11 @@ export default function SignupPage() {
               >
                 {isLoading ? t('creatingAccount') : t('createAccount')}
               </button>
+              <p className="mt-4 text-center text-xs text-gray-500">
+                Free to start. Pro and Enterprise plans from $99/month, cancel any time.
+                By creating an account you agree to our{' '}
+                <Link href="/privacy" className="underline hover:text-gray-700">privacy policy</Link>.
+              </p>
             </div>
           </form>
         </div>
