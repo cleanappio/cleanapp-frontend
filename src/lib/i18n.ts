@@ -601,8 +601,6 @@ export const translations: {
     signingUp: "Registracija...",
     signOut: "Odjavi se",
     startFreeTrial: "započnite besplatnu probu",
-    loginHeadline: "Pogledajte šta svijet prijavljuje o vašem brendu i vašim lokacijama.",
-    loginSubhead: "Fotografije kupaca, gostiju i prolaznika, klasifikovane AI-jem i dostavljene timu koji može da reaguje.",
     or: "Ili",
 
     // Forms
@@ -990,8 +988,6 @@ export const translations: {
 
     // GlobeView specific
     installAndroid: "Instaliraj Android",
-    aboutCleanApp: "O nama",
-    reportAProblem: "Prijavi problem",
     installIOS: "Instaliraj iOS",
     cleanAppGPT: "CleanAppGPT",
     physical: "FIZIČKI",
