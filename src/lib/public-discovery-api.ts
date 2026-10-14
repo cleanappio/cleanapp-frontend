@@ -1,3 +1,4 @@
+import type { ReportKindFilter, ReportSignalSort } from "@/lib/report-evidence";
 import {
   PublicBrandSummary,
   PublicDiscoveryBatch,
@@ -48,16 +49,25 @@ export async function searchPublicReports(
   );
 }
 
+export type PublicEvidenceQuery = {
+  kind?: ReportKindFilter;
+  sort?: ReportSignalSort;
+  offset?: number;
+  product?: string;
+};
+
 export async function fetchPublicBrandReports(
   brandName: string,
   lang: string,
   n: number = 12,
+  query: PublicEvidenceQuery = {},
 ): Promise<PublicDiscoveryBatch> {
   return fetchJson<PublicDiscoveryBatch>(
     buildUrl("/api/v3/public/discovery/by-brand", {
       brand_name: brandName,
       lang,
       n,
+      ...query,
     }),
   );
 }

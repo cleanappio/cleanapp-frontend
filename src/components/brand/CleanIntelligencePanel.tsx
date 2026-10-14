@@ -460,8 +460,7 @@ export default function CleanIntelligencePanel({
                           className="block rounded-lg border border-green-200 bg-green-50 p-2 hover:bg-green-100"
                         >
                           <div className="text-xs font-semibold text-green-800">
-                            Report #{ex.id} • {ex.channel} • sev{" "}
-                            {Number(ex.severity || 0).toFixed(2)}
+                            Report #{ex.id} • {ex.channel}
                           </div>
                           <div className="mt-1 text-sm font-medium text-gray-900">
                             {ex.title}
@@ -520,7 +519,7 @@ export default function CleanIntelligencePanel({
           {!limitReached && !isLoading && (
             <div className="cleanai-halo pointer-events-none absolute -inset-1 rounded-xl border border-green-300/70" />
           )}
-          <div className="relative flex gap-2">
+          <div className="relative flex min-w-0 flex-wrap gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -532,7 +531,7 @@ export default function CleanIntelligencePanel({
               }}
               disabled={limitReached || isLoading}
               placeholder={placeholder}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="min-w-0 basis-full flex-1 rounded-lg border border-gray-300 sm:basis-auto px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <button
               type="button"

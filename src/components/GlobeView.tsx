@@ -1,3 +1,4 @@
+import type { ReportEvidence, ReportRecurrence } from "@/types/public-discovery";
 "use client";
 
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
@@ -216,6 +217,8 @@ export interface ReportAnalysis {
 export interface ReportWithAnalysis {
   report: Report;
   analysis: ReportAnalysis[];
+  evidence?: ReportEvidence;
+  recurrence?: ReportRecurrence;
 }
 
 // Responsive hook for mobile detection

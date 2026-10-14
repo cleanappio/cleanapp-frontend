@@ -3,176 +3,65 @@ import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import { useReportsByBrand } from "@/hooks/useReportsByBrand";
 import { usePublicReportsByBrand } from "@/hooks/usePublicReportsByBrand";
-import { getCurrentLocale, useTranslations } from "@/lib/i18n";
-import { getPreferredReportLanguage, pickPreferredAnalysis } from "@/lib/report-language";
+import { getCurrentLocale } from "@/lib/i18n";
 import { useRouter } from "next/router";
-import { getBrandNameDisplay } from "@/lib/util";
-import { ReportAnalysis, ReportWithAnalysis } from "@/components/GlobeView";
 import PublicBrandDashboard from "@/components/brand/PublicBrandDashboard";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import SubscribedBrandDashboard from "@/components/brand/SubscribedBrandDashboard";
-import AIInsights from "@/components/AIInsights";
 import { useAuthStore } from "@/lib/auth-store";
 import CleanIntelligencePanel from "@/components/brand/CleanIntelligencePanel";
 import { EmbeddedReportBackBar } from "@/components/report/PublicReportDetailPage";
+import EvidenceFilters from "@/components/evidence/EvidenceFilters";
+import type { ReportKindFilter, ReportSignalSort } from "@/lib/report-evidence";
 
 export default function DigitalBrandPage() {
   const router = useRouter();
-  const { brand_name } = router.query;
+  const brandName = typeof router.query.brand_name === "string" ? router.query.brand_name : "";
   const locale = getCurrentLocale();
-  // Only subscribe to the specific auth state properties we need
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAuthLoading = useAuthStore((state) => state.isLoading);
   const subscription = useAuthStore((state) => state.subscription);
-  const billingLoading = useAuthStore((state) => state.billingLoading);
-  const { t } = useTranslations();
-
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const isSubscribed = isAuthenticated && subscription?.status === "active";
   const [isNativeWebView, setIsNativeWebView] = useState(false);
   const isEmbedded = process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true" || isNativeWebView;
+  const [kind, setKind] = useState<ReportKindFilter>("firsthand");
+  const [sort, setSort] = useState<ReportSignalSort>("signal");
+  const [product, setProduct] = useState("");
+  const [offset, setOffset] = useState(0);
+  useEffect(() => { setIsNativeWebView(Boolean(window.ReactNativeWebView)); }, []);
+  useEffect(() => { setKind("firsthand"); setSort("signal"); setProduct(""); setOffset(0); }, [brandName]);
 
-  useEffect(() => {
-    setIsNativeWebView(Boolean(window.ReactNativeWebView));
-  }, []);
+  const publicReports = usePublicReportsByBrand(brandName, locale, Boolean(brandName), { kind, sort, product, offset });
+  const paidReports = useReportsByBrand(brandName, locale, isSubscribed);
+  const { items, totalCount, brandDisplayName, batch, isLoading, error, refresh, hasScopedCounts } = publicReports;
+  const changeKind = (nextKind: ReportKindFilter) => { setKind(nextKind); setOffset(0); };
 
-  const renderWithBackBar = (content: ReactNode) => isEmbedded ? (
-    <div className="min-h-screen bg-gray-50">
-      <EmbeddedReportBackBar onBack={() => {
-        void router.push({ pathname: "/", query: { tab: "digital" } });
-      }} />
-      {content}
-    </div>
-  ) : content;
-
-  const {
-    brandReports,
-    totalCount: subscribedTotalCount,
-    highPriority: subscribedHighPriority,
-    mediumPriority: subscribedMediumPriority,
-    isLoading: subscribedLoading,
-    error: subscribedError,
-    fetchRecentReportsByBrand,
-  } = useReportsByBrand(brand_name as string, locale, isSubscribed);
-
-  const {
-    items: publicBrandItems,
-    totalCount: publicTotalCount,
-    highPriority: publicHighPriority,
-    mediumPriority: publicMediumPriority,
-    brandDisplayName: publicBrandDisplayName,
-    isLoading: publicLoading,
-    error: publicError,
-  } = usePublicReportsByBrand(brand_name as string, locale, !isSubscribed);
-
-  useEffect(() => {
-    // Only show subscribed view if user has an active subscription
-    if (!isAuthLoading && !billingLoading && isAuthenticated && subscription?.status === 'active') {
-      setIsSubscribed(true);
-    } else {
-      setIsSubscribed(false);
-    }
-  }, [isAuthenticated, isAuthLoading, subscription, billingLoading]);
-
-  const isLoading = isAuthLoading || billingLoading || (isSubscribed ? subscribedLoading : publicLoading);
-  const error = isSubscribed ? subscribedError : publicError;
-  const totalCount = isSubscribed ? subscribedTotalCount : publicTotalCount;
-  const highPriority = isSubscribed ? subscribedHighPriority : publicHighPriority;
-  const mediumPriority = isSubscribed ? subscribedMediumPriority : publicMediumPriority;
-
-  if (isLoading) {
-    return renderWithBackBar(
-      <div className="max-w-7xl mx-auto my-6 sm:my-8">
-        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
-          {t("recentReports")}
-        </h1>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mr-3 sm:mr-3"></div>
-            <p className="text-gray-500 text-sm sm:text-base">
-              {t("loading")} {t("recentReports").toLowerCase()}...
-            </p>
-          </div>
-        </div>
+  return (
+    <div className="min-h-screen bg-white">
+      {isEmbedded ? <EmbeddedReportBackBar onBack={() => { void router.push({ pathname: "/", query: { tab: "digital" } }); }} /> : <PageHeader />}
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
+        <p className="mb-2 text-xs text-gray-500">Digital reports{batch?.scope?.includes_products ? " · Company and product scope" : ""}</p>
+        <h1 className="mb-1 text-3xl font-semibold tracking-tight text-gray-950 sm:text-4xl">{brandDisplayName || brandName}</h1>
+        <p className="mb-5 text-sm text-gray-600">Product issues, original sources and reported impact.</p>
+        <EvidenceFilters kind={kind} sort={sort} product={product} batch={batch} onKind={changeKind} onSort={(next) => { setSort(next); setOffset(0); }} onProduct={(next) => { setProduct(next); setOffset(0); }} />
+        <section aria-label="Report evidence" aria-busy={isLoading}>
+          {isLoading ? <p role="status" className="py-12 text-sm text-gray-600">Loading source evidence…</p> : error ? (
+            <div role="alert" className="py-8"><h2 className="mb-2 text-lg font-semibold text-gray-900">Reports could not be loaded</h2><p className="mb-3 text-sm text-gray-600">The evidence service is unavailable. Try again to load this view.</p><button type="button" onClick={refresh} className="min-h-[44px] rounded-md bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">Retry</button></div>
+          ) : (
+            <>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500"><h2 className="text-sm font-semibold text-gray-900">{kind === "firsthand" ? "Firsthand issue entries" : kind === "coverage" ? "Coverage entries" : kind === "unknown" ? "Unclassified entries" : "All source entries"}</h2><p>{totalCount} {hasScopedCounts ? (totalCount === 1 ? "issue entry in this view" : "issue entries in this view") : "entries in the loaded sample"}</p></div>
+              {!hasScopedCounts && <p className="mb-4 text-xs text-gray-500">Classification or scoped counts are not yet available for this response. Unclassified material is kept separate.</p>}
+              {sort === "recent" && hasScopedCounts && <p className="mb-3 text-xs text-gray-500">Sorted by observation or publication date; missing source dates use ingestion time.</p>}
+              {batch?.kind_counts && batch.kind_counts.all < batch.kind_counts.firsthand + batch.kind_counts.coverage + batch.kind_counts.unknown && <p className="mb-3 text-xs text-gray-500">Related issue families can appear in more than one source view.</p>}
+              {items.length ? <PublicBrandDashboard items={items} /> : (
+                <div className="border-y border-gray-100 py-8"><h3 className="mb-2 text-lg font-semibold text-gray-900">{kind === "firsthand" ? "No classified firsthand reports in this view" : "No reports in this view"}</h3><p className="max-w-xl text-sm leading-6 text-gray-600">{kind === "firsthand" ? "Firsthand includes only sources classified from original evidence. Coverage and unclassified sources remain available." : "Try another source type or product scope."}</p><div className="mt-3 flex flex-wrap gap-4"><button type="button" onClick={() => changeKind("unknown")} className="min-h-[44px] text-sm font-semibold text-green-800 underline underline-offset-4">View unclassified</button><button type="button" onClick={() => changeKind("all")} className="min-h-[44px] text-sm font-semibold text-green-800 underline underline-offset-4">View all sources</button></div></div>
+              )}
+              {(offset > 0 || batch?.has_more) && <nav aria-label="Report pages" className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4"><button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 12))} className="min-h-[44px] px-3 text-sm font-semibold text-green-800 disabled:text-gray-400">Previous</button><span className="text-xs text-gray-500">Entries {offset + 1}–{offset + items.length}</span><button type="button" disabled={!batch?.has_more} onClick={() => setOffset(offset + 12)} className="min-h-[44px] px-3 text-sm font-semibold text-green-800 disabled:text-gray-400">Next</button></nav>}
+            </>
+          )}
+        </section>
+        <details className="mt-8 border-t border-gray-200 pt-4"><summary className="min-h-[44px] cursor-pointer text-base font-semibold text-gray-900">Ask about the evidence</summary><p className="mb-4 text-xs text-gray-500">Answers may include all source types for this company. Check the cited original evidence.</p><CleanIntelligencePanel orgId={brandName} totalReports={batch?.kind_counts?.all ?? totalCount} /></details>
+        {isSubscribed && <section className="mt-8 border-t border-gray-200 pt-5"><h2 className="mb-4 text-lg font-semibold text-gray-900">Subscriber report access</h2>{paidReports.isLoading ? <p role="status" className="text-sm text-gray-600">Loading subscriber reports…</p> : paidReports.error ? <p role="alert" className="text-sm text-red-700">Subscriber reports could not be loaded.</p> : <SubscribedBrandDashboard brandReports={paidReports.brandReports} />}</section>}
       </div>
-    );
-  }
-
-  if (error) {
-    return renderWithBackBar(
-      <div className="max-w-7xl mx-auto my-6 sm:my-8">
-        <h1 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4 text-white">
-          {t("recentReports")}
-        </h1>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-          <div className="text-center">
-            <div className="text-red-400 text-3xl sm:text-4xl mb-2">⚠️</div>
-            <p className="text-red-600 font-medium text-sm sm:text-base">
-              {t("failedToFetchReport")}
-            </p>
-            <p className="text-sm text-red-500 mt-1">{error}</p>
-            <button
-              onClick={() => {
-                if (isSubscribed) {
-                  fetchRecentReportsByBrand(brand_name as string);
-                  return;
-                }
-                router.replace(router.asPath);
-              }}
-              className="mt-4 sm:mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-4 sm:py-2 rounded-md transition-colors text-sm"
-            >
-              {t("retry")}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const getAnalysis = (
-    brandReports: ReportWithAnalysis[]
-  ): ReportAnalysis | undefined => {
-    if (brandReports.length === 0) {
-      return undefined;
-    }
-    const preferredLanguage = getPreferredReportLanguage(
-      brand_name as string,
-      locale
-    );
-    return pickPreferredAnalysis(
-      brandReports[0].analysis,
-      preferredLanguage,
-      locale
-    );
-  };
-
-  const pageBrandDisplayName = isSubscribed
-    ? getAnalysis(brandReports) &&
-      getBrandNameDisplay(getAnalysis(brandReports)!).brandDisplayName
-    : publicBrandDisplayName || (brand_name as string);
-
-  return renderWithBackBar(
-    <div className="bg-gray-50">
-      {!isEmbedded && <PageHeader />}
-      <div className="max-w-7xl mx-auto my-6 sm:my-8 px-6 md:px-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-4">
-          {pageBrandDisplayName}
-        </h1>
-        <h2 className="text-lg sm:text-2xl font-medium mb-4 sm:mb-4">
-          {t("totalReports")} ({totalCount})
-        </h2>
-
-        <CleanIntelligencePanel
-          orgId={(brand_name as string) || ""}
-          totalReports={totalCount || brandReports.length}
-        />
-
-        {isSubscribed && (
-          <SubscribedBrandDashboard brandReports={brandReports} />
-        )}
-        {!isSubscribed && <PublicBrandDashboard items={publicBrandItems} />}
-        <AIInsights brandReports={brandReports} totalCount={totalCount} highPriority={highPriority} mediumPriority={mediumPriority} />
-      </div>
-
       {!isEmbedded && <Footer />}
     </div>
   );

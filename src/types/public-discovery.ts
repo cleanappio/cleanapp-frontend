@@ -1,3 +1,38 @@
+import type { ReportKindFilter, ReportSignalSort } from "@/lib/report-evidence";
+
+export type ReportEvidence = {
+  report_kind: "firsthand" | "coverage" | "unknown";
+  intake_method: "cleanapp_submission" | "imported" | "unknown";
+  intake_label: string;
+  source_platform: string | null;
+  source_url: string | null;
+  source_published_at: string | null;
+  observed_at: string | null;
+  ingested_at: string | null;
+  excerpt: string | null;
+  reported_impact: string | null;
+  classification_reason: string | null;
+  entity_relationship: "affected" | "dependency" | "mentioned" | "unknown";
+  validation_status: string;
+  upstream_status: string;
+  resolution_status: string;
+  why_surfaced: string[];
+  evidence_version: number;
+};
+
+export type ReportRecurrence = {
+  issue_id: string;
+  case_id: string | null;
+  supporting_report_count: number;
+  source_account_count: number | null;
+  duplicate_import_count: number;
+  independence: "unassessed" | "verified";
+  related_observation_count: number | null;
+  counts_exact: boolean;
+  grouping?: "related_issue_family" | "source_observation";
+  supporting_sources?: { title: string; source_url: string | null; report_kind: "firsthand" | "coverage" | "unknown"; source_published_at: string | null }[];
+};
+
 export type PublicDiscoveryCard = {
   discovery_token: string;
   title: string;
@@ -9,6 +44,8 @@ export type PublicDiscoveryCard = {
   brand_display_name?: string;
   latitude?: number;
   longitude?: number;
+  evidence?: ReportEvidence;
+  recurrence?: ReportRecurrence;
 };
 
 export type PublicDiscoveryBatch = {
@@ -17,6 +54,18 @@ export type PublicDiscoveryBatch = {
   total_count?: number;
   high_priority_count?: number;
   medium_priority_count?: number;
+  kind?: ReportKindFilter;
+  sort?: ReportSignalSort;
+  offset?: number;
+  has_more?: boolean;
+  kind_counts?: Record<ReportKindFilter, number>;
+  counts_exact?: boolean;
+  scope?: {
+    brand_name: string;
+    product: string | null;
+    includes_products: boolean;
+    products: string[];
+  };
 };
 
 export type PublicPhysicalPoint = {
