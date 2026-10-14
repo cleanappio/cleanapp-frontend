@@ -18,6 +18,7 @@ export type ReportEvidence = {
   resolution_status: string;
   why_surfaced: string[];
   evidence_version: number;
+  has_original_media?: boolean;
 };
 
 export type ReportRecurrence = {

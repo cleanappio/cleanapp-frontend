@@ -82,3 +82,12 @@ test('dedup recurrence is labeled source reports and keeps independence unassess
   assert.match(html, /5 related observations/);
   assert.doesNotMatch(html, /4 affected users|4 users/);
 });
+
+test('image-only originals remain visible as established source evidence', () => {
+  const html = renderToStaticMarkup(React.createElement(ReportEvidence, {
+    evidence: { ...evidence, excerpt: null, source_url: null, has_original_media: true },
+  }));
+  assert.match(html, /Original image is available in report details/);
+  assert.doesNotMatch(html, /Source evidence has not been established/);
+  assert.doesNotMatch(html, /Original source wording/);
+});

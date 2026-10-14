@@ -33,6 +33,8 @@ export default function ReportEvidence({ evidence, recurrence, locale = "en", su
         <p className="mb-1 text-xs font-semibold text-green-800">{excerpt ? "Original source wording" : "Original evidence"}</p>
         {excerpt ? (
           <blockquote className="whitespace-pre-wrap break-words text-base leading-6 text-gray-900">“{excerpt}”</blockquote>
+        ) : evidence?.has_original_media ? (
+          <p className="leading-6">Original image is available in report details. No original text excerpt is available.</p>
         ) : (
           <p className="leading-6">Original wording is not available in CleanApp.{sourceUrl ? " Inspect the linked source." : " Source evidence has not been established."}</p>
         )}
