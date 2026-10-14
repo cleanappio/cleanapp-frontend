@@ -72,12 +72,16 @@ export default function ActionCard() {
 
         if (data.items && data.items.length > 0) {
           const firstReport = data.items[0];
-          const brandName = firstReport.brand_name || searchTerm;
+          const brandName = data.scope?.brand_name || firstReport.brand_name || searchTerm;
+          const firstMatchesScope = !data.scope?.brand_name || firstReport.brand_name?.toLowerCase() === brandName.toLowerCase();
+          const scopeDisplayName = searchTerm.trim().toLowerCase() === brandName.toLowerCase() ? searchTerm.trim() : brandName;
           const actualTotal = data.total_count || data.count || data.items.length;
 
           setMatchingBrand({
             brand_name: brandName,
-            brand_display_name: firstReport.brand_display_name || firstReport.brand_name || searchTerm,
+            brand_display_name: firstMatchesScope
+              ? firstReport.brand_display_name || firstReport.brand_name || searchTerm
+              : scopeDisplayName,
             total: actualTotal,
           });
         } else {
