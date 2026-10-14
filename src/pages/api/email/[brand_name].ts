@@ -39,13 +39,13 @@ export default async function handler(
       "API URL",
       `${apiUrl}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(
         brand_name
-      )}&n=${n}&lang=${locale}`
+      )}&n=${n}&lang=${locale}&kind=all&sort=recent`
     );
 
     const response = await fetch(
       `${apiUrl}/api/v3/reports/by-brand?brand_name=${encodeURIComponent(
         brand_name
-      )}&n=${n}&lang=${locale}`,
+      )}&n=${n}&lang=${locale}&kind=all&sort=recent`,
       {
         method: "GET",
         headers: {

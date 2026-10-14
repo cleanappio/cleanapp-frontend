@@ -68,7 +68,7 @@ export default function ActionCard() {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await fetchPublicBrandReports(searchTerm, 'en', 1);
+        const data = await fetchPublicBrandReports(searchTerm, 'en', 1, { kind: 'all' });
 
         if (data.items && data.items.length > 0) {
           const firstReport = data.items[0];

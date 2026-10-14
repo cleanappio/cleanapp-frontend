@@ -60,7 +60,21 @@ export default function DigitalBrandPage() {
           )}
         </section>
         <details className="mt-8 border-t border-gray-200 pt-4"><summary className="min-h-[44px] cursor-pointer text-base font-semibold text-gray-900">Ask about the evidence</summary><p className="mb-4 text-xs text-gray-500">Answers may include all source types for this company. Check the cited original evidence.</p><CleanIntelligencePanel orgId={brandName} totalReports={batch?.kind_counts?.all ?? totalCount} /></details>
-        {isSubscribed && <section className="mt-8 border-t border-gray-200 pt-5"><h2 className="mb-4 text-lg font-semibold text-gray-900">Subscriber report access</h2>{paidReports.isLoading ? <p role="status" className="text-sm text-gray-600">Loading subscriber reports…</p> : paidReports.error ? <p role="alert" className="text-sm text-red-700">Subscriber reports could not be loaded.</p> : <SubscribedBrandDashboard brandReports={paidReports.brandReports} />}</section>}
+        {isSubscribed && (
+          <section className="mt-8 border-t border-gray-200 pt-5">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">Subscriber report access</h2>
+            {paidReports.isLoading ? (
+              <p role="status" className="text-sm text-gray-600">Loading subscriber reports…</p>
+            ) : paidReports.error ? (
+              <p role="alert" className="text-sm text-red-700">Subscriber reports could not be loaded.</p>
+            ) : (
+              <>
+                {paidReports.hasMore && <p className="mb-3 text-xs text-gray-500">Showing the latest {paidReports.brandReports.length} subscriber entries; this list displays up to 100.</p>}
+                <SubscribedBrandDashboard brandReports={paidReports.brandReports} />
+              </>
+            )}
+          </section>
+        )}
       </div>
       {!isEmbedded && <Footer />}
     </div>

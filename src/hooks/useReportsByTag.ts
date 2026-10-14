@@ -28,7 +28,7 @@ export const useReportsByTags = (
 
         const requests = tags.map((tag) =>
           fetch(
-            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${tag}&n=10`
+            `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${tag}&n=10&kind=all&sort=recent`
           )
             .then(async (response) => {
               if (response.ok) {
