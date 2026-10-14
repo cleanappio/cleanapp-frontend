@@ -27,12 +27,16 @@ export default function DigitalBrandPage() {
   const [sort, setSort] = useState<ReportSignalSort>("signal");
   const [product, setProduct] = useState("");
   const [offset, setOffset] = useState(0);
+  const [subscriberAccess, setSubscriberAccess] = useState({ brand: "", open: false });
+  const subscriberAccessOpen = subscriberAccess.brand === brandName && subscriberAccess.open;
   useEffect(() => { setIsNativeWebView(Boolean(window.ReactNativeWebView)); }, []);
   useEffect(() => { setKind("firsthand"); setSort("signal"); setProduct(""); setOffset(0); }, [brandName]);
+  useEffect(() => { setSubscriberAccess({ brand: brandName, open: false }); }, [brandName, isSubscribed]);
 
   const publicReports = usePublicReportsByBrand(brandName, locale, Boolean(brandName), { kind, sort, product, offset });
-  const paidReports = useReportsByBrand(brandName, locale, isSubscribed);
   const { items, totalCount, brandDisplayName, batch, isLoading, error, refresh, hasScopedCounts } = publicReports;
+  const publicRequestFinished = publicReports.hasCompletedRequest;
+  const paidReports = useReportsByBrand(brandName, locale, isSubscribed && subscriberAccessOpen && publicRequestFinished);
   const changeKind = (nextKind: ReportKindFilter) => { setKind(nextKind); setOffset(0); };
 
   return (
@@ -61,9 +65,9 @@ export default function DigitalBrandPage() {
         </section>
         <details className="mt-8 border-t border-gray-200 pt-4"><summary className="min-h-[44px] cursor-pointer text-base font-semibold text-gray-900">Ask about the evidence</summary><p className="mb-4 text-xs text-gray-500">Answers may include all source types for this company. Check the cited original evidence.</p><CleanIntelligencePanel orgId={brandName} totalReports={batch?.kind_counts?.all ?? totalCount} /></details>
         {isSubscribed && (
-          <section className="mt-8 border-t border-gray-200 pt-5">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Subscriber report access</h2>
-            {paidReports.isLoading ? (
+          <details open={subscriberAccessOpen} onToggle={(event) => setSubscriberAccess({ brand: brandName, open: event.currentTarget.open })} className="mt-8 border-t border-gray-200 pt-5">
+            <summary className="min-h-[44px] cursor-pointer text-lg font-semibold text-gray-900">Subscriber report access</summary>
+            {subscriberAccessOpen && <div className="mt-4">{!publicRequestFinished || paidReports.isLoading ? (
               <p role="status" className="text-sm text-gray-600">Loading subscriber reports…</p>
             ) : paidReports.error ? (
               <p role="alert" className="text-sm text-red-700">Subscriber reports could not be loaded.</p>
@@ -72,8 +76,8 @@ export default function DigitalBrandPage() {
                 {paidReports.hasMore && <p className="mb-3 text-xs text-gray-500">Showing the latest {paidReports.brandReports.length} subscriber entries; this list displays up to 100.</p>}
                 <SubscribedBrandDashboard brandReports={paidReports.brandReports} />
               </>
-            )}
-          </section>
+            )}</div>}
+          </details>
         )}
       </div>
       {!isEmbedded && <Footer />}
