@@ -69,14 +69,25 @@ export default function ArticlePage({ article }: Props) {
             </section>
           ))}
 
+          {article.sources && article.sources.length > 0 && (
+            <section className="mt-10 border-t border-gray-200 pt-6">
+              <h2 className="text-xl font-bold text-gray-900">Sources &amp; further reading</h2>
+              <ul className="mt-3 space-y-2">
+                {article.sources.map((source) => (
+                  <li key={source.href}><a href={source.href} className="text-green-700 hover:underline" target="_blank" rel="noopener noreferrer">{source.title} ↗</a></li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="mt-12 bg-green-50 border border-green-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-gray-900">See what people are reporting about your brand and places</h2>
             <p className="mt-2 text-gray-700">
-              CleanApp is free to report with and starts at $99/month for organizations.
+              Report a problem in your browser, or explore current organization plans.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link href="/pricing" className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-md font-medium">See plans</Link>
-              <Link href="/download" className="border border-gray-300 hover:border-gray-500 text-gray-800 px-5 py-2.5 rounded-md font-medium">Get the app</Link>
+              <Link href="/report-a-problem" className="border border-gray-300 hover:border-gray-500 text-gray-800 px-5 py-2.5 rounded-md font-medium">Report a problem</Link>
             </div>
           </section>
 

@@ -1,52 +1,61 @@
 import type { GetServerSideProps } from "next";
 import { absoluteUrl } from "@/lib/seo";
+import { fetchPublicSeoJson, isPublicSeoObject } from "@/lib/public-seo-fetch";
 
 const LIVE_API = process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
 const CACHE_MS = 60 * 60 * 1000;
 
-type BrandSummary = { brand_name: string; total: number };
-
 // One backend call per hour per server process; crawlers hit this often.
 let cached: { xml: string; at: number } | null = null;
+let retryAt = 0;
 
-async function fetchBrands(): Promise<BrandSummary[]> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
-  try {
-    const response = await fetch(
-      `${LIVE_API}/api/v3/public/discovery/brands/summary?classification=digital&lang=en`,
-      { signal: controller.signal, cache: "no-store" },
-    );
-    if (!response.ok) return [];
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
+function xmlText(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-function buildXml(brands: BrandSummary[], lastmod: string): string {
-  const urls = brands
-    .filter((brand) => brand.brand_name && brand.total > 0)
-    .map(
-      (brand) =>
-        `  <url>\n    <loc>${absoluteUrl(`/digital/${encodeURIComponent(brand.brand_name)}`)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.6</priority>\n  </url>`,
-    )
-    .join("\n");
+function buildXml(data: unknown): string {
+  if (!Array.isArray(data)) throw new Error("Invalid brand summary");
+  const names = new Map<string, string>();
+  let validRows = 0;
+  for (const row of data) {
+    if (!isPublicSeoObject(row) || typeof row.brand_name !== "string" || typeof row.total !== "number" ||
+      !Number.isSafeInteger(row.total) || row.total < 0 || (row.classification !== undefined && row.classification !== "digital")) continue;
+    const name = row.brand_name.trim();
+    if (!name || name.length > 128 || name === "." || name === ".." || /[\u0000-\u001f\u007f]/.test(name)) continue;
+    validRows += 1;
+    if (row.total > 0 && !names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
+  }
+  if (data.length && !validRows) throw new Error("Malformed brand rows");
+  const urls = [...names.values()].map((name) => `  <url><loc>${xmlText(absoluteUrl(`/digital/${encodeURIComponent(name)}`))}</loc></url>`).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  if (!cached || Date.now() - cached.at > CACHE_MS) {
-    const brands = await fetchBrands();
-    cached = { xml: buildXml(brands, new Date().toISOString().slice(0, 10)), at: Date.now() };
+  const now = Date.now();
+  let stale = false;
+  if (!cached || now - cached.at > CACHE_MS) {
+    try {
+      if (now < retryAt) throw new Error("Brand lookup retry pending");
+      const { status, data } = await fetchPublicSeoJson(`${LIVE_API}/api/v3/public/discovery/brands/summary?classification=digital&lang=en`, 6000);
+      if (status !== 200) throw new Error("Brand summary unavailable");
+      cached = { xml: buildXml(data), at: Date.now() };
+      retryAt = 0;
+    } catch {
+      if (now >= retryAt) retryAt = now + 60_000;
+      stale = true;
+      if (!cached) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Retry-After", "60");
+        res.end("Sitemap temporarily unavailable.\n");
+        return { props: {} };
+      }
+    }
   }
-  res.setHeader("Content-Type", "application/xml");
-  res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
-  res.write(cached.xml);
-  res.end();
+  res.setHeader("Content-Type", "application/xml; charset=utf-8");
+  res.setHeader("Cache-Control", stale ? "public, s-maxage=60, stale-while-revalidate=60" : "public, s-maxage=3600, stale-while-revalidate=86400");
+  res.end(cached.xml);
   return { props: {} };
 };
 

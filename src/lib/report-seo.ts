@@ -1,5 +1,6 @@
 import type { GetServerSideProps } from "next";
 import type { ReportClassification } from "@/lib/report-links";
+import { fetchPublicSeoJson, isPublicSeoObject, publicSeoText } from "@/lib/public-seo-fetch";
 
 /** Server-rendered metadata for a public report page, so crawlers and link previews see real content. */
 export type ReportSeoProps = {
@@ -26,43 +27,46 @@ export function makeReportSeoProps(
   classification: ReportClassification,
 ): GetServerSideProps<ReportSeoProps> {
   return async ({ params, res, locale }) => {
+    res.setHeader("Cache-Control", "no-store");
     const publicId = typeof params?.public_id === "string" ? params.public_id : "";
     const fallback: ReportSeoProps = {
       seo: {
-        title: `${CLASS_LABEL[classification]} ${publicId} | CleanApp`,
-        description: `A ${classification} report on CleanApp. Photo, location and AI analysis, routed to the brand or place responsible.`,
+        title: `${CLASS_LABEL[classification]} | CleanApp`,
+        description: "Explore public problem reports and their source context on CleanApp.",
         image: null,
         found: false,
       },
     };
-    if (!publicId) return { props: fallback };
+    if (!publicId || !/^[A-Za-z0-9_-]{1,128}$/.test(publicId)) return { notFound: true };
 
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4000);
-      const response = await fetch(
+      const { status, data } = await fetchPublicSeoJson(
         `${LIVE_API}/api/v3/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`,
-        { headers: { Accept: "application/json" }, signal: controller.signal, cache: "no-store" },
       );
-      clearTimeout(timer);
-      if (!response.ok) {
-        if (response.status === 404) res.statusCode = 404;
+      if (status === 404) return { notFound: true };
+      if (status !== 200 || !isPublicSeoObject(data) || !isPublicSeoObject(data.report) || data.report.public_id !== publicId) {
         return { props: fallback };
       }
-      const data = await response.json();
-      const analyses: Array<{ language?: string; title?: string; summary?: string; description?: string; brand_display_name?: string; brand_name?: string }> =
-        Array.isArray(data?.analysis) ? data.analysis : [];
+      const report = data.report;
+      if (data.is_public === false || report.is_public === false ||
+        (typeof data.visibility === "string" && data.visibility !== "public") ||
+        (typeof report.visibility === "string" && report.visibility !== "public")) return { props: fallback };
+      const analyses = Array.isArray(data.analysis) ? data.analysis.filter(isPublicSeoObject) : [];
       const analysis =
-        analyses.find((item) => item.language === (locale || "en")) || analyses[0] || {};
-      const brand = analysis.brand_display_name || analysis.brand_name;
-      const title = analysis.title
-        ? `${analysis.title}${brand ? ` – ${brand}` : ""} | CleanApp`
-        : fallback.seo.title;
-      const summary = (analysis.summary || analysis.description || "").trim();
+        analyses.find((item) => item.language === (locale || "en")) || analyses.find((item) => item.language === "en") || analyses[0];
+      // The legacy detail projection does not hydrate is_valid; its default
+      // false is not a reliable moderation signal. Visibility is checked above.
+      if (!analysis || (analysis.classification !== "physical" && analysis.classification !== "digital") || !publicSeoText(analysis.title)) return { props: fallback };
+      if (analysis.classification !== classification) return {
+        redirect: { destination: `/${analysis.classification}/report/${encodeURIComponent(publicId)}`, permanent: false },
+      };
+      const brand = publicSeoText(analysis.brand_display_name) || publicSeoText(analysis.brand_name);
+      const title = `${publicSeoText(analysis.title)}${brand ? ` – ${brand}` : ""} | CleanApp`;
+      const summary = publicSeoText(analysis.summary) || publicSeoText(analysis.description);
       const description = summary
         ? summary.length > 155 ? `${summary.slice(0, 152).trimEnd()}…` : summary
         : fallback.seo.description;
-      const hasImage = Boolean(data?.report?.image);
+      const hasImage = typeof report.image === "string" && report.image.length > 0;
       return {
         props: {
           seo: {

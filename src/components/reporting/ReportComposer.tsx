@@ -63,10 +63,13 @@ export default function ReportComposer({ surface = "page", state }: { surface?: 
   async function addImage(file?: File) {
     if (!file || locked.current) return;
     const version = ++imageVersion.current;
-    setPreparing(true); setError(""); draft.current = null;
+    setPreparing(true); setError("");
     try {
       const image = await prepareReportImage(file);
-      if (mounted.current && version === imageVersion.current) setAttachment({ file, image, preview: URL.createObjectURL(file) });
+      if (mounted.current && version === imageVersion.current) {
+        setAttachment({ file, image, preview: URL.createObjectURL(file) });
+        draft.current = null;
+      }
     } catch (err) {
       if (mounted.current && version === imageVersion.current) setError(err instanceof Error ? err.message : "We couldn’t open that image.");
     } finally {

@@ -36,3 +36,10 @@ This file is a navigation aid. Use the linked pages for current product informat
 - [Android listing](https://play.google.com/store/apps/details?id=com.cleanapp)
 
 Contact: info@cleanapp.io
+
+## Press and editorial guides
+- [Press kit](https://www.cleanapp.io/press): product descriptions, logos, assets and contact
+- [Guides](https://www.cleanapp.io/blog): practical selection criteria for reporting tools
+- [Choosing an incident reporting tool](https://www.cleanapp.io/blog/best-incident-reporting-apps)
+- [Choosing a hazard reporting app](https://www.cleanapp.io/blog/best-hazard-reporting-apps)
+- [Choosing bug reporting tools](https://www.cleanapp.io/blog/best-bug-reporting-tools)

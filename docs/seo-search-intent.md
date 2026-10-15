@@ -48,3 +48,17 @@ Existing official reporting flows use concrete problem language: [GOV.UK pothole
 The [CleanApp frontend repository](https://github.com/cleanappio/cleanapp-frontend) is a public implementation source. The pricing page is the current public source for organization plans. Company content contains no customer, revenue, funding, market-size or search-volume estimates.
 
 `llms.txt` is a small navigation aid, not a ranking mechanism. Structured data describes visible content; it is not a promise of rich results or AI citations.
+
+## Concurrent editorial content review
+
+The three existing `/blog/best-*` slugs are retained, with titles and copy reframed as selection guides. They do not claim a comparative product survey, a market ranking or measured reporting reach. Specific competitor capability lists were removed; the guides instead offer concrete evaluation criteria and link to primary HSE, GOV.UK, Chrome and Jira sources checked on 15 October 2026. Source links are available in the article template. CleanApp examples match text-or-image browser reporting and the observation → AI structure → related reports → routing flow.
+
+The press kit uses the same product description, links to current pricing instead of duplicating figures, and omits the legacy reward/fix promotional image from its downloads. Blog and press routes remain linked for discovery; article calls to action offer browser reporting directly.
+
+## Public report and brand discovery
+
+Report metadata comes from the public API with a four-second deadline covering headers and JSON. The requested ID must match, with usable analysis and a physical/digital classification. Incorrect report-kind URLs redirect to the actual kind; missing reports return 404. Unavailable, malformed or explicitly private results receive generic, nonindexable metadata. Public metadata responses use `no-store`; subscriber data is never requested or serialized for SEO.
+
+Brand metadata uses only matching digital cards from the public discovery endpoint. Unknown or unconfirmed brands remain nonindexable. The brand sitemap validates and deduplicates public summary rows and omits synthetic modification dates. On an upstream outage it briefly serves the last successful XML, or responds 503 with `Retry-After` if none exists; it never caches a failed lookup as a successful empty sitemap.
+
+The legacy detail API currently serializes an unhydrated `is_valid` boolean. Do not interpret its default false as a moderation decision. The frontend checks public endpoint identity, explicit visibility and classification; backend public-access enforcement remains authoritative.
