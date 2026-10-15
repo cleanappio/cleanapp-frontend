@@ -49,7 +49,7 @@ export default function PublicBrandDashboard({ items, onOpenReport, pageBrand, a
       {openError && <p role="alert" className="mb-4 text-red-700">Unable to open this report. Please try again.</p>}
       <div className="-mx-4 divide-y divide-gray-100 sm:-mx-5">
         {items.map((item) => (
-          <article key={item.discovery_token} className="flow-root px-4 py-7 odd:bg-white even:bg-green-100/50 sm:px-5 sm:py-8" aria-label={item.title || "Report"}>
+          <article key={item.discovery_token} className="flow-root px-4 py-7 odd:bg-green-100/50 even:bg-white sm:px-5 sm:py-8" aria-label={item.title || "Report"}>
             <ReportThumbnail item={item} onOpen={() => { void handleOpen(item); }} className="float-right mb-3 ml-4 w-24 sm:ml-6 sm:w-40" />
             <h3 className="mb-2 flow-root break-words text-xl font-semibold leading-snug tracking-tight text-gray-950 sm:text-2xl">
               <button type="button" disabled={openingToken === item.discovery_token} aria-busy={openingToken === item.discovery_token} onClick={() => { void handleOpen(item); }} className="min-h-[44px] w-full text-left transition-colors hover:text-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700 disabled:opacity-60 [overflow-wrap:anywhere]">

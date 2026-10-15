@@ -189,7 +189,7 @@ test('overview names the authoritative brand or selected product while retaining
   assert.doesNotMatch(product, /reports about|report about Anthropic/);
 });
 
-test('recent activity keeps the real counts static with one decorative reduced-motion-safe sheen', () => {
+test('recent activity keeps real counts static with a repeating sheen and three-second rest, disabled for reduced motion', () => {
   const overview = { total_reports: 301, reports_last_30_days: 44, reports_last_7_days: 6 };
   const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch: { overview }, brandName: 'grok' }));
   assert.match(html, /aria-hidden="true" class="brand-recent-sheen"/);
@@ -201,7 +201,9 @@ test('recent activity keeps the real counts static with one decorative reduced-m
   }));
   assert.doesNotMatch(empty, /brand-recent-sheen/);
   const css = fs.readFileSync(require('node:path').resolve(__dirname, '../src/styles/globals.css'), 'utf8');
-  assert.match(css, /animation: brandRecentSheen 1800ms ease-out 350ms 1;/);
+  assert.match(css, /animation: brandRecentSheen 4800ms ease-out 350ms infinite;/);
+  // The sheen is fully hidden for the final 62.5% of each 4.8-second cycle.
+  assert.match(css, /37\.5%, 100%\s*\{\s*background-position: -60% 0; opacity: 0;\s*\}/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.brand-recent-sheen\s*\{[^}]*animation: none;[^}]*display: none;/);
 });
 
@@ -213,17 +215,35 @@ test('native provenance does not invent a mobile client from a sensor, image or 
   assert.equal(cleanAppSubmissionLabel({ intake_method: 'unknown', source_platform: 'mobile' }), null);
 });
 
-test('mobile provenance requires the server-projected native mobile channel', () => {
-  assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', intake_channel: 'mobile' }), 'via CleanApp mobile');
-  for (const intake_channel of ['web', 'share', 'legacy_v2', 'unrecognized', null, undefined]) {
-    assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', intake_channel }), 'via CleanApp');
+test('native channels identify the recorded mobile, web and share routes', () => {
+  for (const [intake_channel, label] of [
+    ['mobile', 'via CleanApp mobile'], ['web', 'via CleanApp web'], ['share', 'via CleanApp share'],
+    ['legacy_v2', 'via CleanApp'], ['unrecognized', 'via CleanApp'], [null, 'via CleanApp'], [undefined, 'via CleanApp'],
+  ]) {
+    assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', intake_channel }), label);
+    const html = renderToStaticMarkup(React.createElement(ReportEvidence, {
+      evidence: { ...evidence, intake_method: 'cleanapp_submission', intake_channel },
+    }));
+    assert.ok(html.split('<details')[0].includes(label));
+    assert.ok(html.includes(`How received</dt><dd>${label}`));
   }
   for (const intake_method of ['imported', 'unknown', undefined]) {
-    assert.equal(cleanAppSubmissionLabel({ intake_method, intake_channel: 'mobile' }), null);
+    for (const intake_channel of ['mobile', 'web', 'share']) {
+      assert.equal(cleanAppSubmissionLabel({ intake_method, intake_channel }), null);
+    }
   }
+});
+
+test('agent API label requires its explicit server-projected channel without implying a native human submission', () => {
+  for (const intake_method of ['imported', 'unknown']) {
+    assert.equal(cleanAppSubmissionLabel({ intake_method, intake_channel: 'agent_api' }), 'via CleanApp Agentic API');
+  }
+  assert.equal(cleanAppSubmissionLabel({ intake_method: 'imported', source_platform: 'agent', intake_label: 'Agentic API' }), null);
+  assert.equal(cleanAppSubmissionLabel({ intake_method: 'imported', intake_channel: 'wire' }), null);
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, {
-    evidence: { ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'mobile' },
+    evidence: { ...evidence, report_kind: 'unknown', intake_channel: 'agent_api' },
   }));
-  assert.match(html.split('<details')[0], /via CleanApp mobile/);
-  assert.match(html, /How received<\/dt><dd>via CleanApp mobile/);
+  assert.match(html.split('<details')[0], /Other report/);
+  assert.match(html, /via CleanApp Agentic API/);
+  assert.doesNotMatch(html, /Personal experience|via CleanApp mobile|via CleanApp web/);
 });
