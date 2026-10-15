@@ -21,7 +21,7 @@ export function makeReportSeoProps(classification: ReportClassification): GetSer
     };
     try {
       const { status, data } = await fetchPublicSeoJson(`${LIVE_API}/api/v3/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`);
-      if ([400, 401, 403, 404, 410].includes(status)) return { notFound: true };
+      if ([404, 410].includes(status)) return { notFound: true };
       if (status !== 200) { publicSeoUnavailable(res); return { props: unavailable }; }
       if (explicitlyNonpublic(data) || (isPublicSeoObject(data) && explicitlyNonpublic(data.report))) return { notFound: true };
       const report = projectPublicReport(data, publicId, locale || "en");

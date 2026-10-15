@@ -49,7 +49,7 @@ test('explicitly nonpublic and missing reports produce 404 without serializing t
     assert.equal(result.page.notFound, true);
     assert.equal(JSON.stringify(result.page).includes('PRIVATE_'), false);
   }
-  for (const status of [400, 401, 403, 404, 410]) {
+  for (const status of [404, 410]) {
     const h = harness(async () => response(status, body()));
     assert.equal((await invoke(h.load('src/lib/report-seo.ts').makeReportSeoProps('digital'), { public_id: id })).page.notFound, true);
   }
@@ -65,7 +65,7 @@ test('malformed public payloads and transient failures are retryable 503 respons
     assert.equal(result.page.props.seo.unavailable, true); assert.equal(result.page.props.initialReport, null);
     assert.equal(JSON.stringify(result.page).includes('PRIVATE_'), false);
   }
-  for (const status of [429, 500, 503]) {
+  for (const status of [400, 401, 403, 429, 500, 503]) {
     const h = harness(async () => response(status, body()));
     const result = await invoke(h.load('src/lib/report-seo.ts').makeReportSeoProps('digital'), { public_id: id });
     assert.equal(result.status, 503); assert.equal(result.headers['Cache-Control'], 'no-store');

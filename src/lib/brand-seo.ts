@@ -41,7 +41,7 @@ export const getBrandSeoProps: GetServerSideProps<BrandSeoProps> = async ({ para
   try {
     const query = new URLSearchParams({ brand_name: name, lang: "en", n: String(PREVIEW_LIMIT), evidence_kind: "firsthand" });
     const { status, data } = await fetchPublicSeoJson(`${LIVE_API}/api/v3/public/discovery/brand-preview?${query}`);
-    if ([400, 401, 403, 404, 410].includes(status)) return { notFound: true };
+    if ([404, 410].includes(status)) return { notFound: true };
     if (status !== 200 || !isPublicSeoObject(data)) { publicSeoUnavailable(res); return { props: fallback }; }
     if (explicitlyNonpublic(data) || data.brand_found === false) return { notFound: true };
     if (data.brand_found !== true || data.classification !== "digital" || data.evidence_kind !== "firsthand" ||

@@ -47,7 +47,7 @@ test('preview rejects mismatched identities, non-firsthand rows, unsafe links an
 });
 
 test('absent and nonpublic brands stay missing; transient errors invite retry instead of noindex', async () => {
-  for (const status of [400, 401, 403, 404, 410]) {
+  for (const status of [404, 410]) {
     const h = harness(async () => response(status, body([row])));
     assert.equal((await invoke(h.load('src/lib/brand-seo.ts').getBrandSeoProps, { brand_name: 'openai' })).page.notFound, true);
   }
@@ -55,7 +55,7 @@ test('absent and nonpublic brands stay missing; transient errors invite retry in
     const h = harness(async () => response(200, data));
     assert.equal((await invoke(h.load('src/lib/brand-seo.ts').getBrandSeoProps, { brand_name: 'openai' })).page.notFound, true);
   }
-  for (const status of [429, 500, 503]) {
+  for (const status of [400, 401, 403, 429, 500, 503]) {
     const h = harness(async () => response(status, body([row])));
     const result = await invoke(h.load('src/lib/brand-seo.ts').getBrandSeoProps, { brand_name: 'openai' });
     assert.equal(result.status, 503); assert.equal(result.headers['Retry-After'], '60'); assert.equal(result.page.props.seo.unavailable, true);
