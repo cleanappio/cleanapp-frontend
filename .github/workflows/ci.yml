@@ -1,0 +1,52 @@
+name: CI
+
+# Type-check, lint and build on every PR and every push to main, so broken
+# code is caught before the prod deploy workflow ever runs.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".version"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Placeholder values: API clients throw at import time when these are unset.
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AREAS_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AUTH_API_URL: http://localhost:8080
+      NEXT_PUBLIC_REPORT_PROCESSING_API_URL: http://localhost:8080
+      NEXT_PUBLIC_LIVE_API_URL: http://localhost:8080
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: http://localhost:8080
+      NEXT_PUBLIC_WEBSITE_URL: http://localhost:8080
+      NEXT_PUBLIC_RENDERER_API_URL: http://localhost:8080
+      NEXT_PUBLIC_REF_API_URL: http://localhost:8080
+      NEXT_PUBLIC_WEBSOCKET_LIVE_API_URL: http://localhost:8080
+      NEXT_PUBLIC_TAGS_API_URL: http://localhost:8080
+      NEXT_PUBLIC_REPORT_COUNT_URL: http://localhost:8080
+      NEXT_PUBLIC_REDBULL_API_URL: http://localhost:8080
+      NEXT_PUBLIC_NEW_YORK_API_URL: http://localhost:8080
+      NEXT_PUBLIC_MONTENEGRO_API_URL: http://localhost:8080
+      NEXT_PUBLIC_EMAIL_API_URL: http://localhost:8080
+      NEXT_PUBLIC_EDGE_CITY_API_URL: http://localhost:8080
+      NEXT_PUBLIC_DEVCONNECT2025_API_URL: http://localhost:8080
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: pk.placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npx next lint
+      - run: npm run build

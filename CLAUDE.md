@@ -378,3 +378,12 @@ Use Claude as a learning tool, not just a coding tool.
 - Have Claude generate a visual HTML presentation explaining unfamiliar code — it makes surprisingly good slides!
 - Ask Claude to draw ASCII diagrams of new protocols and codebases to help you understand them
 - Build a spaced-repetition learning skill: you explain your understanding, Claude asks follow-ups to fill gaps, stores the result
+
+---
+
+# Repo rules (shared with Codex)
+
+Read `AGENTS.md` first. Summary: branch `claude/<topic>`, never commit to `main`
+directly, rebase before PR, merge only on green CI, self-merge is fine except
+billing/checkout. Every merge deploys to prod; never touch `.version`. Stay in
+the Claude territory listed in `AGENTS.md`; shared files are append-only.

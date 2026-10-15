@@ -1,15 +1,17 @@
 import React from "react";
 import Link from "next/link";
 import { LANDING_PAGES } from "@/content/landing-pages";
-import { ANDROID_APP_URL, CLEANAPP_GPT_URL, IOS_APP_URL } from "@/lib/seo";
+import { ANDROID_APP_URL, CLEANAPP_GPT_URL, IOS_APP_URL, SOCIAL_LINKS } from "@/lib/seo";
 
 const REPORTING_PAGES = LANDING_PAGES.filter((page) => !page.slug.startsWith("solutions/"));
 const SOLUTION_PAGES = LANDING_PAGES.filter((page) => page.slug.startsWith("solutions/"));
 
 const COMPANY_LINKS = [
   { label: "About CleanApp", href: "/about" },
+  { label: "Blog", href: "/blog" },
   { label: "FAQ", href: "/faq" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Press & brand", href: "/press" },
   { label: "Live Report Map", href: "/" },
   { label: "Privacy Policy", href: "/privacy" },
 ];
@@ -60,7 +62,7 @@ const Footer = () => {
   return (
     <footer className="bg-gray-50 border-t border-gray-200 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <FooterColumn
             heading="Reporting"
             links={REPORTING_PAGES.map((page) => ({
@@ -77,6 +79,7 @@ const Footer = () => {
           />
           <FooterColumn heading="Company" links={COMPANY_LINKS} />
           <FooterColumn heading="Get CleanApp" links={APP_LINKS} />
+          <FooterColumn heading="Follow" links={SOCIAL_LINKS} />
         </div>
         <div className="mt-10 pt-6 border-t border-gray-200 text-sm text-gray-500">
           <p>
