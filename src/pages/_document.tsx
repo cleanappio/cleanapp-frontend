@@ -10,11 +10,17 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* Favicon and App Icons */}
-        <link rel="icon" href="/favicon.ico" />
+        {/* Favicon and App Icons. Search engines need a crawlable icon that is a
+            multiple of 48px (Google) at a stable URL; favicon.ico is multi-size 16/32/48. */}
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="msapplication-TileImage" content="/icon-192.png" />
+        <meta name="msapplication-TileColor" content="#ffffff" />
         <meta name="theme-color" content="#16a34a" />
         <meta name="author" content="CleanApp" />
 

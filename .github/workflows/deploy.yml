@@ -74,3 +74,12 @@ jobs:
             echo "$path -> $code"
             [ "$code" = "200" ] || exit 1
           done
+
+      - name: Notify search engines (IndexNow)
+        if: env.TARGET_ENV == 'prod'
+        run: |
+          # Bing, Yahoo, DuckDuckGo and others pick up IndexNow pings; key file lives in public/.
+          urls=$(curl -s https://www.cleanapp.io/sitemap.xml | grep -o '<loc>[^<]*</loc>' | sed 's/<\/\?loc>//g' | python3 -c 'import sys,json; print(json.dumps([u.strip() for u in sys.stdin if u.strip()]))')
+          curl -s -o /dev/null -w "IndexNow -> %{http_code}\n" -X POST https://api.indexnow.org/indexnow \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "{\"host\":\"www.cleanapp.io\",\"key\":\"6198de183ff2b7b95116057ea654c51c\",\"keyLocation\":\"https://www.cleanapp.io/6198de183ff2b7b95116057ea654c51c.txt\",\"urlList\":$urls}"
