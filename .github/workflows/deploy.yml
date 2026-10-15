@@ -30,14 +30,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
     env:
       TARGET_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      DEPLOY_SOURCE_SHA: ${{ github.sha }}
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
       - uses: actions/checkout@v4
         with:
           # Needed so the .version bump below can be pushed back.
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
 
       - uses: google-github-actions/auth@v2
         with:
@@ -47,22 +51,25 @@ jobs:
         with:
           project_id: cleanup-mysql-v2
 
+      - name: Seed latest automated production version
+        if: env.TARGET_ENV == 'prod'
+        run: python3 scripts/deploy-version.py seed --source-sha "$DEPLOY_SOURCE_SHA"
+
       - name: Build image and deploy to VM
+        id: build
         run: |
           chmod +x fastFEdeploy.sh
-          ./fastFEdeploy.sh -e "$TARGET_ENV"
+          ./fastFEdeploy.sh -e "$TARGET_ENV" --source-sha "$DEPLOY_SOURCE_SHA" --metadata-file "$RUNNER_TEMP/frontend-build.json"
+          echo "version=$(python3 scripts/deploy-version.py read)" >> "$GITHUB_OUTPUT"
 
       - name: Commit version bump
         if: env.TARGET_ENV == 'prod'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .version
-          git diff --cached --quiet || git commit -m "chore: bump frontend version after deploy [skip ci]"
-          git push
+        env:
+          BUILT_VERSION: ${{ steps.build.outputs.version }}
+        run: python3 scripts/deploy-version.py publish --source-sha "$DEPLOY_SOURCE_SHA" --version "$BUILT_VERSION"
 
       - name: Smoke test
-        if: env.TARGET_ENV == 'prod'
+        if: always() && !cancelled() && env.TARGET_ENV == 'prod' && steps.build.outcome == 'success'
         run: |
           # The container needs a little time after restart; retry for up to ~2 minutes.
           for path in / /incident-reporting /sitemap.xml /robots.txt; do
