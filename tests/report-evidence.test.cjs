@@ -7,7 +7,7 @@ const file = require('node:path').resolve(__dirname, '../src/lib/report-evidence
 const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const target = new Module(file);
 target._compile(compiled, file);
-const { safeOriginalSourceUrl, evidenceDate, contentKind, matchesContentKind, brandLabel } = target.exports;
+const { safeOriginalSourceUrl, evidenceDate, contentKind, matchesContentKind, brandLabel, cleanAppSubmissionLabel } = target.exports;
 
 test('source links reject executable protocols, credentials and relative URLs', () => {
   for (const url of ['javascript:alert(1)', 'data:text/html,hello', '/reports/1', 'https://user:secret@example.org/']) assert.equal(safeOriginalSourceUrl(url), null);
@@ -79,7 +79,7 @@ test('render never invents direct submission, firsthand, validation or original 
   assert.match(html, /How received<\/dt><dd>Unknown/);
   assert.match(html, /Independent validation unknown/);
   assert.match(html, /Source count unknown/);
-  assert.doesNotMatch(html, /Personal experience|Submitted to CleanApp|href=/);
+  assert.doesNotMatch(html, /Personal experience|via CleanApp|href=/);
   assert.doesNotMatch(html.split('<details')[0], /How received|Source date unknown/);
 });
 
@@ -107,9 +107,9 @@ test('summary gives raw report totals and additions without presenting grouped r
     kind_counts: { firsthand: 110, coverage: 2050, unknown: 4903, all: 7063 },
     overview: { total_reports: 7196, reports_last_30_days: 325, reports_last_7_days: 42, reports_previous_7_days: 80 },
   };
-  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch, locale: 'en' }));
+  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch, locale: 'en', brandName: 'anthropic' }));
   assert.match(html, /7,196/);
-  assert.match(html, /reports in CleanApp/);
+  assert.match(html, /reports about Anthropic in CleanApp/);
   assert.match(html, /325<\/span> added in the past 30 days/);
   assert.match(html, /42<\/span> in the past 7 days/);
   assert.doesNotMatch(html, /7,063|110|new issues|affected users/);
@@ -163,10 +163,67 @@ test('personal experiences retain direct versus imported provenance', () => {
   const imported = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence })).split('<details')[0];
   assert.match(imported, /Personal experience/);
   assert.match(imported, /Imported from GitHub/);
-  assert.doesNotMatch(imported, /Submitted to CleanApp/);
+  assert.doesNotMatch(imported, /via CleanApp/);
   const direct = renderToStaticMarkup(React.createElement(ReportEvidence, {
     evidence: { ...evidence, intake_method: 'cleanapp_submission' },
   })).split('<details')[0];
-  assert.match(direct, /Submitted to CleanApp/);
+  assert.match(direct, /via CleanApp/);
+  assert.doesNotMatch(direct, /via CleanApp mobile/);
   assert.doesNotMatch(direct, /Imported from/);
+});
+
+test('overview names the authoritative brand or selected product while retaining all-source raw totals', () => {
+  const overview = { total_reports: 301, reports_last_30_days: 44, reports_last_7_days: 6 };
+  const brand = renderToStaticMarkup(React.createElement(BrandOverview, {
+    batch: { overview, scope: { brand_name: 'grok', product: null }, kind_counts: { firsthand: 13 } },
+    brandName: 'anthropic',
+  }));
+  assert.match(brand, /301<\/strong>/);
+  assert.match(brand, /reports about Grok in CleanApp/);
+  assert.doesNotMatch(brand, /Anthropic|13<\/strong>/);
+  const product = renderToStaticMarkup(React.createElement(BrandOverview, {
+    batch: { overview: { ...overview, total_reports: 1 }, scope: { brand_name: 'anthropic', product: 'claude-code' } },
+    brandName: 'anthropic',
+  }));
+  assert.match(product, /report about Claude Code in CleanApp/);
+  assert.doesNotMatch(product, /reports about|report about Anthropic/);
+});
+
+test('recent activity keeps the real counts static with one decorative reduced-motion-safe sheen', () => {
+  const overview = { total_reports: 301, reports_last_30_days: 44, reports_last_7_days: 6 };
+  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch: { overview }, brandName: 'grok' }));
+  assert.match(html, /aria-hidden="true" class="brand-recent-sheen"/);
+  assert.match(html, /44<\/span> added in the past 30 days/);
+  assert.match(html, /6<\/span> in the past 7 days/);
+  assert.doesNotMatch(html, /Live|Novel|aria-live/);
+  const empty = renderToStaticMarkup(React.createElement(BrandOverview, {
+    batch: { overview: { ...overview, reports_last_30_days: 0, reports_last_7_days: 0 } }, brandName: 'grok',
+  }));
+  assert.doesNotMatch(empty, /brand-recent-sheen/);
+  const css = fs.readFileSync(require('node:path').resolve(__dirname, '../src/styles/globals.css'), 'utf8');
+  assert.match(css, /animation: brandRecentSheen 1800ms ease-out 350ms 1;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.brand-recent-sheen\s*\{[^}]*animation: none;[^}]*display: none;/);
+});
+
+test('native provenance does not invent a mobile client from a sensor, image or generic submission label', () => {
+  for (const source_platform of ['sensor', 'mobile', 'web', null]) {
+    assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', source_platform, has_original_media: true, intake_label: 'Submitted through CleanApp' }), 'via CleanApp');
+  }
+  assert.equal(cleanAppSubmissionLabel({ intake_method: 'imported', source_platform: 'sensor' }), null);
+  assert.equal(cleanAppSubmissionLabel({ intake_method: 'unknown', source_platform: 'mobile' }), null);
+});
+
+test('mobile provenance requires the server-projected native mobile channel', () => {
+  assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', intake_channel: 'mobile' }), 'via CleanApp mobile');
+  for (const intake_channel of ['web', 'share', 'legacy_v2', 'unrecognized', null, undefined]) {
+    assert.equal(cleanAppSubmissionLabel({ intake_method: 'cleanapp_submission', intake_channel }), 'via CleanApp');
+  }
+  for (const intake_method of ['imported', 'unknown', undefined]) {
+    assert.equal(cleanAppSubmissionLabel({ intake_method, intake_channel: 'mobile' }), null);
+  }
+  const html = renderToStaticMarkup(React.createElement(ReportEvidence, {
+    evidence: { ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'mobile' },
+  }));
+  assert.match(html.split('<details')[0], /via CleanApp mobile/);
+  assert.match(html, /How received<\/dt><dd>via CleanApp mobile/);
 });

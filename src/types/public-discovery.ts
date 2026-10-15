@@ -3,6 +3,7 @@ import type { ReportKindFilter, ReportSignalSort } from "@/lib/report-evidence";
 export type ReportEvidence = {
   report_kind: "firsthand" | "coverage" | "unknown";
   intake_method: "cleanapp_submission" | "imported" | "unknown";
+  intake_channel?: "mobile" | "web" | "share" | "legacy_v2" | null;
   intake_label: string;
   source_platform: string | null;
   source_url: string | null;

@@ -1,4 +1,4 @@
-import { contentKind, evidenceDate, safeOriginalSourceUrl } from "@/lib/report-evidence";
+import { cleanAppSubmissionLabel, contentKind, evidenceDate, safeOriginalSourceUrl } from "@/lib/report-evidence";
 import type { ReportEvidence as Evidence, ReportRecurrence } from "@/types/public-discovery";
 
 const KIND_LABELS = { firsthand: "Personal experience", coverage: "News & discussion", unknown: "Other report" };
@@ -20,9 +20,7 @@ export default function ReportEvidence({ evidence, recurrence, locale = "en", su
   const excerpt = evidence?.excerpt?.trim();
   const published = evidenceDate(evidence?.source_published_at, locale);
   const observed = evidenceDate(evidence?.observed_at, locale);
-  const intake = evidence?.intake_method === "cleanapp_submission" ? "Submitted to CleanApp"
-    : evidence?.intake_method === "imported" ? `Imported${sourceLabel !== "source" ? ` from ${sourceLabel}` : ""}`
-    : null;
+  const intake = cleanAppSubmissionLabel(evidence) || (evidence?.intake_method === "imported" ? `Imported${sourceLabel !== "source" ? ` from ${sourceLabel}` : ""}` : null);
 
   return (
     <div className="text-sm text-gray-600">

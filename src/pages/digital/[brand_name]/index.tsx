@@ -45,7 +45,7 @@ export default function DigitalBrandPage() {
       {isEmbedded ? <EmbeddedReportBackBar onBack={() => { void router.push({ pathname: "/", query: { tab: "digital" } }); }} /> : <PageHeader />}
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
         <h1 className="mb-1 text-3xl font-semibold tracking-tight text-gray-950 sm:text-4xl">{brandDisplayName || brandName}</h1>
-        <BrandOverview batch={batch} locale={locale} />
+        <BrandOverview batch={batch} locale={locale} brandName={brandName} brandDisplayName={brandDisplayName} />
         <EvidenceFilters kind={kind} sort={sort} product={product} batch={batch} onKind={changeKind} onSort={(next) => { setSort(next); setOffset(0); }} onProduct={(next) => { setProduct(next); setOffset(0); }} />
         <section aria-label="Report evidence" aria-busy={isLoading}>
           {isLoading ? <p role="status" className="py-12 text-sm text-gray-600">Loading reports…</p> : error ? (
