@@ -39,9 +39,11 @@ const CompactEvidence = load('../src/components/brand/BrandReportEvidence.tsx', 
   '@/lib/report-evidence': evidenceHelpers,
   '@/lib/brand-report-presentation': helpers,
 }).default;
+const NotificationCount = load('../src/components/brand/ReportNotificationCount.tsx').default;
 const Dashboard = load('../src/components/brand/PublicBrandDashboard.tsx', {
   '@/components/brand/BrandReportEvidence': CompactEvidence,
   '@/components/report/ReportThumbnail': ({ item }) => item.evidence?.has_original_media ? React.createElement('img', { alt: 'Original report image', src: '/fixture.webp' }) : null,
+  '@/components/brand/ReportNotificationCount': NotificationCount,
   '@/lib/brand-report-presentation': helpers,
   '@/lib/i18n': { getCurrentLocale() { return 'en-GB'; } },
   '@/lib/public-discovery-api': { resolvePublicDiscoveryToken() { throw new Error('Rendering must not resolve a token'); } },
@@ -133,4 +135,52 @@ test('brand list uses striped rows and clickable title plus compact read action 
   assert.match(html, /<h3[^>]*><button[^>]*>Grok application freezes<\/button><\/h3>/);
   assert.equal((html.match(/Read report/g) || []).length, 2);
   assert.doesNotMatch(html, /View report|rounded-xl|<article[^>]*grid-cols|border-green-200/);
+});
+
+test('feed shows the representative notification count separately from related report counts without resolving tokens', () => {
+  const html = renderToStaticMarkup(React.createElement(Dashboard, {
+    activeKind: 'firsthand',
+    items: [{ ...item, notification_count: { state: 'sent', email_count: 4 },
+      recurrence: { ...item.recurrence, supporting_report_count: 120 } }],
+  }));
+  const closed = html.split('<details')[0];
+  assert.match(closed, /4 notification emails sent/);
+  assert.match(closed, /120 related reports/);
+  assert.doesNotMatch(closed, /120 notification|480|delivered|acknowledged|SendGrid|@x\.ai/);
+});
+
+test('notification count handles singular, zero, unavailable and older or malformed API data honestly', () => {
+  const renderCount = (count) => renderToStaticMarkup(React.createElement(NotificationCount, {
+    count, reportTitle: 'Original finding', onOpen() {}, locale: 'en-GB',
+  }));
+  const one = renderCount({ state: 'sent', email_count: 1 });
+  assert.match(one, />1 notification email sent</);
+  assert.doesNotMatch(one, /1 notification emails/);
+  const zero = renderCount({ state: 'none_recorded', email_count: 0 });
+  assert.match(zero, />0 notification emails</);
+  assert.doesNotMatch(zero, /emails sent|No one notified|text-green-800/);
+  for (const count of [undefined, null, { state: 'unavailable' }, { state: 'unavailable', email_count: 9 },
+    { state: 'sent', email_count: 0 }, { state: 'sent', email_count: -4 }, { state: 'sent', email_count: 2.5 },
+    { state: 'sent', email_count: '4' }, { state: 'none_recorded' }, { state: 'sent', email_count: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const html = renderCount(count);
+    assert.match(html, />Notification count unavailable</);
+    assert.doesNotMatch(html, />0 notification emails<|emails sent|text-green-800/);
+  }
+});
+
+test('notification count is a keyboard-accessible history action with decorative icon and no recipient disclosure', () => {
+  let opened = 0;
+  const count = { state: 'sent', email_count: 1234, recipients: ['private@example.invalid'], provider: 'private-provider' };
+  const props = { count, reportTitle: 'A <script>finding</script>', locale: 'en-GB', onOpen() { opened++; } };
+  const html = renderToStaticMarkup(React.createElement(NotificationCount, props));
+  assert.match(html, /<button type="button"/);
+  assert.match(html, /aria-label="1,234 notification emails sent\. View notification history for A &lt;script&gt;finding&lt;\/script&gt;"/);
+  assert.match(html, /aria-hidden="true"/);
+  assert.match(html, /min-h-\[44px\]/);
+  assert.doesNotMatch(html, /private@example|private-provider|delivered|acknowledged/);
+  NotificationCount(props).props.onClick();
+  assert.equal(opened, 1);
+  const opening = renderToStaticMarkup(React.createElement(NotificationCount, { ...props, opening: true }));
+  assert.match(opening, /disabled=""/);
+  assert.match(opening, /aria-busy="true"/);
 });

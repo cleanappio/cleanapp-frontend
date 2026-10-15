@@ -7,12 +7,13 @@ import type { PublicDiscoveryCard } from "@/types/public-discovery";
 const KIND_LABELS = { firsthand: "Personal experience", coverage: "News & discussion", unknown: "Other report" };
 const RELATIONSHIP_LABELS = { affected: "Affected product or place", dependency: "Connected service", mentioned: "Mentioned in source", unknown: "Unknown" };
 
-export default function BrandReportEvidence({ item, productLabel, locale = "en", action, showSourceKind = false }: {
+export default function BrandReportEvidence({ item, productLabel, locale = "en", action, showSourceKind = false, notification }: {
   item: PublicDiscoveryCard;
   productLabel?: string | null;
   locale?: string;
   action: ReactNode;
   showSourceKind?: boolean;
+  notification?: ReactNode;
 }) {
   const { evidence, recurrence } = item;
   const excerpt = evidence?.excerpt?.trim();
@@ -36,6 +37,7 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
             {sourceLabel ? `From ${sourceLabel}` : "Original source"} <span aria-hidden="true">↗</span>
           </a>
         ) : imported ? <span>{sourceLabel ? `From ${sourceLabel}` : "Imported report"}</span> : null}
+        {notification}
         {count !== null && count > 1 && <span className="font-medium text-gray-700">{count.toLocaleString(locale)} related reports</span>}
       </div>
 
