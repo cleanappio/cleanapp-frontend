@@ -31,6 +31,9 @@ elif args[:2] == ["builds", "submit"]:
     print(record["id"])
 elif args[:2] == ["builds", "describe"]:
     record = json.loads((directory / (args[2] + ".json")).read_text())
+    if "--format=value(status)" in args:
+        print(record["status"])
+        raise SystemExit(0)
     if os.environ.get("MOCK_EXTRA_IMAGE"):
         record["results"]["images"].insert(0, {"name": "example.invalid/unrelated:tag", "digest": "sha256:" + "3" * 64})
     if os.environ.get("MOCK_INVALID_DIGEST"):
@@ -123,6 +126,25 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn("@sha256:", command)
                 self.assertNotIn("image:prod", command)
                 self.assertIn("--network deployer_default", command)
+                self.assertLess(command.index("sudo docker pull"), command.index("sudo docker stop"))
+
+    def test_failed_pull_keeps_running_container(self):
+        result = self.run_release()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        call = next(call for call in self.calls() if call[:2] == ["compute", "ssh"])
+        command = next(arg.split("=", 1)[1] for arg in call if arg.startswith("--command="))
+        # Execute the actual remote command against fake local clients. A registry
+        # failure must abort before stop/rm, rather than merely order them later.
+        docker_calls = self.directory / "docker-calls.txt"
+        sudo = self.bin / "sudo"
+        sudo.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$DOCKER_CALLS"\nif [ "$2" = pull ]; then exit 1; fi\nexit 0\n')
+        sudo.chmod(0o755)
+        (self.bin / "gcloud").write_text('#!/bin/sh\nprintf "mock-access-token\\n"\n')
+        executed = subprocess.run(["bash", "-c", command], env=self.environment | {"DOCKER_CALLS": str(docker_calls)}, capture_output=True, text=True)
+        self.assertNotEqual(executed.returncode, 0)
+        operations = docker_calls.read_text().splitlines()
+        self.assertTrue(any(line.startswith("docker pull ") for line in operations))
+        self.assertFalse(any(line.startswith(("docker stop ", "docker rm ", "docker run ")) for line in operations))
 
     def test_second_build_failure_does_not_promote_first_image(self):
         result = self.run_release("--with-embedded", extra_env={"MOCK_FAIL_EMBEDDED": "1"})
