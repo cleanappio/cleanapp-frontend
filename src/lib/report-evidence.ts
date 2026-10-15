@@ -19,10 +19,16 @@ export function evidenceDate(value?: string | null, locale = "en"): string {
   return date.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** Only the server-projected native channel can identify a mobile submission. */
+/** Submission labels use the server-projected channel, never platform guesses. */
 export function cleanAppSubmissionLabel(evidence?: { intake_method?: string | null; intake_channel?: string | null }): string | null {
+  if (evidence?.intake_channel === "agent_api") return "via CleanApp Agentic API";
   if (evidence?.intake_method !== "cleanapp_submission") return null;
-  return evidence.intake_channel === "mobile" ? "via CleanApp mobile" : "via CleanApp";
+  switch (evidence.intake_channel) {
+    case "mobile": return "via CleanApp mobile";
+    case "web": return "via CleanApp web";
+    case "share": return "via CleanApp share";
+    default: return "via CleanApp";
+  }
 }
 
 export type ReportContentKind = "firsthand" | "coverage" | "unknown";

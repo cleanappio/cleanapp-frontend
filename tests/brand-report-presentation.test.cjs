@@ -91,15 +91,17 @@ test('native reports retain their submission provenance without repeating source
   assert.doesNotMatch(closed, /sensor|Personal experience|Imported|From Bluesky/);
 });
 
-test('brand rows identify mobile only with an explicit native mobile channel', () => {
-  const native = { ...item, evidence: { ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'mobile' } };
-  assert.match(render(native).split('<details')[0], /via CleanApp mobile/);
-  for (const intake_channel of ['web', 'share', 'legacy_v2', null, undefined]) {
-    const html = render({ ...native, evidence: { ...native.evidence, intake_channel } }).split('<details')[0];
-    assert.match(html, /via CleanApp/);
-    assert.doesNotMatch(html, /via CleanApp mobile/);
+test('brand rows show the recorded submission route in the feed and expanded details', () => {
+  const native = { ...item, evidence: { ...evidence, intake_method: 'cleanapp_submission', source_url: null } };
+  for (const [intake_channel, label] of [
+    ['mobile', 'via CleanApp mobile'], ['web', 'via CleanApp web'], ['share', 'via CleanApp share'],
+    ['legacy_v2', 'via CleanApp'], [null, 'via CleanApp'], [undefined, 'via CleanApp'],
+  ]) {
+    const html = render({ ...native, evidence: { ...native.evidence, intake_channel } });
+    assert.ok(html.split('<details')[0].includes(label));
+    assert.ok(html.includes(`How received</dt><dd>${label}`));
   }
-  assert.doesNotMatch(render({ ...native, evidence: { ...native.evidence, intake_method: 'imported' } }).split('<details')[0], /via CleanApp/);
+  assert.doesNotMatch(render({ ...native, evidence: { ...native.evidence, intake_method: 'imported', intake_channel: 'mobile' } }).split('<details')[0], /via CleanApp/);
 });
 
 test('image-only and missing-source rows have no empty evidence boxes or invented wording', () => {
@@ -143,7 +145,7 @@ test('all-source views retain the plain source type while filtered views avoid r
 test('brand list uses striped rows and clickable title plus compact read action without a heavy card grid', () => {
   const html = renderToStaticMarkup(React.createElement(Dashboard, { items: [item, { ...item, discovery_token: 'second-token' }] }));
   assert.equal((html.match(/<article/g) || []).length, 2);
-  assert.match(html, /odd:bg-white even:bg-green-100\/50/);
+  assert.match(html, /odd:bg-green-100\/50 even:bg-white/);
   assert.match(html, /<h3[^>]*><button[^>]*>Grok application freezes<\/button><\/h3>/);
   assert.equal((html.match(/Read report/g) || []).length, 2);
   assert.doesNotMatch(html, /View report|rounded-xl|<article[^>]*grid-cols|border-green-200/);
@@ -195,4 +197,16 @@ test('notification count is a keyboard-accessible history action with decorative
   const opening = renderToStaticMarkup(React.createElement(NotificationCount, { ...props, opening: true }));
   assert.match(opening, /disabled=""/);
   assert.match(opening, /aria-busy="true"/);
+});
+
+test('agent reports show their API channel while retaining the original source link in details', () => {
+  const report = { ...item, evidence: { ...evidence, intake_method: 'imported', intake_channel: 'agent_api' } };
+  const html = render(report);
+  assert.match(html.split('<details')[0], /via CleanApp Agentic API/);
+  assert.match(html, /How received<\/dt><dd>via CleanApp Agentic API/);
+  assert.match(html, /Read original source/);
+  assert.ok(html.includes('href="https://bsky.app/profile/example/post/original"'));
+  const imported = render({ ...item, evidence: { ...evidence, intake_channel: null } }).split('<details')[0];
+  assert.match(imported, /From Bluesky/);
+  assert.doesNotMatch(imported, /via CleanApp Agentic API/);
 });

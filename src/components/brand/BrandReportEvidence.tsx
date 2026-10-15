@@ -20,7 +20,6 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
   const date = brandReportDate(evidence, locale);
   const sourceUrl = safeOriginalSourceUrl(evidence?.source_url);
   const sourceLabel = reportSourceLabel(evidence);
-  const direct = evidence?.intake_method === "cleanapp_submission";
   const submissionLabel = cleanAppSubmissionLabel(evidence);
   const imported = evidence?.intake_method === "imported";
   const count = recurrence?.counts_exact ? recurrence.supporting_report_count : null;
@@ -90,7 +89,7 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
                   </li>;
                 })}</ul></div>
               )}
-              {sourceUrl && direct && <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-green-800 underline underline-offset-4">Read original source ↗</a>}
+              {sourceUrl && submissionLabel && <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-green-800 underline underline-offset-4">Read original source ↗</a>}
             </div>
           </details>
         ) : <div className="h-11" />}
