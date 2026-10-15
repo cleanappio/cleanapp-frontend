@@ -18,12 +18,18 @@ export function PublicCollapsibleLatestReports({
   loading,
   error,
   onItemClick,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
   isMenuOpen = false,
 }: {
   items: PublicDiscoveryCard[];
   loading: boolean;
   error?: string | null;
   onItemClick: (item: PublicDiscoveryCard) => void | Promise<void>;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   isMenuOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = React.useState(!isMenuOpen);
@@ -53,6 +59,9 @@ export function PublicCollapsibleLatestReports({
           loading={loading}
           error={error}
           onItemClick={onItemClick}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={onLoadMore}
         />
       </CollapsibleContent>
     </Collapsible>

@@ -8,6 +8,9 @@ interface PublicLatestReportsProps {
   loading: boolean;
   error?: string | null;
   onItemClick: (item: PublicDiscoveryCard) => void | Promise<void>;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
@@ -15,6 +18,9 @@ const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
   loading,
   error,
   onItemClick,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }) => {
   const { t } = useTranslations();
   const isMobile = useIsMobile();
@@ -31,32 +37,50 @@ const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide items-center">
           {loading ? (
             <p className="text-xs text-gray-400">{t("loading")}...</p>
-          ) : error ? (
+          ) : error && items.length === 0 ? (
             <p className="text-xs text-gray-400">{error}</p>
           ) : items.length === 0 ? (
             <p className="text-xs text-gray-400">{t("noReportsFound")}.</p>
           ) : (
-            items.map((item, idx) => (
-              <div
-                key={`${item.discovery_token}-${idx}`}
-                onClick={() => {
-                  void onItemClick(item);
-                }}
-                className="flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer transition-colors text-center border-slate-700 text-slate-300 hover:bg-slate-700/50"
-              >
-                <p className="text-xs font-medium">
-                  {item.title || t("report")}
+            <>
+              {error && (
+                <p role="status" className="text-xs text-gray-400">
+                  Couldn’t refresh reports. Showing the last update.
                 </p>
-                {item.timestamp && (
-                  <p className="text-xs text-gray-500">
-                    {new Date(item.timestamp).toLocaleString()}
+              )}
+              {items.map((item, idx) => (
+                <div
+                  key={`${item.discovery_token}-${idx}`}
+                  onClick={() => {
+                    void onItemClick(item);
+                  }}
+                  className="flex flex-col gap-1 text-sm border p-3 rounded-lg mt-2 mx-2 cursor-pointer transition-colors text-center border-slate-700 text-slate-300 hover:bg-slate-700/50"
+                >
+                  <p className="text-xs font-medium">
+                    {item.title || t("report")}
                   </p>
-                )}
-                <p className="text-xs text-gray-400 line-clamp-2">
-                  {item.summary || t("noSummary")}
-                </p>
-              </div>
-            ))
+                  {item.timestamp && (
+                    <p className="text-xs text-gray-500">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 line-clamp-2">
+                    {item.summary || t("noSummary")}
+                  </p>
+                </div>
+              ))}
+              {hasMore && onLoadMore && (
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                  aria-busy={loadingMore}
+                  className="mt-3 mb-1 min-h-11 px-4 text-xs font-medium text-slate-200 underline underline-offset-4 hover:text-white disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -49,6 +49,7 @@ import { navigateToCase } from "@/lib/case-navigation";
 import { getCanonicalReportPath } from "@/lib/report-links";
 import { reportMapCoordinates } from "@/lib/report-location";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
+import { subscribePublicLive } from "@/lib/public-live-subscription";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
 import {
   getPublicLiveSocketUrl,
@@ -418,10 +419,11 @@ export default function GlobeView() {
     items: publicLatestItems,
     loading: publicLatestLoading,
     error: publicLatestError,
+    refresh: refreshPublicLatest,
+    hasMore: publicLatestHasMore,
+    loadingMore: publicLatestLoadingMore,
+    loadMore: loadMorePublicLatest,
   } = usePublicLatestReports(selectedTab);
-  const [livePublicLatestItems, setLivePublicLatestItems] = useState<
-    PublicDiscoveryCard[]
-  >([]);
 
   const {
     physicalReports: latestPhysicalReportsV2,
@@ -429,10 +431,6 @@ export default function GlobeView() {
     appendPhysicalLite: appendPhysicalLiteV2,
     appendDigitalLite: appendDigitalLiteV2,
   } = useLiteReportsByTabV2();
-
-  useEffect(() => {
-    setLivePublicLatestItems(publicLatestItems);
-  }, [publicLatestItems]);
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
   const shouldUseSeqForDigital = useCallback(
@@ -2559,118 +2557,98 @@ export default function GlobeView() {
   }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
 
   useEffect(() => {
-    const ws = new WebSocket(getPublicLiveSocketUrl());
+    return subscribePublicLive({
+      url: getPublicLiveSocketUrl(),
+      onOpen: refreshPublicLatest,
+      onMessage(data) {
+        let refreshLatest = false;
+        const chunks = String(data)
+          .split("\n")
+          .map((chunk) => chunk.trim())
+          .filter(Boolean);
 
-    ws.onopen = function () {
-      console.log("=== WebSocket Connected ===");
-    };
-
-    ws.onmessage = function (event) {
-      const chunks = String(event.data)
-        .split("\n")
-        .map((chunk) => chunk.trim())
-        .filter(Boolean);
-
-      for (const chunk of chunks) {
-        const message = JSON.parse(chunk);
-        if (message.type !== "public_reports") {
-          continue;
-        }
-
-        const batch = message.data;
-        const reports = Array.isArray(batch?.reports)
-          ? (batch.reports as PublicLiveReport[])
-          : [];
-
-        for (const report of reports) {
-          const selectedAnalysis = pickPublicLiveAnalysis(
-            report.analysis || [],
-          );
-          if (!selectedAnalysis) {
+        for (const chunk of chunks) {
+          let message;
+          try {
+            message = JSON.parse(chunk);
+          } catch {
+            continue;
+          }
+          if (message?.type !== "public_reports") {
             continue;
           }
 
-          const classification = selectedAnalysis.classification || "physical";
-          if (classification === "physical") {
-            appendPhysicalLiteV2([
-              {
-                classification: "physical",
-                latitude: report.latitude || 0,
-                longitude: report.longitude || 0,
-                severity_level: selectedAnalysis.severity_level,
-              } as PhysicalReportResponse,
-            ]);
-          } else {
-            appendDigitalLiteV2([
-              {
-                classification: "digital",
-                brand_name: selectedAnalysis.brand_name || "other",
-                brand_display_name:
-                  selectedAnalysis.brand_display_name || "Other",
-                total: 1,
-              } as DigitalReportResponse,
-            ]);
+          const batch = message.data;
+          const reports = Array.isArray(batch?.reports)
+            ? (batch.reports as PublicLiveReport[])
+            : [];
+
+          for (const report of reports) {
+            const selectedAnalysis = pickPublicLiveAnalysis(
+              report.analysis || [],
+            );
+            if (!selectedAnalysis) {
+              continue;
+            }
+
+            const classification = selectedAnalysis.classification || "physical";
+            const physicalCoordinates = reportMapCoordinates(
+              report.latitude,
+              report.longitude,
+            );
+            if (classification === "physical" && physicalCoordinates) {
+              appendPhysicalLiteV2([
+                {
+                  classification: "physical",
+                  latitude: physicalCoordinates[1],
+                  longitude: physicalCoordinates[0],
+                  severity_level: selectedAnalysis.severity_level,
+                } as PhysicalReportResponse,
+              ]);
+            } else if (classification === "digital") {
+              appendDigitalLiteV2([
+                {
+                  classification: "digital",
+                  brand_name: selectedAnalysis.brand_name || "other",
+                  brand_display_name:
+                    selectedAnalysis.brand_display_name || "Other",
+                  total: 1,
+                } as DigitalReportResponse,
+              ]);
+            }
+
+            if (classification === "digital" || physicalCoordinates) {
+              animateLiveUpdate({
+                classification,
+                severityLevel: selectedAnalysis.severity_level,
+                latitude: report.latitude,
+                longitude: report.longitude,
+                brandName:
+                  selectedAnalysis.brand_display_name ||
+                  selectedAnalysis.brand_name ||
+                  "other",
+                idKey: report.discovery_token || report.timestamp,
+              });
+            }
+
+            if (classification !== selectedTab) {
+              continue;
+            }
+
+            // Discovery tokens rotate. Replace from the authoritative endpoint
+            // instead of merging live and HTTP cards by their unrelated tokens.
+            refreshLatest = true;
           }
-
-          animateLiveUpdate({
-            classification,
-            severityLevel: selectedAnalysis.severity_level,
-            latitude: report.latitude,
-            longitude: report.longitude,
-            brandName:
-              selectedAnalysis.brand_display_name ||
-              selectedAnalysis.brand_name ||
-              "other",
-            idKey: report.discovery_token || report.timestamp,
-          });
-
-          if (classification !== selectedTab) {
-            continue;
-          }
-
-          const latestItem: PublicDiscoveryCard = {
-            discovery_token: report.discovery_token,
-            title: selectedAnalysis.title,
-            summary: selectedAnalysis.summary,
-            classification,
-            severity_level: selectedAnalysis.severity_level,
-            timestamp: report.timestamp,
-            brand_name: selectedAnalysis.brand_name,
-            brand_display_name: selectedAnalysis.brand_display_name,
-            latitude: report.latitude,
-            longitude: report.longitude,
-          };
-
-          setLivePublicLatestItems((prev) => {
-            const next = [
-              latestItem,
-              ...prev.filter(
-                (item) => item.discovery_token !== latestItem.discovery_token,
-              ),
-            ];
-            return next.slice(0, 10);
-          });
         }
-      }
-    };
-
-    ws.onclose = function () {
-      console.log("Disconnected from report listener");
-    };
-
-    ws.onerror = function (error) {
-      console.error("WebSocket error:", error);
-    };
-
-    return () => {
-      console.log("Closing WebSocket connection");
-      ws.close();
-    };
+        if (refreshLatest) refreshPublicLatest();
+      },
+    });
   }, [
     animateLiveUpdate,
     appendDigitalLiteV2,
     appendPhysicalLiteV2,
     pickPublicLiveAnalysis,
+    refreshPublicLatest,
     selectedTab,
   ]);
 
@@ -3919,9 +3897,12 @@ export default function GlobeView() {
         />
       ) : (
         <PublicCollapsibleLatestReports
-          items={livePublicLatestItems}
+          items={publicLatestItems}
           loading={publicLatestLoading}
           error={publicLatestError}
+          hasMore={publicLatestHasMore}
+          loadingMore={publicLatestLoadingMore}
+          onLoadMore={loadMorePublicLatest}
           onItemClick={(item) => {
             void openPublicDiscoveryItem(item);
           }}
