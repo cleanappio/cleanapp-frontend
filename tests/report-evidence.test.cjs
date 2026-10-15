@@ -7,7 +7,7 @@ const file = require('node:path').resolve(__dirname, '../src/lib/report-evidence
 const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const target = new Module(file);
 target._compile(compiled, file);
-const { safeOriginalSourceUrl, evidenceDate, contentKind, matchesContentKind } = target.exports;
+const { safeOriginalSourceUrl, evidenceDate, contentKind, matchesContentKind, brandLabel } = target.exports;
 
 test('source links reject executable protocols, credentials and relative URLs', () => {
   for (const url of ['javascript:alert(1)', 'data:text/html,hello', '/reports/1', 'https://user:secret@example.org/']) assert.equal(safeOriginalSourceUrl(url), null);
@@ -29,6 +29,13 @@ test('dates distinguish absence or malformed input from publication', () => {
   assert.match(evidenceDate('2025-07-20T12:00:00Z', 'en-GB'), /2025/);
 });
 
+test('known brand names take canonical casing without rewriting arbitrary names', () => {
+  assert.equal(brandLabel('anthropic', 'anthropic'), 'Anthropic');
+  assert.equal(brandLabel('openai', 'openai'), 'OpenAI');
+  assert.equal(brandLabel('claude-code'), 'Claude Code');
+  assert.equal(brandLabel('custom-product', 'Custom Product'), 'Custom Product');
+});
+
 function loadComponent(relativePath) {
   const componentFile = require('node:path').resolve(__dirname, relativePath);
   const js = ts.transpileModule(fs.readFileSync(componentFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -41,6 +48,8 @@ function loadComponent(relativePath) {
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 const ReportEvidence = loadComponent('../src/components/evidence/ReportEvidence.tsx');
+const BrandOverview = loadComponent('../src/components/brand/BrandOverview.tsx');
+const EvidenceFilters = loadComponent('../src/components/evidence/EvidenceFilters.tsx');
 const evidence = {
   report_kind: 'firsthand', intake_method: 'imported', intake_label: 'Imported GitHub report',
   source_platform: 'GitHub', source_url: 'https://github.com/openai/openai-node/issues/1477',
@@ -53,33 +62,34 @@ const evidence = {
 
 test('render keeps original text distinct from AI summary and escapes source text', () => {
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence, summary: 'Generated summary' }));
-  assert.match(html, /Original source wording/);
+  assert.match(html, /From the original report/);
   assert.match(html, /CleanApp AI summary/);
   assert.match(html, /&lt;script&gt;/);
   assert.doesNotMatch(html, /<script>/);
-  assert.match(html, /Integration dependency/);
+  assert.match(html, /Connected service/);
   assert.match(html, /Not independently reproduced/);
-  assert.match(html, /Observed: Unknown/);
+  assert.match(html, /Observed<\/dt><dd>Unknown/);
   assert.match(html, /2025/);
   assert.match(html, /2026/);
 });
 
 test('render never invents direct submission, firsthand, validation or original links for legacy reports', () => {
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, {}));
-  assert.match(html, /Unclassified source/);
-  assert.match(html, /Intake unknown/);
+  assert.match(html, /Other report/);
+  assert.match(html, /How received<\/dt><dd>Unknown/);
   assert.match(html, /Independent validation unknown/);
-  assert.match(html, /Supporting source count unconfirmed/);
-  assert.doesNotMatch(html, /Firsthand account|Submitted through CleanApp|href=/);
+  assert.match(html, /Source count unknown/);
+  assert.doesNotMatch(html, /Personal experience|Submitted to CleanApp|href=/);
+  assert.doesNotMatch(html.split('<details')[0], /How received|Source date unknown/);
 });
 
 test('dedup recurrence is labeled source reports and keeps independence unassessed', () => {
   const recurrence = { supporting_report_count: 4, source_account_count: 2, duplicate_import_count: 3, independence: 'unassessed', counts_exact: true, related_observation_count: 5 };
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence, recurrence }));
-  assert.match(html, /4 supporting source reports/);
-  assert.match(html, /Independence unassessed/);
+  assert.match(html, /4 related source reports/);
+  assert.match(html, /Sources not checked for independence/);
   assert.match(html, /3 duplicate imports excluded/);
-  assert.match(html, /5 related observations/);
+  assert.match(html, /5 related reports/);
   assert.doesNotMatch(html, /4 affected users|4 users/);
 });
 
@@ -87,7 +97,80 @@ test('image-only originals remain visible as established source evidence', () =>
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, {
     evidence: { ...evidence, excerpt: null, source_url: null, has_original_media: true },
   }));
-  assert.match(html, /Original image is available in report details/);
-  assert.doesNotMatch(html, /Source evidence has not been established/);
-  assert.doesNotMatch(html, /Original source wording/);
+  assert.match(html, /Original image available in report details/);
+  assert.doesNotMatch(html, /Original source unconfirmed/);
+  assert.doesNotMatch(html, /From the original report/);
+});
+
+test('summary gives raw report totals and additions without presenting grouped results as totals', () => {
+  const batch = {
+    kind_counts: { firsthand: 110, coverage: 2050, unknown: 4903, all: 7063 },
+    overview: { total_reports: 7196, reports_last_30_days: 325, reports_last_7_days: 42, reports_previous_7_days: 80 },
+  };
+  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch, product: '', locale: 'en' }));
+  assert.match(html, /7,196/);
+  assert.match(html, /reports in CleanApp/);
+  assert.match(html, /325<\/span> added in the past 30 days/);
+  assert.match(html, /42<\/span> in the past 7 days/);
+  assert.match(html, /All products/);
+  assert.match(html, /All source types/);
+  assert.doesNotMatch(html, /7,063|110|new issues|affected users/);
+});
+
+test('missing overview never invents a total; selected products remain explicit and zero is valid', () => {
+  assert.equal(renderToStaticMarkup(React.createElement(BrandOverview, { batch: { kind_counts: { all: 7063 } }, product: '' })), '');
+  const html = renderToStaticMarkup(React.createElement(BrandOverview, {
+    batch: { overview: { total_reports: 0, reports_last_30_days: 0, reports_last_7_days: 0 } }, product: 'claude-code',
+  }));
+  assert.match(html, />0<\/strong>/);
+  assert.match(html, /Claude Code/);
+  assert.doesNotMatch(html, /All products/);
+});
+
+test('compact report keeps validation and missing observation dates in collapsed details', () => {
+  const html = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence }));
+  const beforeDetails = html.split('<details')[0];
+  assert.match(beforeDetails, /Imported from GitHub/);
+  assert.match(beforeDetails, /Published/);
+  assert.doesNotMatch(beforeDetails, /Not independently reproduced|Observed|Why surfaced/);
+  assert.match(html, /<details[^>]*><summary/);
+  assert.doesNotMatch(html, /<details[^>]* open/);
+  assert.match(html, /Not independently reproduced/);
+});
+
+test('compact date follows recent ranking: observed first, then published; imported date is never source date', () => {
+  const observed = renderToStaticMarkup(React.createElement(ReportEvidence, {
+    evidence: { ...evidence, observed_at: '2026-10-15T12:00:00Z' },
+  })).split('<details')[0];
+  assert.match(observed, /Observed.*2026/);
+  assert.doesNotMatch(observed, /Published/);
+  const missing = renderToStaticMarkup(React.createElement(ReportEvidence, {
+    evidence: { ...evidence, source_published_at: null },
+  })).split('<details')[0];
+  assert.doesNotMatch(missing, /Published|Observed|Source date unknown/);
+  assert.doesNotMatch(missing, /2026/);
+});
+
+test('plain source filters avoid jargon and retain exact per-view counts', () => {
+  const html = renderToStaticMarkup(React.createElement(EvidenceFilters, {
+    kind: 'firsthand', sort: 'recent', product: '',
+    batch: { counts_exact: true, kind_counts: { firsthand: 110, coverage: 2050, unknown: 4903, all: 7063 } },
+    onKind() {}, onSort() {}, onProduct() {},
+  }));
+  for (const label of ['Personal experiences', 'News &amp; discussion', 'Other reports', 'All reports', 'Recent', 'Relevance']) assert.match(html, new RegExp(label));
+  assert.doesNotMatch(html, /Firsthand|Coverage|Unclassified/);
+  for (const count of ['110', '2,050', '4,903', '7,063']) assert.match(html, new RegExp(count));
+  assert.match(html, /Reports from people describing their own experience/);
+});
+
+test('personal experiences retain direct versus imported provenance', () => {
+  const imported = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence })).split('<details')[0];
+  assert.match(imported, /Personal experience/);
+  assert.match(imported, /Imported from GitHub/);
+  assert.doesNotMatch(imported, /Submitted to CleanApp/);
+  const direct = renderToStaticMarkup(React.createElement(ReportEvidence, {
+    evidence: { ...evidence, intake_method: 'cleanapp_submission' },
+  })).split('<details')[0];
+  assert.match(direct, /Submitted to CleanApp/);
+  assert.doesNotMatch(direct, /Imported from/);
 });

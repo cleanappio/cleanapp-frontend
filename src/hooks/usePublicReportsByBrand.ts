@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchPublicBrandReports, type PublicEvidenceQuery } from "@/lib/public-discovery-api";
-import { matchesContentKind } from "@/lib/report-evidence";
+import { brandLabel, matchesContentKind } from "@/lib/report-evidence";
 import { PublicDiscoveryBatch, PublicDiscoveryCard } from "@/types/public-discovery";
 
 export function usePublicReportsByBrand(
@@ -15,7 +15,7 @@ export function usePublicReportsByBrand(
   const [revision, setRevision] = useState(0);
   const [completedScope, setCompletedScope] = useState<string | null>(null);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
-  const { kind = "firsthand", sort = "signal", offset = 0, product } = query;
+  const { kind = "firsthand", sort = "recent", offset = 0, product } = query;
   const requestScope = JSON.stringify([brandName, locale, kind, sort, offset, product, revision]);
   // Keep later evidence-filter changes from restarting an open subscriber list.
   useEffect(() => { setCompletedScope(null); }, [brandName, locale]);
@@ -55,7 +55,7 @@ export function usePublicReportsByBrand(
     totalCount: hasScopedCounts ? currentBatch?.total_count ?? items.length : items.length,
     highPriority: currentBatch?.high_priority_count ?? 0,
     mediumPriority: currentBatch?.medium_priority_count ?? 0,
-    brandDisplayName: currentBatch?.items.find((item) => item.brand_name?.toLowerCase() === brandName.toLowerCase())?.brand_display_name || ({ openai: "OpenAI", anthropic: "Anthropic", claude: "Claude", grok: "Grok", xai: "xAI" }[brandName.toLowerCase()] ?? brandName),
+    brandDisplayName: brandLabel(brandName, currentBatch?.items.find((item) => item.brand_name?.toLowerCase() === brandName.toLowerCase())?.brand_display_name),
     isLoading: enabled && Boolean(brandName) && (isLoading || !currentScopeLoaded),
     error: currentScopeLoaded ? error : null,
     hasScopedCounts,

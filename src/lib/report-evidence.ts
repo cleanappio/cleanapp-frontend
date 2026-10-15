@@ -30,3 +30,13 @@ export function contentKind(value?: string | null): ReportContentKind {
 export function matchesContentKind(value: string | null | undefined, filter: ReportKindFilter): boolean {
   return filter === "all" || contentKind(value) === filter;
 }
+
+export function brandLabel(name: string, displayName?: string): string {
+  const known: Record<string, string> = {
+    anthropic: "Anthropic", claude: "Claude", "claude-code": "Claude Code", claudecode: "Claude Code",
+    openai: "OpenAI", chatgpt: "ChatGPT", "chat-gpt": "ChatGPT", codex: "Codex",
+    grok: "Grok", xai: "xAI", "x-ai": "xAI", "openai-api": "OpenAI API",
+    "openai-node": "OpenAI Node", "openai-python": "OpenAI Python", whisper: "Whisper", "dall-e": "DALL·E",
+  };
+  return known[name.toLowerCase()] || displayName || name;
+}

@@ -61,6 +61,16 @@ export type PublicDiscoveryBatch = {
   has_more?: boolean;
   kind_counts?: Record<ReportKindFilter, number>;
   counts_exact?: boolean;
+  overview?: {
+    total_reports: number;
+    reports_last_30_days: number;
+    reports_last_7_days: number;
+    reports_previous_7_days: number;
+    latest_report_at: string | null;
+    as_of: string;
+    classification: "digital";
+    date_basis: "added_to_cleanapp";
+  };
   scope?: {
     brand_name: string;
     product: string | null;
