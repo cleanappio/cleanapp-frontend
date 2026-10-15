@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { ACQUISITION_EVENTS, countAcquisition } from "@/lib/acquisition";
+import { ACQUISITION_EVENTS, acquisitionPage, countAcquisition } from "@/lib/acquisition";
 
 export default function AcquisitionCounts() {
   const router = useRouter();
@@ -21,8 +21,10 @@ export default function AcquisitionCounts() {
       const anchor = event.target instanceof Element ? event.target.closest("a") : null;
       if (!anchor) return;
       const href = anchor.getAttribute("href") || "";
-      if (window.location.pathname.replace(/\/$/, "") === "/company" && /^mailto:info@cleanapp\.io(?:\?|$)/i.test(href)) countAcquisition(anchor.getAttribute("data-contact-purpose") === "investor" ? "investor_contact_interest" : "company_contact_interest");
-      else if (/^\/(?:pricing|signup)(?:[?#]|$)/.test(href)) countAcquisition("organization_interest");
+      const page = acquisitionPage(window.location.pathname);
+      if (page === "company" && /^mailto:info@cleanapp\.io(?:\?|$)/i.test(href)) countAcquisition(anchor.getAttribute("data-contact-purpose") === "investor" ? "investor_contact_interest" : "company_contact_interest");
+      else if (/^\/pricing(?:[?#]|$)/.test(href) ||
+        (/^\/signup(?:[?#]|$)/.test(href) && page && ["pricing", "solution_brands", "solution_cities", "solution_property", "solution_safety"].includes(page))) countAcquisition("organization_interest");
     };
     view();
     router.events.on("routeChangeComplete", view);

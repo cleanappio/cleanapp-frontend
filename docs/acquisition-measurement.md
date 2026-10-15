@@ -4,7 +4,7 @@ Three useful outcomes: a received problem report, an organization's evaluation o
 
 ## First-party operational counts
 
-`AcquisitionCounts` listens to public route changes, existing reporting events, organization plan/signup links and company mailto links. It sends a fixed enum payload to the same-origin `/api/acquisition`; there are no analytics cookies, persistent browser IDs or third-party receivers. Entry page category and referrer source category remain only in page memory. A full navigation begins a new context; counts are events, not unique visitors or sessions. Browser Do Not Track and Global Privacy Control opt out.
+`AcquisitionCounts` listens to public route changes, existing reporting events, plan links, signup links from organization/pricing pages, and company mailto links. A general account signup link is not classified as organization interest. It sends a fixed enum payload to the same-origin `/api/acquisition`; there are no analytics cookies, persistent browser IDs or third-party receivers. Entry page category and referrer source category remain only in page memory. A full navigation begins a new context; counts are events, not unique visitors or sessions. Browser Do Not Track and Global Privacy Control opt out.
 
 The API independently rejects unknown fields/values, cross-site origins, oversized/non-JSON bodies and excess traffic. It writes only hour, event, current page category, landing category, coarse source category and composer surface. No URLs, query strings, arbitrary campaign strings, report IDs/text/images, user IDs, IPs or precise locations enter these records. Existing infrastructure access logs are separate.
 

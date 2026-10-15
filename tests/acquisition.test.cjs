@@ -102,3 +102,22 @@ test('automatic homepage query redirect does not inflate page views', () => {
   assert.equal(events.length,2);
   cleanup();
 });
+test('reporter signup is not organization interest; explicit investor contact has its own count', () => {
+  const counts=[];let click;
+  class Element { constructor(href,purpose){this.href=href;this.purpose=purpose;}closest(){return this;}getAttribute(name){return name==='href'?this.href:this.purpose;} }
+  const window={location:{pathname:'/'},addEventListener(){},removeEventListener(){}};
+  const Component=load('src/components/AcquisitionCounts.tsx',{
+    window,Element,document:{addEventListener:(name,fn)=>{if(name==='click')click=fn;},removeEventListener(){}},
+    require(name){
+      if(name==='react')return {useEffect:fn=>fn()};
+      if(name==='next/router')return {useRouter:()=>({events:{on(){},off(){}}})};
+      if(name==='@/lib/acquisition')return {...lib,countAcquisition:event=>counts.push(event)};
+      return require(name);
+    }
+  }).default;
+  Component();counts.length=0;
+  click({target:new Element('/signup')});assert.equal(counts.length,0);
+  click({target:new Element('/pricing')});assert.equal(counts[0],'organization_interest');
+  window.location.pathname='/solutions/brands';click({target:new Element('/signup?plan=team')});assert.equal(counts[1],'organization_interest');
+  window.location.pathname='/me/company';click({target:new Element('mailto:info@cleanapp.io?subject=CleanApp%20investor%20inquiry','investor')});assert.equal(counts[2],'investor_contact_interest');
+});
