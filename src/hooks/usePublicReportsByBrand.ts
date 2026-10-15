@@ -8,14 +8,17 @@ export function usePublicReportsByBrand(
   locale: string,
   enabled = true,
   query: PublicEvidenceQuery = {},
+  initialBatch?: PublicDiscoveryBatch | null,
 ) {
-  const [batch, setBatch] = useState<PublicDiscoveryBatch | null>(null);
+  const seedScope = JSON.stringify([brandName, locale, "firsthand", "recent", 0, undefined, 0]);
+  const [batch, setBatch] = useState<PublicDiscoveryBatch | null>(initialBatch || null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
-  const [completedScope, setCompletedScope] = useState<string | null>(null);
-  const [loadedScope, setLoadedScope] = useState<string | null>(null);
-  const { kind = "firsthand", sort = "recent", offset = 0, product } = query;
+  const [completedScope, setCompletedScope] = useState<string | null>(initialBatch ? JSON.stringify([brandName, locale]) : null);
+  const [loadedScope, setLoadedScope] = useState<string | null>(initialBatch ? seedScope : null);
+  const { kind = "firsthand", sort = "recent", offset = 0 } = query;
+  const product = query.product || undefined;
   const requestScope = JSON.stringify([brandName, locale, kind, sort, offset, product, revision]);
   // Keep later evidence-filter changes from restarting an open subscriber list.
   useEffect(() => { setCompletedScope(null); }, [brandName, locale]);
@@ -24,6 +27,10 @@ export function usePublicReportsByBrand(
     if (!enabled || !brandName) {
       setBatch(null);
       setIsLoading(false);
+      return;
+    }
+    if (initialBatch && requestScope === seedScope) {
+      setBatch(initialBatch); setLoadedScope(requestScope); setCompletedScope(JSON.stringify([brandName, locale])); setIsLoading(false); setError(null);
       return;
     }
     let cancelled = false;
@@ -41,7 +48,7 @@ export function usePublicReportsByBrand(
         }
       });
     return () => { cancelled = true; };
-  }, [brandName, enabled, locale, kind, sort, offset, product, revision, requestScope]);
+  }, [brandName, enabled, locale, kind, sort, offset, product, revision, requestScope, initialBatch, seedScope]);
 
   // Suppress prior evidence and counts during the render before effects reset.
   const currentScopeLoaded = enabled && Boolean(brandName) && loadedScope === requestScope;
@@ -52,6 +59,7 @@ export function usePublicReportsByBrand(
   return {
     items,
     batch: currentBatch,
+    isPreview: Boolean(initialBatch && currentBatch === initialBatch),
     totalCount: hasScopedCounts ? currentBatch?.total_count ?? items.length : items.length,
     highPriority: currentBatch?.high_priority_count ?? 0,
     mediumPriority: currentBatch?.medium_priority_count ?? 0,

@@ -49,8 +49,14 @@ export default function CompanyPage() {
             </ul>
           </section>
           <section className="mt-12">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">Inspect the evidence</h2>
+            <p className="mt-4 leading-relaxed text-gray-700">Explore <Link href="/?tab=physical" className="text-green-800 underline underline-offset-4">physical observations on the public map</Link> and <Link href="/digital/openai" className="text-green-800 underline underline-offset-4">public reports associated with OpenAI</Link>. Open a report to compare the original evidence with CleanApp&apos;s AI-assisted interpretation, source type and known status. These are product examples, not customer or endorsement claims.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">The useful question is what a recipient can investigate from the observation. A report&apos;s presence does not establish that a recipient received it or that the problem was resolved; those outcomes require their own evidence.</p>
+          </section>
+          <section className="mt-12">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">Partners & investors</h2>
             <p className="mt-4 leading-relaxed text-gray-700">For a product walkthrough, partnership discussion or investor inquiry, contact <a href="mailto:info@cleanapp.io" className="text-green-800 underline underline-offset-4">info@cleanapp.io</a>. The team can address current operations, commercial discussions and any materials appropriate to your inquiry.</p>
+            <p className="mt-4"><a href="mailto:info@cleanapp.io?subject=CleanApp%20investor%20inquiry" data-contact-purpose="investor" className="font-semibold text-green-800 underline underline-offset-4">Investor inquiries →</a></p>
           </section>
         </article>
         <Footer />

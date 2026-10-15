@@ -7,6 +7,8 @@ export type LandingSection = {
   heading: string;
   paragraphs: string[];
   bullets?: string[];
+  links?: { label: string; href: string }[];
+  example?: { label: string; text: string };
 };
 
 export type LandingPageContent = {
@@ -24,6 +26,7 @@ export type LandingPageContent = {
   reportKind?: "physical" | "digital";
   guide?: boolean;
   breadcrumb?: string;
+  evidenceLink?: { label: string; href: string };
 };
 
 const WHAT_HAPPENS_NEXT: LandingSection = {
@@ -180,6 +183,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
     h1: "See the problems residents already notice.",
     lead: "A broken streetlight, a blocked path, waste beside a park. CleanApp gives local observations a common place to start, beyond a city's existing forms and phone lines.",
     keywords: ["community issue reporting", "citizen reporting", "municipal issue reporting"],
+    evidenceLink: { label: "Explore public reports on the map", href: "/?tab=physical" },
     sections: [
       {
         heading: "A resident starts with a place and a problem",
@@ -189,6 +193,12 @@ export const LANDING_PAGES: LandingPageContent[] = [
         heading: "Evaluate the operational fit",
         paragraphs: ["Start with an area your team looks after. Explore reports, map context and AI-assisted analysis, then decide how incoming observations will reach the people who review local issues. Current organization plans describe the available scope."],
         bullets: ["Define the geography and report types your team is responsible for.", "Agree how observations will be reviewed and checked against existing requests.", "Discuss the handoff to your existing request-management process.", "Measure useful reports and follow-through, alongside report counts."],
+      },
+      {
+        heading: "Try a review with one real place",
+        paragraphs: ["Open the public map and choose an area your team knows. Inspect an individual observation: can someone locate the condition from the image and description? Check its date, distinguish the reporter's words from AI analysis, and decide whether it belongs in your team's remit. Compare it with existing requests before treating it as a new job."],
+        bullets: ["A map marker is an observation, not confirmation that a repair request exists.", "Several observations may concern one condition; they are not necessarily separate incidents.", "Record the next operational step and its owner in your established process."],
+        links: [{ label: "Open the public physical-report map", href: "/?tab=physical" }],
       },
       {
         heading: "Set clear expectations for residents",
@@ -206,10 +216,11 @@ export const LANDING_PAGES: LandingPageContent[] = [
     navLabel: "Brands & product teams",
     audience: "organization",
     title: "Physical & Digital Issue Reports for Brands | CleanApp",
-    description: "Understand the product, store and digital problems people report about your brand. Explore CleanApp's public examples and current organization plans.",
+    description: "Evaluate customer problem reports with original source context, AI-assisted analysis and related evidence. Explore CleanApp's public brand views and organization plans.",
     h1: "Your brand exists on shelves, streets and screens.",
     lead: "A broken checkout and damaged packaging are different problems with a common need: a clear observation that helps the right team understand what happened.",
-    keywords: ["product issue reporting", "brand issue monitoring", "customer problem reports"],
+    keywords: ["product issue reporting", "brand issue monitoring", "customer problem reports", "customer feedback outside support channels"],
+    evidenceLink: { label: "Explore public OpenAI reports", href: "/digital/openai" },
     sections: [
       {
         heading: "Observations beyond your feedback form",
@@ -217,17 +228,25 @@ export const LANDING_PAGES: LandingPageContent[] = [
       },
       {
         heading: "Assess the evidence before acting",
-        paragraphs: ["See the photo or screenshot alongside its product, location, date and description. Related observations can help a team distinguish an isolated failure from a pattern worth investigating."],
+        paragraphs: ["Begin with the original observation and any linked source. Check what the person actually experienced, when it happened and which product or place it concerns. An AI summary helps you navigate the evidence; check the underlying report before relying on its interpretation."],
+        bullets: ["Personal experiences and news or discussion answer different questions. Use the source-type filters to inspect them separately.", "A brand association identifies a possible subject. It does not prove fault, ownership or legal responsibility.", "Related observations can suggest a pattern to investigate. Their number alone does not establish how widespread an issue is."],
+      },
+      {
+        heading: "Walk through a public brand view",
+        paragraphs: ["Use the public OpenAI report view as a product walkthrough. Inspect a report and its source context, compare personal experiences with news and discussion, then examine the related evidence. The example is a public product surface; it does not imply that OpenAI is a CleanApp customer or endorses the service."],
+        bullets: ["Identify the concrete task or product affected, rather than starting with a sentiment score.", "Separate the observation from the AI interpretation and note any missing context.", "Decide what your product, support or operations team would need to check next."],
+        links: [{ label: "Open public reports associated with OpenAI", href: "/digital/openai" }],
       },
       {
         heading: "Evaluate CleanApp for your team",
-        paragraphs: ["Explore a public brand example, review current plans and discuss coverage with CleanApp. Establish who reviews incoming observations and how a useful report reaches the people who can investigate."],
+        paragraphs: ["Use a small set of reports to test the fit for your team. Can a reviewer find the original evidence, distinguish a personal experience from coverage, and identify a useful next step? Review current plans and discuss the brands, places and available coverage you need before choosing a workflow."],
         bullets: ["Compare physical and digital observations relevant to your brand.", "Check the quality of the supporting evidence and attribution.", "Choose the relevant brands and places, and agree how your team reviews reports.", "Track investigated issues and useful follow-up."],
       },
     ],
     faqs: [
       { question: "Does a brand match prove the brand caused the problem?", answer: "No. A logo, storefront or interface can help identify the subject of an observation. It does not establish cause, ownership or legal responsibility." },
       { question: "Does CleanApp capture every issue about our brand?", answer: "No. CleanApp can only work with the observations and data it receives. Public reporting is a source of evidence, not a complete census of customer problems." },
+      { question: "How does this fit alongside social listening and customer support?", answer: "Use CleanApp to inspect problem observations and related evidence about products and places. Compare that evidence with the feedback and requests your team already receives. Coverage, access and any connection to existing tools should be checked for your deployment." },
     ],
     related: ["bug-reporting", "report-a-website-problem", "litter-reporting", "incident-reporting"],
   },
@@ -240,6 +259,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
     h1: "The person who sees the problem may be a visitor.",
     lead: "A broken door, a leak or a blocked entrance can be spotted by anyone on site. Give the observation enough context for a property team to investigate.",
     keywords: ["building issue reporting", "report building maintenance", "property problem reporting"],
+    evidenceLink: { label: "Explore physical problem reports", href: "/?tab=physical" },
     sections: [
       {
         heading: "Make a building issue findable",
@@ -248,6 +268,12 @@ export const LANDING_PAGES: LandingPageContent[] = [
       {
         heading: "Connect public observations to a responsible workflow",
         paragraphs: ["CleanApp offers reporting and organization views; the operational response still needs an owner. Decide which team reviews reports, checks the location and creates a maintenance request when appropriate. Confirm any required connection to your existing tools before rollout."],
+      },
+      {
+        heading: "Check whether a report is ready for a site visit",
+        paragraphs: ["Use the public map to inspect the context an observation provides. For your own properties, a reviewer should be able to identify the building, entrance or floor, understand the visible condition and decide what needs checking. A public example demonstrates the reporting format; it does not establish coverage of your buildings."],
+        bullets: ["Check the observation date and whether the same condition is already recorded.", "Confirm the site and affected route before assigning work.", "Keep the repair decision and completion record in your designated maintenance process."],
+        links: [{ label: "Inspect public physical reports", href: "/?tab=physical" }],
       },
       {
         heading: "Be explicit about sensitive information",
@@ -269,6 +295,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
     h1: "A useful safety observation starts with what someone saw.",
     lead: "People on site can notice a damaged guard, blocked route or near miss before a safety team does. Capture the condition and the context needed to review it.",
     keywords: ["hazard observation reporting", "near miss reporting", "workplace safety reporting"],
+    evidenceLink: { label: "Inspect public physical observations", href: "/?tab=physical" },
     sections: [
       {
         heading: "Document the observation clearly",
@@ -277,6 +304,11 @@ export const LANDING_PAGES: LandingPageContent[] = [
       {
         heading: "Agree the response before introducing a new channel",
         paragraphs: ["Identify who reviews observations and how urgent conditions reach the on-site team. Confirm visibility, data handling and any required connection to an existing safety process with CleanApp before deployment."],
+      },
+      {
+        heading: "Evaluate the evidence a reviewer would receive",
+        paragraphs: ["Explore a physical observation on the public map and consider what a safety reviewer could establish from it. The location, time, description and image may help identify a condition; an image or AI summary cannot establish everything happening on site. Check what is missing before deciding whether an inspection or another action is needed."],
+        links: [{ label: "Open public physical observations", href: "/?tab=physical" }],
       },
       {
         heading: "Keep formal safety obligations in the established process",
@@ -307,13 +339,20 @@ export const LANDING_PAGES: LandingPageContent[] = [
       },
       {
         heading: "Who receives a pothole report?",
-        paragraphs: ["The relevant road operator depends on the location and road. If you need an official repair request, use the responsible local authority or road operator's reporting channel. CleanApp provides another place to document the observation when you do not know where to start."],
+        paragraphs: ["The relevant road operator depends on the location and road. For an official repair request, use the responsible local authority or road operator's reporting channel. CleanApp provides another place to document the observation when you do not know where to start.", "In England or Wales, GOV.UK offers a postcode lookup for the local council. Motorways and the A roads managed by National Highways in England have a separate reporting route. GOV.UK also links to the services for Scotland and Northern Ireland. Elsewhere, look for the road operator's official damaged-road or public-works reporting service."],
+        links: [{ label: "GOV.UK: find the official pothole reporting route", href: "https://www.gov.uk/report-pothole" }],
+      },
+      {
+        heading: "An example with enough detail to locate it",
+        paragraphs: ["Use this fictional example as a guide to the level of detail. Replace the place, time and description with what you actually observed; leave out measurements or causes you cannot establish."],
+        example: { label: "Fictional example — road damage", text: "At 8:20 this morning I saw broken, sunken road surface on Example Road, in the lane heading toward Sample Street, just before the bus stop. Water covered part of the damage, so I could not see its depth. The photo shows the road surface and the bus-stop sign from the pavement." },
       },
       WHAT_HAPPENS_NEXT,
     ],
     faqs: [
       { question: "Can I report a pothole without knowing which authority owns the road?", answer: "Yes. Give the road location, nearest landmark and what you observed. CleanApp uses that context to help identify the relevant place and recipients." },
       { question: "What if there is already a pothole report nearby?", answer: "Check the public map for context. If you add a new observation, include the date and explain any changed condition so it can be distinguished from an older report." },
+      { question: "Does a CleanApp receipt mean the road operator received a repair request?", answer: "A receipt confirms that CleanApp accepted the submission. It does not by itself confirm delivery to the road operator, a scheduled repair or a completed fix. Use the operator's designated channel when you need an official request." },
     ],
     related: ["report-a-problem", "hazard-reporting", "solutions/cities"],
   },
@@ -334,8 +373,18 @@ export const LANDING_PAGES: LandingPageContent[] = [
         bullets: ["Add a road, track, entrance or nearby landmark and check the map location.", "Describe the visible waste and approximate extent; do not open bags to identify it.", "Mention blocked access, a nearby waterway or other visible impact.", "State when you saw it and whether you personally observed repeated dumping."],
       },
       {
+        heading: "Who should I tell about dumped waste?",
+        paragraphs: ["Start with the official waste or environmental reporting service for the place where the waste is located. In England, Scotland and Wales, GOV.UK directs small-scale fly-tipping reports to the local council's environmental health team. For large-scale dumping in England, it provides Environment Agency reporting instructions. Northern Ireland has separate guidance.", "CleanApp can document what you observed alongside that official process. Include the location even if you do not know the landowner or which authority is responsible."],
+        links: [{ label: "GOV.UK: official fly-tipping reporting guidance", href: "https://www.gov.uk/report-flytipping" }],
+      },
+      {
         heading: "Report observations, not assumptions about a person",
         paragraphs: ["Do not identify someone as responsible merely because a name or brand appears on discarded material. Keep the report focused on what you actually saw. Use the relevant authority's designated process if you need to submit evidence of an alleged offense."],
+      },
+      {
+        heading: "A useful report describes what is visible",
+        paragraphs: ["This fictional example records the site and uncertainty without guessing who left the waste or what is inside the bags."],
+        example: { label: "Fictional example — dumped waste", text: "At 4 pm today I saw about six tied bags and a broken chair beside the north entrance to Example Park, next to the sign on Sample Road. The pile partly blocks the entrance. I could not see what was inside the bags and did not open them. I did not see anyone leave the waste." },
       },
       WHAT_HAPPENS_NEXT,
     ],
@@ -362,6 +411,16 @@ export const LANDING_PAGES: LandingPageContent[] = [
         bullets: ["What you tried: for example, selecting delivery and pressing Continue.", "What you expected and what happened instead, including the exact error text if useful.", "When it happened and whether it happened more than once.", "Device, browser and app version when known; never include login credentials."],
       },
       {
+        heading: "Find the website or app's support channel",
+        paragraphs: ["For a website, look for Help, Contact or Support on the service's own site. Name the affected page and explain the task that failed. For an account-specific response, contact that service directly as well as documenting the problem.", "On iPhone or iPad, open the app's App Store page, scroll to Ratings & Reviews and choose App Support. On Android, open the app's details page in Google Play and choose App support to find the developer's contact information. Apple and Google both direct users to the app developer for problems inside the app."],
+        links: [{ label: "Apple: contact an app developer", href: "https://support.apple.com/en-au/102435" }, { label: "Google Play: contact an Android app's developer", href: "https://support.google.com/googleplay/answer/113418?hl=en-gb" }],
+      },
+      {
+        heading: "Turn “checkout is broken” into a useful report",
+        paragraphs: ["This fictional example describes the observed failure without claiming to know its cause. A text report is enough to start; add a screenshot when it helps show the problem."],
+        example: { label: "Fictional example — failed website checkout", text: "On https://example.com/checkout at about 2 pm today, I selected a delivery option and pressed Continue. I expected to see the payment step, but the page stayed on delivery and displayed ‘Something went wrong’. The same thing happened when I tried once more. I was using Safari on an iPhone; I do not know the browser version. The screenshot shows the error with my personal details removed." },
+      },
+      {
         heading: "If the problem involves an order or payment",
         paragraphs: ["A CleanApp report documents the issue. For an account-specific response, order change or payment question, also contact the service's official support. Do not include card details, passwords or private account information in a public problem report."],
       },
@@ -370,6 +429,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
     faqs: [
       { question: "Can I report a broken website that is not mine?", answer: "Yes. Include the affected service, what you tried and what happened. CleanApp helps structure observations from people who use a product, even when they are outside its development team." },
       { question: "Can CleanApp recover a failed purchase or refund?", answer: "A problem report is not an account support request or a refund process. Contact the merchant or service through its official support channel for help with a specific transaction." },
+      { question: "Do I need technical knowledge or a screenshot to report an app problem?", answer: "No. Describe the app or website, what you tried, what you expected and what happened instead. Include an error message or screenshot if it helps, and leave unknown device or version details unknown." },
     ],
     related: ["bug-reporting", "report-an-accessibility-barrier", "solutions/brands"],
   },
@@ -391,6 +451,16 @@ export const LANDING_PAGES: LandingPageContent[] = [
       {
         heading: "For a website or app barrier",
         paragraphs: ["Include the affected page or screen, the task and the point where progress stops. Mention a keyboard, screen reader, zoom setting or other relevant setup if you choose to share it. A screenshot may need a written explanation when the problem is not visible."],
+      },
+      {
+        heading: "Tell the organization what task was blocked",
+        paragraphs: ["For a building or public place, use the site operator's designated accessibility or facilities contact when you need an official access request. Identify the entrance, route or facility and explain what prevented use.", "For a website, W3C's accessibility guidance recommends contacting the organization responsible for the site. Look for its accessibility contact, page owner or support channel. Include the page URL, the task and the barrier; add browser or assistive technology details if you know them. Keep a record of your message so you can follow up."],
+        links: [{ label: "W3C WAI: contacting organizations about inaccessible websites", href: "https://www.w3.org/WAI/teach-advocate/contact-inaccessible-websites/" }],
+      },
+      {
+        heading: "Explain the interaction an image cannot show",
+        paragraphs: ["A written explanation matters when a screenshot looks normal. This fictional example describes the point where a keyboard task stops."],
+        example: { label: "Fictional example — keyboard access barrier", text: "On https://example.com/contact today, I used Tab to move through the contact form. I could enter my name and message, but I could not reach the Send button with the keyboard. I expected to submit the form without a mouse. I was using Firefox on a Windows laptop. I do not know whether the same problem happens with other setups." },
       },
       {
         heading: "Describe the impact without disclosing a diagnosis",

@@ -22,6 +22,8 @@ export default function LandingPage({ page }: Props) {
     .filter((candidate): candidate is LandingPageContent => Boolean(candidate));
   const primaryHref = isOrganization ? "/pricing" : reportHref;
   const primaryLabel = isOrganization ? "Explore organization plans" : "Report this problem";
+  const evidenceHref = page.evidenceLink?.href || "/";
+  const evidenceLabel = page.evidenceLink?.label || "Explore public reports";
 
   return (
     <>
@@ -55,8 +57,8 @@ export default function LandingPage({ page }: Props) {
               <Link href={primaryHref} className="inline-flex min-h-12 items-center justify-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
                 {primaryLabel}
               </Link>
-              <Link href={isOrganization ? "/redbull" : "/"} className="inline-flex min-h-12 items-center font-medium text-green-800 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
-                {isOrganization ? "See a public brand example" : "Explore public reports"} <span aria-hidden="true" className="ml-2">→</span>
+              <Link href={evidenceHref} className="inline-flex min-h-12 items-center font-medium text-green-800 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
+                {evidenceLabel} <span aria-hidden="true" className="ml-2">→</span>
               </Link>
             </div>
             {!isOrganization && <p className="mt-3 text-sm text-gray-600">Report in your browser. No app download required.</p>}
@@ -73,6 +75,23 @@ export default function LandingPage({ page }: Props) {
               {section.bullets && (
                 <ul className="mt-4 space-y-3 list-disc pl-6 text-gray-700 marker:text-green-700">
                   {section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+                </ul>
+              )}
+              {section.example && (
+                <figure className="mt-5 border-l-4 border-green-200 bg-green-50/50 px-5 py-4">
+                  <figcaption className="text-sm font-semibold text-green-900">{section.example.label}</figcaption>
+                  <blockquote className="mt-2 text-gray-700 leading-relaxed">{section.example.text}</blockquote>
+                </figure>
+              )}
+              {section.links && (
+                <ul aria-label="Further reading" className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
+                  {section.links.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} className="text-green-800 underline underline-offset-4 hover:text-green-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
+                        {link.label} <span aria-hidden="true">→</span>
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               )}
             </section>

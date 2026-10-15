@@ -23,8 +23,8 @@ export type ReportEvidence = {
 };
 
 export type ReportRecurrence = {
-  issue_id: string;
-  case_id: string | null;
+  issue_id?: string;
+  case_id?: string | null;
   supporting_report_count: number;
   source_account_count: number | null;
   duplicate_import_count: number;
@@ -42,6 +42,8 @@ export type PublicNotificationCount =
   | { state: "unavailable"; email_count?: never };
 
 export type PublicDiscoveryCard = {
+  /** Present only after a fresh public-policy check. */
+  canonical_path?: string;
   discovery_token: string;
   title: string;
   summary: string;

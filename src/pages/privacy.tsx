@@ -40,6 +40,10 @@ const Privacy = () => {
               ))}
             </section>
           ))}
+          <section className="mt-10">
+            <h2 className="text-xl font-bold text-gray-900">Website usage counts</h2>
+            <p className="mt-3 text-gray-700 leading-relaxed">We count visits to public page categories, reporting steps and contact-link clicks to understand whether the website helps people. These first-party counts contain no report content, report or visitor identifiers, exact page URLs, search terms, location or full referrer URLs. They use no analytics cookies or persistent browser storage. Records older than 30 days are deleted when new counts are collected. We respect browser Do Not Track and Global Privacy Control signals.</p>
+          </section>
         </article>
         <Footer />
       </div>

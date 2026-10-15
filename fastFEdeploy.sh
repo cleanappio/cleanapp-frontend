@@ -333,9 +333,12 @@ for INDEX in "${!BUILT_MODES[@]}"; do
     sudo docker rm ${CONTAINER_NAME} 2>/dev/null || true
     
     echo 'Starting ${CONTAINER_NAME}...'
+    sudo install -d -m 700 /var/lib/cleanapp/acquisition-${CONTAINER_NAME}
     sudo docker run -d --name ${CONTAINER_NAME} \
       --network deployer_default \
       -p ${PORT}:3000 \
+      -e ACQUISITION_EVENTS_DIR=/var/lib/cleanapp/acquisition \
+      -v /var/lib/cleanapp/acquisition-${CONTAINER_NAME}:/var/lib/cleanapp/acquisition \
       ${DIGEST_REF}
     
     sudo docker ps | grep ${CONTAINER_NAME}

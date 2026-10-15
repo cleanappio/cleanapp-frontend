@@ -126,6 +126,9 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn("@sha256:", command)
                 self.assertNotIn("image:prod", command)
                 self.assertIn("--network deployer_default", command)
+                self.assertIn("-e ACQUISITION_EVENTS_DIR=/var/lib/cleanapp/acquisition", command)
+                self.assertIn("sudo install -d -m 700 /var/lib/cleanapp/acquisition-", command)
+                self.assertIn(":/var/lib/cleanapp/acquisition", command)
                 self.assertLess(command.index("sudo docker pull"), command.index("sudo docker stop"))
 
     def test_failed_pull_keeps_running_container(self):

@@ -31,3 +31,10 @@ export function publicSeoText(value: unknown, limit = 500): string {
 export function isPublicSeoObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
+
+/** Temporary upstream failures must invite retry, not a successful noindex page. */
+export function publicSeoUnavailable(res: { statusCode: number; setHeader(name: string, value: string): void }): void {
+  res.statusCode = 503;
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Retry-After", "60");
+}

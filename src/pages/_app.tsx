@@ -8,6 +8,7 @@ import Layout from "@/components/Layout";
 import Seo from "@/components/Seo";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import ReportWidget from "@/components/reporting/ReportWidget";
+import AcquisitionCounts from "@/components/AcquisitionCounts";
 
 export default function App({ Component, pageProps }: AppProps) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -28,6 +29,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
       </Layout>
       <ReportWidget />
+      <AcquisitionCounts />
       <Toaster position="top-right" />
     </ErrorBoundary>
   );

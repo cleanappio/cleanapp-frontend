@@ -22,6 +22,7 @@ export default function ImageDisplay({
       <DialogTrigger className="flex justify-center items-center w-full">
         <Image
           src={imageUrl}
+          unoptimized
           alt={t("reportDetails")}
           width={400}
           height={160}
@@ -37,6 +38,7 @@ export default function ImageDisplay({
         <DialogTitle className="sr-only">{t("reportDetails")}</DialogTitle>
         <Image
           src={imageUrl}
+          unoptimized
           alt={t("reportDetails")}
           width={400}
           height={160}

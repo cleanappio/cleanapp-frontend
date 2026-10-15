@@ -3,6 +3,7 @@
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import type { ReportWithAnalysis } from "@/components/GlobeView";
+import type { PublicReportView } from "@/lib/public-report-projection";
 import ImageDisplay from "@/components/ImageDisplay";
 import ReportEvidence from "@/components/evidence/ReportEvidence";
 import ReportNotifications from "@/components/report/ReportNotifications";
@@ -23,6 +24,8 @@ type Props = {
   publicId?: string;
   presentation?: "page" | "embedded";
   onBack?: () => void;
+  initialReport?: PublicReportView | null;
+  unavailable?: boolean;
 };
 
 export function EmbeddedReportBackBar({ onBack }: { onBack: () => void }) {
@@ -55,6 +58,8 @@ export default function PublicReportDetailPage({
   publicId: suppliedPublicId,
   presentation = "page",
   onBack,
+  initialReport,
+  unavailable = false,
 }: Props) {
   const router = useRouter();
   const publicId =
@@ -76,8 +81,8 @@ export default function PublicReportDetailPage({
     setIsNativeWebView(Boolean(window.ReactNativeWebView));
   }, []);
 
-  const [report, setReport] = useState<ReportWithAnalysis | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [report, setReport] = useState<PublicReportView | ReportWithAnalysis | null>(initialReport || null);
+  const [isLoading, setIsLoading] = useState(!initialReport && !unavailable);
   const [error, setError] = useState<string | null>(null);
   const [contactStrategy, setContactStrategy] =
     useState<ReportContactStrategyResponse | null>(null);
@@ -89,6 +94,12 @@ export default function PublicReportDetailPage({
       return;
     }
 
+    // The server checked publication and supplied this exact public document.
+    // Reuse it for hydration; route changes still perform a fresh reader call.
+    if (initialReport?.report.public_id === publicId) {
+      setReport(initialReport); setIsLoading(false); setError(null);
+      return;
+    }
     let cancelled = false;
 
     const load = async () => {
@@ -151,6 +162,7 @@ export default function PublicReportDetailPage({
     publicId,
     router,
     t,
+    initialReport,
   ]);
 
   const matchingAnalysis = useMemo(() => {
@@ -257,7 +269,7 @@ export default function PublicReportDetailPage({
     return renderPage(
       <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
         <h1 className="text-xl font-semibold text-red-600 mb-2">
-          {error || "Report not found"}
+          {unavailable ? "Report temporarily unavailable" : error || "Report not found"}
         </h1>
         <button
           onClick={isEmbedded ? handleBack : () => router.push("/")}
@@ -289,7 +301,7 @@ export default function PublicReportDetailPage({
                 <li>/</li>
                 <li>
                   <Link
-                    href={`/digital/${matchingAnalysis.brand_name}`}
+                    href={`/digital/${encodeURIComponent(matchingAnalysis.brand_name)}`}
                     className="hover:text-blue-600 transition-colors"
                   >
                     {brandDisplay}
