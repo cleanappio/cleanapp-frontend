@@ -25,8 +25,8 @@ export default function Document() {
         <meta name="author" content="CleanApp" />
 
         {/* Telegram Specific Meta Tags */}
-        <meta name="telegram:channel" content="@cleanapp" />
-        <meta name="telegram:site" content="@cleanapp" />
+        <meta name="telegram:channel" content="@cleanappio" />
+        <meta name="telegram:site" content="@cleanappio" />
 
         {/* Additional Meta Tags for Better Compatibility */}
         <meta name="format-detection" content="telephone=no" />
