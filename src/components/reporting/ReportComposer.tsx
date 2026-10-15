@@ -4,11 +4,24 @@ import Link from "next/link";
 import { newWebReportPayload, prepareReportImage, readReportReceipt, reportApiBase, submissionError, trackReportEvent, validateReportDraft, type WebReportPayload, type WebReportReceipt } from "@/lib/web-reporting";
 import styles from "./ReportComposer.module.css";
 
+function receiptIsProcessing(receipt: WebReportReceipt) {
+  if (receipt.publication_status) return receipt.publication_status === "pending_analysis";
+  if (receipt.processing_status) return receipt.processing_status === "pending_analysis";
+  return ["received", "accepted", "duplicate"].includes(receipt.status);
+}
+
+function receiptIsComplete(receipt: WebReportReceipt) {
+  if (receipt.publication_status) return ["public", "review_required"].includes(receipt.publication_status);
+  return receipt.processing_status === "analyzed" || receipt.status === "published" || Boolean(receipt.canonical_path);
+}
+
 export function ReportReceipt({ receipt: initialReceipt, onAnother }: { receipt: WebReportReceipt; onAnother?: () => void }) {
   const [receipt, setReceipt] = useState(initialReceipt);
+  const [polling, setPolling] = useState(() => !receiptIsComplete(initialReceipt));
   useEffect(() => {
     setReceipt(initialReceipt);
-    if (initialReceipt.publication_status === "public") return;
+    setPolling(!receiptIsComplete(initialReceipt));
+    if (receiptIsComplete(initialReceipt)) return;
     let active = true;
     let checks = 0;
     let timer: ReturnType<typeof setTimeout>;
@@ -18,9 +31,10 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother }: { receipt:
       try {
         const response = await fetch(`${reportApiBase()}/receipts/${encodeURIComponent(initialReceipt.receipt_id)}`, { cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(10_000) });
         const next = response.ok ? readReportReceipt(await response.json()) : null;
-        if (active && next) { setReceipt(next); done = next.publication_status === "public"; }
+        if (active && next) { setReceipt(next); done = receiptIsComplete(next); }
       } catch { /* The accepted receipt remains valid during a temporary outage. */ }
       if (active && !done && checks < 8) timer = setTimeout(refresh, Math.min(5000 * (checks + 1), 15000));
+      else if (active) setPolling(false);
     }
     timer = setTimeout(refresh, 5000);
     return () => { active = false; clearTimeout(timer); };
@@ -28,9 +42,10 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother }: { receipt:
   const review = receipt.publication_status
     ? receipt.publication_status === "review_required"
     : ["shadowed", "quarantined"].includes(receipt.status);
+  const processing = polling && receiptIsProcessing(receipt);
   return <div className={styles.receipt} role="status" aria-live="polite">
-    <Check size={30} color="#226536" aria-hidden="true" />
-    <h2>We’re on it.</h2>
+    {processing ? <Loader2 className={styles.spinner} size={30} color="#226536" aria-hidden="true" /> : <Check size={30} color="#226536" aria-hidden="true" />}
+    <h2>{processing ? "Generating receipt & escalation log." : "We’re on it."}</h2>
     <p>{receipt.publication_status === "public" ? "Your report is ready to view." : review ? "Your report is received for review." : "Your report is received for processing."}</p>
     {receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
     <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>

@@ -32,6 +32,8 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 
 `GET /receipts/:receipt_id` refreshes the same receipt. The receipt page is `/report-a-problem?receipt=<ID>`. The UI polls up to eight times with bounded delays while awaiting publication; a temporary polling outage retains the accepted receipt. It shows **View report** only when the backend supplies a safe canonical link. Receiving a report, publishing it, sending a notification and resolving the problem are separate events.
 
+While a receipt is processing, the shared receipt view shows **Generating receipt & escalation log.** with a spinner that respects reduced motion. Published and review states stop polling and restore **We’re on it.** with a checkmark. When the bounded polling window ends, the spinner also stops; the accepted receipt and its current status remain available through **Keep your receipt**. This progress copy does not assert that a notification was sent.
+
 ## Lifecycle and reliability
 
 1. The listener applies browser validation and stores canonical web provenance as `human-web`, actor `human`, channel `web`, initially shadowed with unknown domain.
