@@ -34,6 +34,12 @@ export type ReportRecurrence = {
   supporting_sources?: { title: string; source_url: string | null; report_kind: "firsthand" | "coverage" | "unknown"; source_published_at: string | null }[];
 };
 
+/** Recorded accepted email sends for this report, not its related report family. */
+export type PublicNotificationCount =
+  | { state: "sent"; email_count: number }
+  | { state: "none_recorded"; email_count: 0 }
+  | { state: "unavailable"; email_count?: never };
+
 export type PublicDiscoveryCard = {
   discovery_token: string;
   title: string;
@@ -47,6 +53,7 @@ export type PublicDiscoveryCard = {
   longitude?: number;
   evidence?: ReportEvidence;
   recurrence?: ReportRecurrence;
+  notification_count?: PublicNotificationCount;
 };
 
 export type PublicDiscoveryBatch = {

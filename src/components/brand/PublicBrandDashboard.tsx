@@ -6,6 +6,7 @@ import { resolvePublicDiscoveryToken } from "@/lib/public-discovery-api";
 import { PublicDiscoveryCard, PublicDiscoveryResolveResponse } from "@/types/public-discovery";
 import BrandReportEvidence from "@/components/brand/BrandReportEvidence";
 import ReportThumbnail from "@/components/report/ReportThumbnail";
+import ReportNotificationCount from "@/components/brand/ReportNotificationCount";
 import { getCurrentLocale } from "@/lib/i18n";
 import { rowProductLabel } from "@/lib/brand-report-presentation";
 import type { ReportKindFilter } from "@/lib/report-evidence";
@@ -56,6 +57,7 @@ export default function PublicBrandDashboard({ items, onOpenReport, pageBrand, a
               </button>
             </h3>
             <BrandReportEvidence item={item} productLabel={rowProductLabel(item, contextBrand)} locale={locale} showSourceKind={!activeKind || activeKind === "all"}
+              notification={<ReportNotificationCount count={item.notification_count} reportTitle={item.title} locale={locale} opening={openingToken === item.discovery_token} onOpen={() => { void handleOpen(item); }} />}
               action={<button type="button" disabled={openingToken === item.discovery_token} onClick={() => { void handleOpen(item); }} className="inline-flex min-h-[44px] items-center text-sm font-semibold text-green-800 transition-colors hover:text-green-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700 disabled:opacity-60">
                 {openingToken === item.discovery_token ? "Opening…" : <>Read report <span aria-hidden="true" className="ml-1">→</span></>}
               </button>}
