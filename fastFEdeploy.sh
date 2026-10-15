@@ -320,16 +320,17 @@ for INDEX in "${!BUILT_MODES[@]}"; do
   # Deploy to VM
   echo "🚢 Deploying ${MODE} to ${VM_NAME}..."
   gcloud compute ssh ${VM_NAME} --project="${PROJECT_NAME}" --zone=us-central1-a --command="
-    echo 'Stopping ${CONTAINER_NAME}...'
-    sudo docker stop ${CONTAINER_NAME} 2>/dev/null || true
-    sudo docker rm ${CONTAINER_NAME} 2>/dev/null || true
-    
+    set -e
     echo 'Authenticating with Docker registry...'
     ACCESS_TOKEN=\$(gcloud auth print-access-token)
     echo \"\${ACCESS_TOKEN}\" | sudo docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
     
     echo 'Pulling new image...'
     sudo docker pull ${DIGEST_REF}
+
+    echo 'Stopping ${CONTAINER_NAME}...'
+    sudo docker stop ${CONTAINER_NAME} 2>/dev/null || true
+    sudo docker rm ${CONTAINER_NAME} 2>/dev/null || true
     
     echo 'Starting ${CONTAINER_NAME}...'
     sudo docker run -d --name ${CONTAINER_NAME} \

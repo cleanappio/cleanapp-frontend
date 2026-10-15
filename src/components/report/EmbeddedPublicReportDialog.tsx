@@ -49,7 +49,7 @@ function EmbeddedPublicBrandPreview({
           <p className="mb-5 text-gray-600">
             {t("totalReports")} ({totalCount})
           </p>
-          <PublicBrandDashboard items={items} onOpenReport={onOpenReport} />
+          <PublicBrandDashboard items={items} pageBrand={brandName} activeKind="all" onOpenReport={onOpenReport} />
         </>
       )}
     </div>
