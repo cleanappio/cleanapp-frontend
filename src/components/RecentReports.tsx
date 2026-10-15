@@ -9,6 +9,7 @@ import {
   resolvePublicDiscoveryToken,
 } from "@/lib/public-discovery-api";
 import { PublicDiscoveryCard } from "@/types/public-discovery";
+import { reportMapCoordinates } from "@/lib/report-location";
 import LocationsCard from "./RecentReports/LocationsCard";
 import AIInsightsCard from "./RecentReports/AIInsightsCard";
 
@@ -81,6 +82,7 @@ function PublicRecentReportCard({
   onOpen: (item: PublicDiscoveryCard) => void;
 }) {
   const { t } = useTranslations();
+  const coordinates = reportMapCoordinates(item.latitude, item.longitude);
 
   return (
     <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
@@ -137,11 +139,9 @@ function PublicRecentReportCard({
           <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">
             {(item.brand_display_name || item.brand_name || item.classification).toUpperCase()}
           </span>
-          {item.classification === "physical" &&
-            item.latitude !== undefined &&
-            item.longitude !== undefined && (
+          {item.classification === "physical" && coordinates && (
               <span className="text-xs text-gray-500">
-                {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                {coordinates[1].toFixed(4)}, {coordinates[0].toFixed(4)}
               </span>
             )}
         </div>
@@ -188,15 +188,13 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         return;
       }
 
-      if (
-        reportItem &&
-        reportItem.classification === "physical" &&
-        reportItem.latitude !== undefined &&
-        reportItem.longitude !== undefined
-      ) {
+      const coordinates = reportItem?.classification === "physical"
+        ? reportMapCoordinates(reportItem.latitude, reportItem.longitude)
+        : null;
+      if (reportItem?.classification === "physical" && coordinates) {
         const batch = await fetchPublicNearbyReports(
-          reportItem.latitude,
-          reportItem.longitude,
+          coordinates[1],
+          coordinates[0],
           locale,
           0.5,
           10,

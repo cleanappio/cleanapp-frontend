@@ -1,17 +1,8 @@
 /**
- * Keyword-targeted marketing pages. Each entry renders through
- * <LandingPage /> and is also used to build the sitemap, footer link hub
- * and llms.txt, so adding a page here is the only step needed.
- *
- * Keyword strategy (primary → supporting):
- *  - incident-reporting   "incident reporting app/software", "report an incident"
- *  - hazard-reporting     "hazard reporting app", "report a hazard", "safety hazard reporting"
- *  - bug-reporting        "bug reporting app/tool", "report a bug", "website bug report"
- *  - litter-reporting     "litter reporting app", "report illegal dumping", "pollution reporting"
- *  - report-a-problem     "report a problem", "report an issue", "report graffiti/pothole"
- *  - solutions/*          commercial-intent pages per buyer (cities, brands, property, safety)
+ * Search intent pages: answer a concrete question, then offer a reporting action.
+ * Search terms document hypotheses, not measured demand or ranking promises.
+ * Keep visible claims consistent with the reporting receipt and product evidence.
  */
-
 export type LandingSection = {
   heading: string;
   paragraphs: string[];
@@ -19,649 +10,406 @@ export type LandingSection = {
 };
 
 export type LandingPageContent = {
-  slug: string; // site path without leading slash, e.g. "incident-reporting"
-  navLabel: string; // short label for footer / nav
-  title: string; // <title>, ≤ 60 chars ideally
-  description: string; // meta description, ≤ 160 chars
+  slug: string;
+  navLabel: string;
+  title: string;
+  description: string;
   h1: string;
   lead: string;
-  keywords: string[]; // for meta keywords + llms.txt; not a ranking factor, documentation only
+  keywords: string[];
   sections: LandingSection[];
   faqs: { question: string; answer: string }[];
-  related: string[]; // slugs
-  breadcrumb?: string; // parent label for /solutions/* pages
+  related: string[];
+  audience?: "reporter" | "organization";
+  reportKind?: "physical" | "digital";
+  guide?: boolean;
+  breadcrumb?: string;
 };
 
-const HOW_IT_WORKS: LandingSection = {
-  heading: "How CleanApp reporting works",
+const WHAT_HAPPENS_NEXT: LandingSection = {
+  heading: "What happens after you submit",
   paragraphs: [
-    "CleanApp removes every step that normally stops people from reporting. There are no forms, no account walls and no \"which department do I email?\" guesswork.",
-  ],
-  bullets: [
-    "Snap: open CleanApp and take one photo (or screenshot) of the problem. Location, time and device context are captured automatically.",
-    "Analyze: CleanApp AI classifies the report as a physical hazard or digital bug, scores severity, detects the brand or property involved and writes a plain-language summary.",
-    "Route: the report is matched to the brand, property owner, facility manager or city department responsible and delivered through their preferred channel.",
-    "Resolve: organizations track incidents on a live map and dashboard, spot hotspots and close the loop. Reporters earn rewards for verified reports.",
+    "CleanApp accepts your report and returns a receipt. AI structures the observation, identifies relevant brands or places and helps group related reports. CleanApp works to route that information to relevant recipients, who can investigate and respond. Keep your receipt to check the status available for your report.",
   ],
 };
 
 export const LANDING_PAGES: LandingPageContent[] = [
   {
     slug: "incident-reporting",
-    navLabel: "Incident Reporting",
-    title: "Incident Reporting App – Report Any Incident in One Tap | CleanApp",
-    description:
-      "CleanApp is a free incident reporting app. Photograph the incident, AI classifies it and routes it to the responsible organization. Live incident maps and dashboards for teams.",
-    h1: "Incident reporting app: one photo, zero paperwork",
-    lead:
-      "CleanApp is the fastest way to report an incident. Take a photo, and CleanApp's AI turns it into a structured incident report with location, severity, classification and the organization responsible — then routes it to them automatically.",
-    keywords: [
-      "incident reporting app",
-      "incident reporting software",
-      "incident report app",
-      "report an incident",
-      "mobile incident reporting",
-      "incident reporting system",
-      "incident management app",
-      "near miss reporting app",
-    ],
+    navLabel: "Report an incident",
+    title: "Report an Incident with a Photo | CleanApp",
+    description: "Saw damage, a near miss or another problem? Document what happened with a photo and context. Report an incident to CleanApp in your browser.",
+    h1: "Something happened. Make a useful record.",
+    lead: "A damaged stair, a spill in a shop or a product that failed: record what you noticed, even when you do not know which team to tell.",
+    keywords: ["report an incident", "incident reporting", "near miss report"],
     sections: [
       {
-        heading: "Why most incident reporting systems fail",
-        paragraphs: [
-          "Traditional incident reporting software assumes the reporter is an employee, logged in, at a desk, willing to fill a twelve-field form. In reality, the person who notices a spill in aisle four, a broken railing on a stairwell or a checkout page that crashes is usually a customer, a visitor or a passer-by. If reporting takes more than a few seconds, the incident goes unreported until it becomes a claim.",
-          "CleanApp was built for that reality. Anyone can report an incident with a single photo, and the AI does the data entry. Organizations receive clean, structured incident data from the people who actually see problems first.",
-        ],
-      },
-      HOW_IT_WORKS,
-      {
-        heading: "What you can report with CleanApp",
-        paragraphs: [
-          "CleanApp accepts any kind of incident, physical or digital. Common report types include:",
-        ],
+        heading: "What to include in an incident report",
+        paragraphs: ["Describe what you observed in plain language. Separate what you saw from what you think caused it."],
         bullets: [
-          "Safety incidents and near misses: slips, trips, falls, blocked exits, unsafe equipment, exposed wiring.",
-          "Property damage: broken fixtures, vandalism, water damage, structural issues.",
-          "Environmental incidents: litter, illegal dumping, spills, overflowing bins, pollution.",
-          "Security incidents: unsecured doors, broken locks, suspicious activity around a site.",
-          "Digital incidents: app crashes, broken checkout flows, error pages, misleading UI, accessibility failures.",
-          "Product and brand incidents: damaged packaging, recalled products on shelves, mislabeled goods.",
+          "A photo of the problem and enough surrounding context to identify it.",
+          "Where and when it happened, including a site, store or product name if known.",
+          "What happened and what was affected. Say if the condition is still present.",
+          "Relevant detail that is not visible in the photo, without including other people's private information.",
         ],
       },
+      WHAT_HAPPENS_NEXT,
       {
-        heading: "Incident reporting software for organizations",
-        paragraphs: [
-          "For brands, property managers, facilities teams and cities, CleanApp is an incident reporting system that never needs onboarding on the reporter side. Every report that mentions your brand, lands on your property or falls inside your service area appears on your dashboard in real time.",
-          "CleanApp Pro and Enterprise plans add live alerts, AI-powered insights, incident hotspot tracking, multi-site coverage, custom dashboards and risk-hotspot forecasting, so you can move from reacting to incidents to preventing them.",
-        ],
-      },
-      {
-        heading: "Free for reporters, rewarding by design",
-        paragraphs: [
-          "Reporting on CleanApp is free and always will be. Verified reports earn rewards, which is why CleanApp's community keeps reporting incidents long after a typical corporate app has been forgotten. More reports means earlier warning for the organizations that subscribe.",
-        ],
+        heading: "For teams responsible for a place or product",
+        paragraphs: ["Customers, visitors and contractors may notice issues outside an internal reporting process. CleanApp brings physical and digital observations into a common reporting platform, with maps and organization views. Explore the relevant solution and current plans to evaluate the fit for your team."],
       },
     ],
     faqs: [
-      {
-        question: "What is an incident reporting app?",
-        answer:
-          "An incident reporting app lets people document an incident — an injury, hazard, damage, near miss or digital failure — from a mobile device, usually with a photo, location and description, and sends it to the organization responsible for resolving it. CleanApp does this with a single photo and uses AI to fill in the rest.",
-      },
-      {
-        question: "Is CleanApp free to use for incident reporting?",
-        answer:
-          "Yes. Submitting incident reports on CleanApp is free on iOS, Android and the web. Organizations that want live alerts, dashboards and AI insights subscribe to CleanApp Pro or Enterprise.",
-      },
-      {
-        question: "Do reporters need an account?",
-        answer:
-          "No. CleanApp is designed so that anyone — customers, visitors, residents, contractors — can report an incident instantly without creating an account or filling out a form.",
-      },
-      {
-        question: "How does CleanApp know who to send an incident to?",
-        answer:
-          "CleanApp's AI analyzes the photo and location to detect the brand, property or city area involved, then matches the incident to the responsible organization and delivers it through their preferred channel, including email, dashboard and API.",
-      },
-      {
-        question: "Can CleanApp replace our existing incident management software?",
-        answer:
-          "For many teams, yes. For others, CleanApp works as the intake layer: it captures incidents from everyone, not just employees, and feeds structured data into your existing EHS, CMMS or ticketing systems.",
-      },
+      { question: "Can I report a near miss?", answer: "Yes. Describe the condition and what nearly happened. A useful near-miss report explains the risk without presenting an injury or outcome that did not occur." },
+      { question: "What happens after an incident report?", answer: "CleanApp records the observation, analyzes its text and images and works to route it to relevant recipients. Keep your receipt to check available status." },
+      { question: "Is CleanApp an emergency service?", answer: "No. If someone needs urgent help or there is immediate danger, contact the appropriate local emergency service." },
     ],
-    related: ["hazard-reporting", "bug-reporting", "solutions/workplace-safety", "solutions/cities"],
+    related: ["hazard-reporting", "bug-reporting", "solutions/workplace-safety"],
   },
   {
     slug: "hazard-reporting",
-    navLabel: "Hazard Reporting",
-    title: "Hazard Reporting App – Report Safety Hazards Instantly | CleanApp",
-    description:
-      "Report a hazard in seconds with CleanApp. Photo-based hazard reporting with AI severity scoring, GPS location and automatic routing to the responsible property owner, employer or city.",
-    h1: "Hazard reporting app: see something, snap it, it's handled",
-    lead:
-      "CleanApp is a hazard reporting app for everyone, not just employees. Photograph a safety hazard and CleanApp scores its severity, pinpoints the location and routes the report to whoever is responsible for fixing it.",
-    keywords: [
-      "hazard reporting app",
-      "hazard reporting system",
-      "report a hazard",
-      "safety hazard reporting",
-      "workplace hazard reporting app",
-      "hazard identification app",
-      "safety observation app",
-      "public safety hazard report",
-    ],
+    navLabel: "Report a hazard",
+    title: "Report a Safety Hazard | CleanApp",
+    description: "Report a blocked exit, damaged railing, spill or other safety concern. Add a photo, location and what makes the condition hazardous.",
+    h1: "Spotted a hazard? Show what needs attention.",
+    lead: "A photo can make a blocked exit, broken railing or slippery floor easier to understand. Add where it is and who or what is affected.",
+    keywords: ["report a safety hazard", "report a hazard", "blocked exit", "broken railing"],
+    reportKind: "physical",
     sections: [
       {
-        heading: "Hazard reporting that works outside the org chart",
-        paragraphs: [
-          "Most hazard reporting systems live inside a company's safety software. They are invisible to the customers, tenants, residents and contractors who encounter most hazards first. A hazard that nobody can easily report is a hazard that stays in place.",
-          "CleanApp opens hazard reporting to the public while giving organizations the structured data they need: hazard type, severity, exact location, timestamp and photo evidence, all generated by AI from a single image.",
-        ],
-      },
-      HOW_IT_WORKS,
-      {
-        heading: "Types of hazards people report on CleanApp",
-        paragraphs: ["CleanApp's AI recognizes and classifies a wide range of physical hazards, including:"],
-        bullets: [
-          "Trip and fall hazards: broken pavement, loose tiles, cables across walkways, missing handrails.",
-          "Fire and electrical hazards: blocked fire exits, exposed wiring, damaged outlets, overloaded sockets.",
-          "Structural hazards: cracked walls, loose signage, damaged balconies, unstable scaffolding.",
-          "Environmental hazards: chemical spills, illegal dumping, overflowing waste, standing water, sharps.",
-          "Road and public-space hazards: potholes, broken streetlights, damaged crossings, fallen trees.",
-          "Equipment hazards: unguarded machinery, damaged playground equipment, faulty elevators.",
-        ],
+        heading: "Describe the condition and the risk",
+        paragraphs: ["The most useful report helps another person find and assess the condition. Do not move closer or recreate an unsafe situation to get a photo."],
+        bullets: ["Show the hazard and its surroundings, where you can do so safely.", "Give a precise location: floor, entrance, aisle, nearby sign or map position.", "Explain the obstacle or potential harm, such as a loose handrail on the only staircase.", "State when you saw it and whether it appeared temporary or ongoing."],
       },
       {
-        heading: "Severity scoring and hazard hotspots",
-        paragraphs: [
-          "Every hazard report gets an AI-generated hazard probability and severity level, so safety teams can triage the critical few before the trivial many. Over time, CleanApp's live map reveals hazard hotspots — the stairwell, loading dock or intersection that keeps generating reports — so you can fix root causes instead of symptoms.",
-        ],
+        heading: "Unsure who manages the location?",
+        paragraphs: ["You can still document what you saw. Include any building, business or place name you know. A visible sign, nearby landmark or map position helps CleanApp associate the observation with the relevant place."],
       },
-      {
-        heading: "Built for safety teams, property owners and cities",
-        paragraphs: [
-          "Whether you run EHS for a manufacturer, manage a portfolio of buildings or operate a city's public works department, CleanApp gives you a public hazard reporting channel with zero reporter onboarding, plus dashboards, alerts and exports for your own workflow.",
-        ],
-      },
+      WHAT_HAPPENS_NEXT,
     ],
     faqs: [
-      {
-        question: "How do I report a safety hazard with CleanApp?",
-        answer:
-          "Open CleanApp, take a photo of the hazard and submit. CleanApp captures your location automatically, scores the hazard's severity and sends the report to the organization responsible. No form and no account required.",
-      },
-      {
-        question: "Can employees use CleanApp for workplace hazard reporting?",
-        answer:
-          "Yes. CleanApp works as a workplace hazard reporting app for employees and contractors, and also captures hazards reported by customers and visitors who would never install an internal safety app.",
-      },
-      {
-        question: "Is hazard reporting on CleanApp anonymous?",
-        answer:
-          "Reporters do not need an account to submit a hazard report. Organizations receive the photo, location, AI analysis and timestamp, not the reporter's identity, unless the reporter chooses to share contact details.",
-      },
-      {
-        question: "What happens after I report a hazard?",
-        answer:
-          "CleanApp's AI classifies the hazard, scores its severity and routes it to the responsible party. Subscribed organizations see it instantly on their live map and dashboard. You can track reports in your CleanApp history.",
-      },
+      { question: "Can a visitor report a hazard?", answer: "Yes. You do not have to be an employee to submit an observation to CleanApp. Include enough context for someone unfamiliar with the site to find it." },
+      { question: "Should I wait for CleanApp if someone is in immediate danger?", answer: "No. Contact the appropriate emergency service or on-site team for urgent assistance. CleanApp is a reporting platform, not an emergency dispatch service." },
     ],
-    related: ["incident-reporting", "report-a-problem", "solutions/workplace-safety", "solutions/property-managers"],
+    related: ["report-an-accessibility-barrier", "incident-reporting", "solutions/property-managers", "solutions/workplace-safety"],
   },
   {
     slug: "bug-reporting",
-    navLabel: "Bug Reporting",
-    title: "Bug Reporting App – Report Bugs on Any Website or App | CleanApp",
-    description:
-      "Report a bug on any app or website with one screenshot. CleanApp's AI identifies the product, classifies the bug and delivers it to the company responsible. Free for reporters.",
-    h1: "Bug reporting app for every website and app you use",
-    lead:
-      "Found a broken checkout, a crashing app or a misleading button? CleanApp is a bug reporting tool that works on any product, not just the ones with a feedback form. Screenshot it, and CleanApp identifies the brand, classifies the bug and sends it to the team that can fix it.",
-    keywords: [
-      "bug reporting app",
-      "bug reporting tool",
-      "report a bug",
-      "website bug report",
-      "app bug report",
-      "digital issue reporting",
-      "user feedback app",
-      "report broken website",
-    ],
+    navLabel: "Report a software bug",
+    title: "Report a Bug on a Website or App | CleanApp",
+    description: "Found a broken website, crashing app or failed checkout? Report the problem with a screenshot, affected product and steps that explain what went wrong.",
+    h1: "The website is broken. The feedback form is missing.",
+    lead: "Record the bug in CleanApp with a screenshot and a short explanation. You can report a product you use without being part of its development team.",
+    keywords: ["report a website bug", "report an app bug", "website not working", "bug reporting"],
+    reportKind: "digital",
     sections: [
       {
-        heading: "The bug reporting gap",
-        paragraphs: [
-          "Bug reporting tools built for QA teams — bug trackers, session replay, in-app SDKs — only capture issues inside the products that installed them. The vast majority of bugs users encounter every day are in products with no feedback channel at all, or a support form so painful nobody uses it.",
-          "CleanApp fills that gap. It is a universal bug reporting app: one screenshot of any website, mobile app, kiosk, ATM, smart TV interface or in-car screen becomes a structured bug report delivered to the company responsible.",
-        ],
+        heading: "A screenshot is the start of a useful bug report",
+        paragraphs: ["Show the failure, then explain the action that led to it. A screenshot by itself may not reveal the cause or let someone reproduce the problem."],
+        bullets: ["Name the website or app and include the affected URL when relevant.", "Explain what you tried to do, what you expected and what happened instead.", "Add the device, browser or app version if you know them.", "Remove passwords, account details and other private information from the screenshot."],
       },
       {
-        heading: "How bug reporting works on CleanApp",
-        paragraphs: ["Reporting a digital bug takes seconds and requires no technical knowledge."],
-        bullets: [
-          "Capture: take a screenshot or photo of the bug — an error message, a broken layout, a payment that failed, a dark pattern.",
-          "Analyze: CleanApp AI detects the brand or product, classifies the issue (crash, UI defect, broken flow, content error, accessibility failure, security concern), scores severity and writes a reproducible summary.",
-          "Route: the report is delivered to the responsible company through CleanApp's brand dashboard, email or API.",
-          "Reward: verified bug reports earn CleanApp rewards.",
-        ],
+        heading: "One place to document a problem you encountered",
+        paragraphs: ["CleanApp accepts digital observations as well as physical ones. AI helps structure the issue, identify the relevant brand and connect related reports, then CleanApp works to route the information to the right recipients."],
       },
-      {
-        heading: "Bug reports your product team will actually use",
-        paragraphs: [
-          "Brands that subscribe to CleanApp get a live feed of digital issue reports about their products from real users in the wild, with AI classification, severity, affected surface and trend analysis. It is the user feedback you cannot get from analytics, delivered without building or maintaining your own feedback tooling.",
-          "Reports are grouped by brand, so you see every bug reported about your website, apps and devices in one place, alongside physical reports about your stores, packaging and signage.",
-        ],
-      },
-      {
-        heading: "Beyond bugs: digital hazards",
-        paragraphs: [
-          "CleanApp also captures digital hazards: phishing pages impersonating a brand, misleading subscription flows, broken privacy controls and scam ads. Treating these like physical hazards — report, classify, route — gives brands and regulators early warning from the public.",
-        ],
-      },
+      WHAT_HAPPENS_NEXT,
     ],
     faqs: [
-      {
-        question: "How do I report a bug on a website that has no contact form?",
-        answer:
-          "Take a screenshot and submit it through CleanApp. CleanApp's AI identifies the company from the screenshot and routes the bug report to them, so you do not need to find a contact address yourself.",
-      },
-      {
-        question: "Is CleanApp a bug tracker like Jira?",
-        answer:
-          "No. CleanApp is a public-facing bug reporting app that captures issues from any user about any product. Subscribed brands can push CleanApp reports into their own bug tracker via dashboard exports and API.",
-      },
-      {
-        question: "Can I report bugs in mobile apps, not just websites?",
-        answer:
-          "Yes. Any screen you can photograph or screenshot — mobile apps, web apps, kiosks, ATMs, vehicle infotainment, smart TVs — can be reported through CleanApp.",
-      },
-      {
-        question: "Do I get rewarded for bug reports?",
-        answer:
-          "Yes. Verified reports on CleanApp, physical and digital, earn rewards. Rewards grow with report quality and the value of the issue to the organization that resolves it.",
-      },
+      { question: "How do I report a bug when there is no feedback form?", answer: "Name the website or app, show the problem and explain what led to it. Submit that observation to CleanApp, which uses AI to structure it and identify relevant recipients." },
+      { question: "Is CleanApp a bug tracker like Jira?", answer: "CleanApp is a public reporting platform for problems people encounter across products and places. It is not a replacement for a development team's internal issue workflow." },
+      { question: "Can AI reconstruct a bug from a screenshot?", answer: "AI can help describe what is visible, but a screenshot does not establish the full sequence or root cause. Include your own steps, expected result and actual result." },
     ],
-    related: ["incident-reporting", "solutions/brands", "report-a-problem", "hazard-reporting"],
+    related: ["report-a-website-problem", "report-an-accessibility-barrier", "solutions/brands"],
   },
   {
     slug: "litter-reporting",
-    navLabel: "Litter Reporting",
-    title: "Litter Reporting App – Report Litter, Dumping & Pollution | CleanApp",
-    description:
-      "CleanApp is the litter reporting app that started it all. Photograph litter, illegal dumping or pollution; AI maps it and routes it to the responsible brand, property owner or city.",
-    h1: "Litter reporting app: turn trash into data that gets it cleaned up",
-    lead:
-      "CleanApp began as a litter reporting app, and it is still the easiest way to report litter, illegal dumping, overflowing bins and pollution. Every photo becomes a geolocated, brand-attributed data point that cities, property owners and brands use to clean up faster.",
-    keywords: [
-      "litter reporting app",
-      "trash reporting app",
-      "report illegal dumping",
-      "report litter",
-      "pollution reporting app",
-      "fly tipping reporting app",
-      "overflowing bin report",
-      "environmental reporting app",
-    ],
+    navLabel: "Report litter or waste",
+    title: "Report Litter, Waste or an Overflowing Bin | CleanApp",
+    description: "Document litter, overflowing bins and dumped waste with a photo and location. Help make a local environmental problem visible through CleanApp.",
+    h1: "Litter has a location. Give it a record.",
+    lead: "Show the waste, where it is and the scale of the problem. A clear observation is more useful than a complaint with no location.",
+    keywords: ["report litter", "overflowing bin", "report dumped rubbish", "litter reporting"],
+    reportKind: "physical",
     sections: [
       {
-        heading: "Why 'trash is cash'",
-        paragraphs: [
-          "Litter is the most visible symptom of a broken feedback loop: the people who see it have no easy way to tell the people who can remove it. CleanApp closes that loop. Reporters earn rewards for documenting litter, and organizations pay for the resulting intelligence — where waste accumulates, which brands' packaging dominates it and which bins overflow every weekend.",
-        ],
-      },
-      HOW_IT_WORKS,
-      {
-        heading: "What CleanApp detects in litter reports",
-        paragraphs: ["CleanApp's AI analyzes each photo and extracts:"],
-        bullets: [
-          "Litter probability and hazard probability, so a sharps find is prioritized over a candy wrapper.",
-          "Brand detection on packaging, enabling brand-level litter accountability and extended producer responsibility (EPR) reporting.",
-          "Waste type: packaging, construction debris, electronics, organic waste, hazardous materials.",
-          "Exact GPS location and time, feeding live litter maps and hotspot analysis.",
-        ],
+        heading: "What makes a useful litter report",
+        paragraphs: ["Capture the litter and its setting. Include an address, landmark or map position and distinguish an overflowing bin from scattered waste or a larger dumping site."],
+        bullets: ["Describe the approximate amount and type of waste you can see.", "Mention blocked paths, nearby drains or other visible impacts.", "Include branding only when it is actually visible; packaging does not establish who discarded it.", "Do not handle unknown waste to improve a photo."],
       },
       {
-        heading: "For cities, waste contractors and brands",
-        paragraphs: [
-          "Cities use CleanApp as a public litter and illegal dumping reporting channel that costs nothing to deploy and needs no app of their own. Waste contractors use hotspot data to re-route collection. Brands use brand-level litter data to measure packaging impact, support EPR compliance and target clean-up sponsorships where their packaging actually ends up.",
-        ],
+        heading: "For a larger dumping site",
+        paragraphs: ["Illegal dumping needs different context from a single dropped wrapper. The dedicated guide explains what to record about access, extent and repeated dumping."],
       },
+      WHAT_HAPPENS_NEXT,
     ],
     faqs: [
-      {
-        question: "How do I report illegal dumping?",
-        answer:
-          "Open CleanApp, photograph the dumped waste and submit. CleanApp records the location, classifies the waste type and routes the report to the responsible municipality or property owner.",
-      },
-      {
-        question: "Does CleanApp work in my city?",
-        answer:
-          "CleanApp accepts litter reports anywhere in the world. Reports are mapped publicly and routed to any organization that has claimed the area or brand. Cities and brands can subscribe to receive reports and dashboards for their territory.",
-      },
-      {
-        question: "Can brands see litter reports that feature their packaging?",
-        answer:
-          "Yes. CleanApp's AI detects brands on packaging. Brands that subscribe see every litter report featuring their products, with location, volume trends and hotspot maps.",
-      },
+      { question: "Can I report an overflowing public bin?", answer: "Yes. Show the bin and its surroundings, add its location and describe the visible overflow. Include a bin number or nearby landmark if there is one." },
+      { question: "Does branding on litter prove who dropped it?", answer: "No. A visible logo can identify packaging, but it does not establish who discarded it or who is legally responsible for the location." },
     ],
-    related: ["report-a-problem", "hazard-reporting", "solutions/cities", "solutions/brands"],
+    related: ["report-illegal-dumping", "report-a-pothole", "solutions/cities", "solutions/brands"],
   },
   {
     slug: "report-a-problem",
-    navLabel: "Report a Problem",
-    title: "Report a Problem – Potholes, Graffiti, Litter, Hazards & More | CleanApp",
-    description:
-      "Need to report a problem in your neighborhood, building or favorite app? CleanApp routes any photo report to the right city department, property owner or brand automatically.",
-    h1: "Report a problem — anywhere, about anything, in one tap",
-    lead:
-      "Pothole, graffiti, broken streetlight, abandoned vehicle, overflowing bin, broken elevator, crashing app: CleanApp is the one place to report a problem without figuring out who to call. Take a photo; CleanApp works out who is responsible and sends it to them.",
-    keywords: [
-      "report a problem",
-      "report an issue",
-      "report graffiti",
-      "report a pothole",
-      "report broken streetlight",
-      "report abandoned vehicle",
-      "311 app alternative",
-      "citizen reporting app",
-      "community issue reporting",
-    ],
+    navLabel: "Report a problem",
+    title: "Report a Problem — Physical or Digital | CleanApp",
+    description: "Something broken, unsafe or not working? Report a physical or digital problem to CleanApp with a photo or screenshot, even when you do not know whom to tell.",
+    h1: "Something's wrong. You don't know who to tell.",
+    lead: "A pothole, a broken entrance, a crashing website. Tell us what happened. Add a photo or screenshot if it helps.",
+    keywords: ["report a problem", "who do I report this to", "report an issue"],
     sections: [
       {
-        heading: "One app instead of a dozen hotlines",
-        paragraphs: [
-          "Every city, utility, landlord and company has its own way to report a problem — a 311 line, a web form, a support email, a Facebook page. Nobody can remember all of them, so most problems go unreported. CleanApp replaces the directory with a single action: photograph the problem.",
-          "CleanApp's AI determines whether the problem is physical or digital, what kind of issue it is, how severe it is and who is responsible — then delivers the report through that organization's preferred channel.",
-        ],
+        heading: "Start with the problem, not a department",
+        paragraphs: ["You do not need to choose a corporate team or understand a city's org chart to document an observation. Identify the place or product, show the problem and explain the effect it had."],
+        bullets: ["Physical: streets, buildings, litter, damaged products and access barriers.", "Digital: broken websites, app errors, failed flows and inaccessible interfaces."],
       },
-      {
-        heading: "Problems people report every day",
-        paragraphs: ["CleanApp handles the full range of everyday issues, including:"],
-        bullets: [
-          "Streets and public space: potholes, broken streetlights, damaged signs, graffiti, fly-tipping, blocked drains, fallen trees.",
-          "Buildings and property: broken elevators, leaks, broken doors and locks, damaged stairs, pest sightings, unsafe balconies.",
-          "Parks and nature: litter, vandalism, damaged play equipment, polluted waterways.",
-          "Businesses and brands: damaged products on shelves, broken self-checkouts, misleading pricing, unsafe store conditions.",
-          "Digital: broken websites, crashing apps, failed payments, scam pages, dark patterns.",
-        ],
-      },
-      HOW_IT_WORKS,
-      {
-        heading: "A public map of what needs fixing",
-        paragraphs: [
-          "Every CleanApp report appears on a live public map. Residents can see what has been reported nearby, organizations can see what is being said about their property or brand, and journalists and researchers can study patterns in how places and products fail. Transparency is what turns a complaint into accountability.",
-        ],
-      },
+      WHAT_HAPPENS_NEXT,
     ],
     faqs: [
-      {
-        question: "Who receives my report?",
-        answer:
-          "CleanApp routes reports to the organization responsible for the location or brand in the photo — a city department, property manager, facilities team or brand. Organizations that subscribe receive reports in real time; others are contacted through public channels.",
-      },
-      {
-        question: "Can I report a problem anonymously?",
-        answer:
-          "Yes. You do not need an account to submit a report. Organizations receive the photo, location and AI analysis, not your identity.",
-      },
-      {
-        question: "Is CleanApp an official 311 service?",
-        answer:
-          "CleanApp is not operated by any government, but cities can subscribe to receive CleanApp reports for their territory, and many reports are forwarded to municipal channels. It works alongside 311 where one exists and replaces it where one does not.",
-      },
+      { question: "What if I do not know who is responsible?", answer: "Include the location or the website or app name and describe what you observed. CleanApp's analysis helps identify relevant places, brands and recipients." },
+      { question: "Can I report in a browser?", answer: "Yes. Describe the problem, add a photo or screenshot if it helps and send it from this page. The iOS and Android apps are also available." },
+      { question: "How do I check what happened to my report?", answer: "Keep the receipt returned after submission. It links to the status available for your report and, when available, its public report page." },
     ],
-    related: ["litter-reporting", "hazard-reporting", "bug-reporting", "solutions/cities"],
+    related: ["report-a-pothole", "report-illegal-dumping", "report-a-website-problem", "report-an-accessibility-barrier"],
   },
   {
     slug: "solutions/cities",
-    breadcrumb: "Solutions",
-    navLabel: "For Cities",
-    title: "Citizen Reporting App for Cities & Municipalities | CleanApp",
-    description:
-      "Give residents a one-tap way to report potholes, litter, graffiti and hazards. CleanApp delivers AI-classified, geolocated reports to the right department with live maps and hotspot analytics.",
-    h1: "Citizen issue reporting for cities, without building an app",
-    lead:
-      "CleanApp gives every resident and visitor a one-tap channel to report problems in your city — and gives your departments structured, AI-classified, geolocated reports with severity scores, hotspot maps and trend dashboards. No procurement of a custom 311 app, no adoption campaign.",
-    keywords: [
-      "citizen reporting app",
-      "311 app",
-      "smart city issue reporting",
-      "municipal reporting software",
-      "report a problem to the city",
-      "public works reporting app",
-      "city maintenance request app",
-    ],
+    navLabel: "Cities & communities",
+    audience: "organization",
+    title: "Community Problem Reporting for Cities | CleanApp",
+    description: "Explore a public reporting channel for local problems: potholes, litter, damaged infrastructure and access barriers. See CleanApp's maps and organization plans.",
+    h1: "See the problems residents already notice.",
+    lead: "A broken streetlight, a blocked path, waste beside a park. CleanApp gives local observations a common place to start, beyond a city's existing forms and phone lines.",
+    keywords: ["community issue reporting", "citizen reporting", "municipal issue reporting"],
     sections: [
       {
-        heading: "The adoption problem with city apps",
-        paragraphs: [
-          "Cities spend heavily on custom reporting apps that few residents install and fewer keep. CleanApp flips the model: residents already use CleanApp to report problems anywhere, and your city simply subscribes to receive the reports inside its boundaries.",
-        ],
+        heading: "A resident starts with a place and a problem",
+        paragraphs: ["People do not always know which department manages a road, bin or public entrance. Photo and location context can make their observations easier for a city team to assess. CleanApp's public map provides another way to explore reported conditions."],
       },
       {
-        heading: "What your departments receive",
-        paragraphs: ["Every report inside your service area arrives with:"],
-        bullets: [
-          "Photo evidence, exact GPS location and timestamp.",
-          "AI classification (litter, hazard, infrastructure, vandalism, environmental) and severity score.",
-          "A plain-language summary ready for a work order.",
-          "Live map and dashboard views, hotspot detection and trend analysis by district and category.",
-          "Exports and API access for integration with your CMMS, 311 or GIS systems.",
-        ],
+        heading: "Evaluate the operational fit",
+        paragraphs: ["Start with an area your team looks after. Explore reports, map context and AI-assisted analysis, then decide how incoming observations will reach the people who review local issues. Current organization plans describe the available scope."],
+        bullets: ["Define the geography and report types your team is responsible for.", "Agree how observations will be reviewed and checked against existing requests.", "Discuss the handoff to your existing request-management process.", "Measure useful reports and follow-through, alongside report counts."],
       },
       {
-        heading: "Draw your area, start receiving reports",
-        paragraphs: [
-          "CleanApp lets municipalities define custom service areas directly on the map. Reports inside those areas route to the right department automatically. Multi-area and multi-department setups are supported on Enterprise plans, with dedicated account management and custom dashboards.",
-        ],
-      },
-      {
-        heading: "Litter, dumping and public safety intelligence",
-        paragraphs: [
-          "Because CleanApp detects brands on litter and scores hazard severity, cities get more than a complaint queue. They get data to support extended producer responsibility programs, prioritize public safety spending and demonstrate results to residents with a public map.",
-        ],
+        heading: "Set clear expectations for residents",
+        paragraphs: ["CleanApp is an independent reporting platform. It can help residents document an observation alongside the city's designated process for official requests."],
       },
     ],
     faqs: [
-      {
-        question: "Does CleanApp integrate with our 311 or work-order system?",
-        answer:
-          "Yes. CleanApp provides exports and API access so reports can flow into existing 311, CMMS, GIS and ticketing systems. Enterprise plans include integration support.",
-      },
-      {
-        question: "What does CleanApp cost for a city?",
-        answer:
-          "Residents report for free. Cities subscribe to CleanApp Pro or Enterprise based on area coverage and features. See the pricing page or contact us for municipal pricing.",
-      },
-      {
-        question: "Can residents see what has been reported?",
-        answer:
-          "Yes. CleanApp's public map shows reports in your city, which increases trust and reduces duplicate reports. Sensitive details can be withheld from public view.",
-      },
+      { question: "Is CleanApp the city's official 311 service?", answer: "No. CleanApp is independent. Residents should use the city's designated process when an official request or urgent response is needed." },
+      { question: "Can a city connect CleanApp to an existing work-order system?", answer: "Discuss your current tools and required handoff with the CleanApp team. The integration and operational process should be agreed for your deployment." },
     ],
-    related: ["report-a-problem", "litter-reporting", "hazard-reporting", "solutions/property-managers"],
+    related: ["report-a-pothole", "report-illegal-dumping", "report-an-accessibility-barrier", "litter-reporting"],
   },
   {
     slug: "solutions/brands",
-    breadcrumb: "Solutions",
-    navLabel: "For Brands",
-    title: "Brand Issue Reporting & Feedback Intelligence | CleanApp for Brands",
-    description:
-      "See every physical and digital issue reported about your brand — damaged products, unsafe stores, app bugs, littered packaging — in one AI-powered dashboard. CleanApp for brands.",
-    h1: "Every issue about your brand, reported by the public, in one dashboard",
-    lead:
-      "Customers see your brand's failures before you do: a broken self-checkout, a recalled product still on shelves, a checkout bug, your packaging on a beach. CleanApp captures those reports from anyone, anywhere, attributes them to your brand with AI and delivers them as risk intelligence.",
-    keywords: [
-      "brand feedback app",
-      "product issue reporting",
-      "customer complaint app",
-      "brand risk monitoring",
-      "product defect reporting app",
-      "brand reputation intelligence",
-      "retail incident reporting",
-    ],
+    navLabel: "Brands & product teams",
+    audience: "organization",
+    title: "Physical & Digital Issue Reports for Brands | CleanApp",
+    description: "Understand the product, store and digital problems people report about your brand. Explore CleanApp's public examples and current organization plans.",
+    h1: "Your brand exists on shelves, streets and screens.",
+    lead: "A broken checkout and damaged packaging are different problems with a common need: a clear observation that helps the right team understand what happened.",
+    keywords: ["product issue reporting", "brand issue monitoring", "customer problem reports"],
     sections: [
       {
-        heading: "Feedback you cannot get from surveys",
-        paragraphs: [
-          "Surveys and support tickets only reach customers who are already engaged. CleanApp reaches everyone who photographs a problem involving your brand, whether they are your customer or not. Reports are classified as physical (stores, products, packaging, signage, vehicles) or digital (websites, apps, kiosks), scored for severity and summarized for action.",
-        ],
+        heading: "Observations beyond your feedback form",
+        paragraphs: ["CleanApp accepts reports about physical products and locations as well as websites and apps. AI-assisted classification and brand identification organize those observations; related reports can reveal recurring problems across the customer experience."],
       },
       {
-        heading: "What CleanApp for Brands includes",
-        paragraphs: [],
-        bullets: [
-          "Brand dashboard with live feed of every report attributed to your brand.",
-          "AI insights: recurring issues, severity trends, affected locations and products.",
-          "Incident hotspot tracking across stores, venues and regions.",
-          "Digital issue reports for your websites and apps, grouped by surface.",
-          "Litter and packaging attribution data for sustainability and EPR reporting.",
-          "Alerts, exports and API access for your support, QA and risk teams.",
-        ],
+        heading: "Assess the evidence before acting",
+        paragraphs: ["See the photo or screenshot alongside its product, location, date and description. Related observations can help a team distinguish an isolated failure from a pattern worth investigating."],
       },
       {
-        heading: "From complaint to competitive advantage",
-        paragraphs: [
-          "Brands that resolve public reports quickly turn critics into advocates and avoid the claims, recalls and PR incidents that start as unreported problems. CleanApp's public map also means your responsiveness is visible, which is a reputation asset in itself.",
-        ],
+        heading: "Evaluate CleanApp for your team",
+        paragraphs: ["Explore a public brand example, review current plans and discuss coverage with CleanApp. Establish who reviews incoming observations and how a useful report reaches the people who can investigate."],
+        bullets: ["Compare physical and digital observations relevant to your brand.", "Check the quality of the supporting evidence and attribution.", "Choose the relevant brands and places, and agree how your team reviews reports.", "Track investigated issues and useful follow-up."],
       },
     ],
     faqs: [
-      {
-        question: "How does CleanApp know a report is about my brand?",
-        answer:
-          "CleanApp's AI detects logos, product packaging, store signage, app interfaces and website layouts in report photos and screenshots, and attributes the report to the brand with a confidence score.",
-      },
-      {
-        question: "Can we respond to reporters?",
-        answer:
-          "Reports are anonymous by default. Brands can publish responses and resolution status, and reporters who opt in to contact can be reached through CleanApp.",
-      },
-      {
-        question: "Is there a free way to see reports about our brand?",
-        answer:
-          "Yes. CleanApp's public brand pages show a sample of recent reports. Subscribing to CleanApp Pro unlocks the full feed, alerts, AI insights and dashboards.",
-      },
+      { question: "Does a brand match prove the brand caused the problem?", answer: "No. A logo, storefront or interface can help identify the subject of an observation. It does not establish cause, ownership or legal responsibility." },
+      { question: "Does CleanApp capture every issue about our brand?", answer: "No. CleanApp can only work with the observations and data it receives. Public reporting is a source of evidence, not a complete census of customer problems." },
     ],
-    related: ["bug-reporting", "incident-reporting", "litter-reporting", "solutions/property-managers"],
+    related: ["bug-reporting", "report-a-website-problem", "litter-reporting", "incident-reporting"],
   },
   {
     slug: "solutions/property-managers",
-    breadcrumb: "Solutions",
-    navLabel: "For Property Managers",
-    title: "Property & Facility Issue Reporting App | CleanApp for Property Managers",
-    description:
-      "Let tenants, visitors and staff report maintenance issues and hazards with one photo. CleanApp routes reports to your facilities team with AI severity scoring and live site maps.",
-    h1: "Maintenance and hazard reporting for buildings, campuses and venues",
-    lead:
-      "Tenants, guests, contractors and staff notice leaks, broken lifts, blocked exits and trip hazards long before scheduled inspections do. CleanApp lets any of them report with one photo, and gives your facilities team AI-classified, severity-scored, location-pinned reports on a live map of every property you manage.",
-    keywords: [
-      "property maintenance reporting app",
-      "facility issue reporting app",
-      "tenant issue reporting app",
-      "building hazard reporting",
-      "facilities management incident app",
-      "maintenance request app",
-    ],
+    navLabel: "Property & facilities teams",
+    audience: "organization",
+    title: "Property & Building Problem Reporting | CleanApp",
+    description: "Help tenants, visitors and staff document building problems. Explore photo reporting for maintenance issues, damaged entrances and accessibility barriers.",
+    h1: "The person who sees the problem may be a visitor.",
+    lead: "A broken door, a leak or a blocked entrance can be spotted by anyone on site. Give the observation enough context for a property team to investigate.",
+    keywords: ["building issue reporting", "report building maintenance", "property problem reporting"],
     sections: [
       {
-        heading: "Reporting without tenant onboarding",
-        paragraphs: [
-          "Tenant portals and maintenance request apps fail because the people who notice problems are not always tenants, and tenants rarely remember their portal login. CleanApp needs no account: a QR code in the lobby or a sign in the car park is enough for anyone to report a problem in seconds.",
-        ],
+        heading: "Make a building issue findable",
+        paragraphs: ["An address alone may not identify a problem in a large building. Encourage people to add the entrance, floor, unit or nearby feature, along with a photo of the condition and a short description of its impact."],
       },
       {
-        heading: "Built for multi-site portfolios",
-        paragraphs: ["CleanApp for property managers includes:"],
-        bullets: [
-          "Custom property areas drawn on the map, each routed to the right team.",
-          "AI classification and severity scoring to prioritize safety hazards over cosmetic issues.",
-          "Live site maps and hotspot analysis across the portfolio.",
-          "Reports from anyone on site: tenants, visitors, contractors, security and cleaning staff.",
-          "Exports and API access for CMMS and work-order systems.",
-        ],
+        heading: "Connect public observations to a responsible workflow",
+        paragraphs: ["CleanApp offers reporting and organization views; the operational response still needs an owner. Decide which team reviews reports, checks the location and creates a maintenance request when appropriate. Confirm any required connection to your existing tools before rollout."],
       },
       {
-        heading: "Reduce liability with a documented hazard record",
-        paragraphs: [
-          "Every CleanApp report is time-stamped, geolocated and photo-documented. That record shows when a hazard was first reported and how quickly it was resolved — evidence that matters for insurance, compliance audits and litigation defense.",
-        ],
+        heading: "Be explicit about sensitive information",
+        paragraphs: ["A maintenance photo can inadvertently include a resident, door code or private interior. Ask reporters to include only what is needed to show the issue. Discuss visibility and data requirements with CleanApp before using the service for sensitive operational reports."],
       },
     ],
     faqs: [
-      {
-        question: "Can we restrict reports to our own properties?",
-        answer:
-          "Yes. Draw your property boundaries in CleanApp and you will receive only reports inside them. Multi-property portfolios are supported on Enterprise plans.",
-      },
-      {
-        question: "Does CleanApp integrate with our CMMS?",
-        answer:
-          "CleanApp provides exports and API access so reports can create work orders in your existing CMMS or ticketing system.",
-      },
+      { question: "Can a tenant report a building problem?", answer: "Yes. A tenant, visitor or member of staff can submit an observation to CleanApp. For an official repair request or urgent building problem, also use the property's designated contact process." },
+      { question: "Does a CleanApp report create a maintenance work order?", answer: "Agree the review process with your property team and discuss any required handoff to existing maintenance tools with CleanApp." },
     ],
-    related: ["hazard-reporting", "incident-reporting", "report-a-problem", "solutions/workplace-safety"],
+    related: ["hazard-reporting", "report-an-accessibility-barrier", "incident-reporting"],
   },
   {
     slug: "solutions/workplace-safety",
-    breadcrumb: "Solutions",
-    navLabel: "Workplace Safety",
-    title: "Workplace Safety & EHS Incident Reporting App | CleanApp",
-    description:
-      "A workplace safety reporting app employees and contractors actually use: one photo for hazards, near misses and incidents, AI severity scoring, live site maps and EHS-ready exports.",
-    h1: "Workplace safety reporting your whole site will actually use",
-    lead:
-      "Near misses go unreported because reporting is slow. CleanApp makes hazard, near-miss and incident reporting a single photo for employees, contractors and visitors, and gives EHS teams AI-classified, severity-scored data on a live site map.",
-    keywords: [
-      "workplace safety app",
-      "EHS incident reporting app",
-      "near miss reporting app",
-      "safety observation app",
-      "employee hazard reporting",
-      "occupational safety reporting software",
-      "contractor incident reporting",
-    ],
+    navLabel: "Safety teams",
+    audience: "organization",
+    title: "Hazard & Near-Miss Observations for Safety Teams | CleanApp",
+    description: "Explore a photo-based channel for hazards and near misses noticed by staff, contractors and visitors. Evaluate CleanApp alongside your safety workflow.",
+    h1: "A useful safety observation starts with what someone saw.",
+    lead: "People on site can notice a damaged guard, blocked route or near miss before a safety team does. Capture the condition and the context needed to review it.",
+    keywords: ["hazard observation reporting", "near miss reporting", "workplace safety reporting"],
     sections: [
       {
-        heading: "Why near-miss reporting rates stay low",
-        paragraphs: [
-          "Safety teams know that near misses predict injuries, yet most EHS software makes reporting a near miss harder than ignoring it: log in, choose a form, fill a dozen fields. CleanApp reduces reporting to a photo. The AI generates the classification, severity and summary, so the reporter's job takes seconds and the safety team still gets structured data.",
-        ],
+        heading: "Document the observation clearly",
+        paragraphs: ["Describe the location, the visible condition, who or what could be affected and when it was observed. Distinguish an ongoing hazard from an event that has already happened. AI-assisted analysis can help organize a report; a qualified person still needs to assess it."],
       },
       {
-        heading: "Covers everyone on site, not just payroll",
-        paragraphs: [
-          "Contractors, delivery drivers, temporary workers and visitors are often excluded from internal safety apps. With CleanApp, anyone on site can report without an account, which closes the biggest blind spot in most safety programs.",
-        ],
+        heading: "Agree the response before introducing a new channel",
+        paragraphs: ["Identify who reviews observations and how urgent conditions reach the on-site team. Confirm visibility, data handling and any required connection to an existing safety process with CleanApp before deployment."],
       },
       {
-        heading: "EHS features",
-        paragraphs: [],
-        bullets: [
-          "Hazard, near-miss and incident reporting with photo evidence, GPS and timestamp.",
-          "AI hazard probability and severity scoring for triage.",
-          "Live site map, hotspot detection and trend dashboards.",
-          "Multi-site coverage and custom dashboards on Enterprise plans.",
-          "Exports and API access for your existing EHS management system.",
-        ],
+        heading: "Keep formal safety obligations in the established process",
+        paragraphs: ["Keep urgent escalation, formal incident records and required notifications in your established safety process. Use CleanApp to add observations from people who notice conditions on site."],
       },
     ],
     faqs: [
-      {
-        question: "Does CleanApp replace our EHS management system?",
-        answer:
-          "CleanApp is the intake layer. It captures hazards, near misses and incidents from everyone on site and feeds structured reports into your EHS system through exports and API, or serves as a lightweight system on its own for smaller operations.",
-      },
-      {
-        question: "Can reports be kept internal?",
-        answer:
-          "Enterprise plans support private reporting areas where reports are visible only to your organization.",
-      },
+      { question: "Can AI determine whether a workplace is safe?", answer: "No. A report and its AI analysis describe limited evidence. They do not replace an on-site assessment, a competent safety professional or the organization's established process." },
+      { question: "Does CleanApp replace our safety management system?", answer: "CleanApp adds a reporting channel for observations on site. Discuss how those observations should reach your safety team and any existing tools." },
     ],
-    related: ["incident-reporting", "hazard-reporting", "solutions/property-managers", "solutions/cities"],
+    related: ["hazard-reporting", "incident-reporting", "solutions/property-managers"],
+  },
+  {
+    slug: "report-a-pothole",
+    navLabel: "Report a pothole",
+    guide: true,
+    reportKind: "physical",
+    title: "How to Report a Pothole | CleanApp",
+    description: "Report a pothole with a photo, road location, direction and nearby landmark. Learn which details help make a damaged-road observation useful.",
+    h1: "Report a pothole someone can actually find.",
+    lead: "“There's a pothole on the main road” leaves a lot to guess. Show the damage and add the road, direction and nearest identifiable point.",
+    keywords: ["report a pothole", "who do I report a pothole to", "report road damage"],
+    sections: [
+      {
+        heading: "Locate the damage precisely",
+        paragraphs: ["Record the street or road name, nearest junction or address and the side or lane affected. If you use a map position, check that it points to the damage rather than where you happened to be standing."],
+        bullets: ["Add the direction of travel and a fixed landmark.", "Describe the visible extent without stepping into traffic to measure it.", "Say whether the surface is broken, sunken or filled with water.", "Record when you saw it; avoid presenting an old photo as a current observation."],
+      },
+      {
+        heading: "Who receives a pothole report?",
+        paragraphs: ["The relevant road operator depends on the location and road. If you need an official repair request, use the responsible local authority or road operator's reporting channel. CleanApp provides another place to document the observation when you do not know where to start."],
+      },
+      WHAT_HAPPENS_NEXT,
+    ],
+    faqs: [
+      { question: "Can I report a pothole without knowing which authority owns the road?", answer: "Yes. Give the road location, nearest landmark and what you observed. CleanApp uses that context to help identify the relevant place and recipients." },
+      { question: "What if there is already a pothole report nearby?", answer: "Check the public map for context. If you add a new observation, include the date and explain any changed condition so it can be distinguished from an older report." },
+    ],
+    related: ["report-a-problem", "hazard-reporting", "solutions/cities"],
+  },
+  {
+    slug: "report-illegal-dumping",
+    navLabel: "Report illegal dumping",
+    guide: true,
+    reportKind: "physical",
+    title: "How to Report Illegal Dumping or Fly-Tipping | CleanApp",
+    description: "Document dumped rubbish or fly-tipping with its location, visible waste and extent. Report an observation without guessing who left it there.",
+    h1: "Found dumped waste? Document the place and the extent.",
+    lead: "A pile of bags, discarded furniture or repeated dumping needs more context than a single piece of litter. Show what is there and how someone can locate it.",
+    keywords: ["report illegal dumping", "report fly tipping", "dumped rubbish"],
+    sections: [
+      {
+        heading: "Show the site without disturbing the waste",
+        paragraphs: ["A wider photo helps show the extent and surroundings. A second view can clarify the type of material, where it is visible from a safe position."],
+        bullets: ["Add a road, track, entrance or nearby landmark and check the map location.", "Describe the visible waste and approximate extent; do not open bags to identify it.", "Mention blocked access, a nearby waterway or other visible impact.", "State when you saw it and whether you personally observed repeated dumping."],
+      },
+      {
+        heading: "Report observations, not assumptions about a person",
+        paragraphs: ["Do not identify someone as responsible merely because a name or brand appears on discarded material. Keep the report focused on what you actually saw. Use the relevant authority's designated process if you need to submit evidence of an alleged offense."],
+      },
+      WHAT_HAPPENS_NEXT,
+    ],
+    faqs: [
+      { question: "Is fly-tipping the same reporting topic as illegal dumping?", answer: "Fly-tipping is a term commonly used for dumped waste. In your report, focus on the actual location, material and extent rather than needing to choose a legal classification." },
+      { question: "Should I remove or inspect the dumped material first?", answer: "You do not need to handle waste to report it. Document what is visible and include any uncertainty about the contents." },
+    ],
+    related: ["litter-reporting", "report-a-problem", "solutions/cities"],
+  },
+  {
+    slug: "report-a-website-problem",
+    navLabel: "Report a broken website",
+    guide: true,
+    reportKind: "digital",
+    title: "How to Report a Broken Website or App | CleanApp",
+    description: "A page will not load, checkout fails or an app crashes? Capture the affected URL, screenshot and steps to explain the problem through CleanApp.",
+    h1: "Show where the website stopped working.",
+    lead: "A failed checkout, a button that does nothing or an app that closes unexpectedly: explain the task you were trying to complete and where it failed.",
+    keywords: ["report broken website", "report website problem", "checkout not working", "app keeps crashing"],
+    sections: [
+      {
+        heading: "Include enough context to investigate",
+        paragraphs: ["Capture the error or broken state and add the page URL or app name. Explain the sequence in your own words; a screenshot cannot establish the steps by itself."],
+        bullets: ["What you tried: for example, selecting delivery and pressing Continue.", "What you expected and what happened instead, including the exact error text if useful.", "When it happened and whether it happened more than once.", "Device, browser and app version when known; never include login credentials."],
+      },
+      {
+        heading: "If the problem involves an order or payment",
+        paragraphs: ["A CleanApp report documents the issue. For an account-specific response, order change or payment question, also contact the service's official support. Do not include card details, passwords or private account information in a public problem report."],
+      },
+      WHAT_HAPPENS_NEXT,
+    ],
+    faqs: [
+      { question: "Can I report a broken website that is not mine?", answer: "Yes. Include the affected service, what you tried and what happened. CleanApp helps structure observations from people who use a product, even when they are outside its development team." },
+      { question: "Can CleanApp recover a failed purchase or refund?", answer: "A problem report is not an account support request or a refund process. Contact the merchant or service through its official support channel for help with a specific transaction." },
+    ],
+    related: ["bug-reporting", "report-an-accessibility-barrier", "solutions/brands"],
+  },
+  {
+    slug: "report-an-accessibility-barrier",
+    navLabel: "Report an access barrier",
+    guide: true,
+    title: "How to Report an Accessibility Barrier | CleanApp",
+    description: "Document a blocked entrance, unusable control or other physical or digital access barrier. Explain the task, the obstacle and its impact.",
+    h1: "What should be accessible isn't. Make the barrier clear.",
+    lead: "A blocked ramp and a form that cannot be used with a keyboard are different barriers. A useful report explains what someone was trying to do and what prevented it.",
+    keywords: ["report accessibility issue", "report blocked wheelchair access", "website accessibility problem"],
+    sections: [
+      {
+        heading: "For a physical access barrier",
+        paragraphs: ["Show the route, entrance, facility or control and identify its exact location. Explain the practical obstacle: for example, a bin blocking the step-free entrance or a lift unavailable on the only accessible route."],
+        bullets: ["Name the entrance, floor or part of the route affected.", "Describe the task or journey that could not be completed.", "Say whether another usable route was visible, without assuming it meets everyone's needs."],
+      },
+      {
+        heading: "For a website or app barrier",
+        paragraphs: ["Include the affected page or screen, the task and the point where progress stops. Mention a keyboard, screen reader, zoom setting or other relevant setup if you choose to share it. A screenshot may need a written explanation when the problem is not visible."],
+      },
+      {
+        heading: "Describe the impact without disclosing a diagnosis",
+        paragraphs: ["Focus on the barrier and its effect on the task or route. You do not need to share a diagnosis to make that experience clear. For an official accessibility request, also use the organization's designated contact process."],
+      },
+      WHAT_HAPPENS_NEXT,
+    ],
+    faqs: [
+      { question: "Can I report an accessibility problem that is not visible in a screenshot?", answer: "Yes. Explain the task, the interaction and what prevented completion. For a digital report, include the page and relevant setup; the written context can be essential when an image does not show the barrier." },
+      { question: "Do I need to share a disability or diagnosis?", answer: "No. Focus on the barrier and its effect on the task or route. Include only the personal information you choose to share and that is necessary to understand the observation." },
+    ],
+    related: ["hazard-reporting", "bug-reporting", "solutions/property-managers", "solutions/brands"],
   },
 ];
 
 export function getLandingPage(slug: string): LandingPageContent | undefined {
   return LANDING_PAGES.find((page) => page.slug === slug);
+}
+
+export function reportingHref(page: LandingPageContent): string {
+  return `/report-a-problem${page.reportKind ? `?kind=${page.reportKind}` : ""}`;
 }

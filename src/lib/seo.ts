@@ -26,9 +26,9 @@ export const SOCIAL_LINKS = [
 ];
 
 export const DEFAULT_TITLE =
-  "CleanApp – Incident, Hazard & Bug Reporting App | Report Anything in One Tap";
+  "CleanApp | Report Physical & Digital Problems";
 export const DEFAULT_DESCRIPTION =
-  "CleanApp is the one-tap incident reporting app for physical hazards and digital bugs. Snap a photo, AI classifies and routes it to the brand, property owner or city responsible. Free for reporters; live risk maps and dashboards for organizations.";
+  "Something broken, unsafe or not working? Tell CleanApp. Describe a physical or digital problem, add an image if it helps and explore public reports.";
 
 /** Absolute URL for a site path ("/about" -> "https://www.cleanapp.io/about"). */
 export function absoluteUrl(path: string): string {
@@ -56,7 +56,7 @@ export function organizationJsonLd() {
     },
     image: `${SITE_URL}/cleanapp-logo-1200.png`,
     description:
-      "CleanApp is an AI-powered incident, hazard and bug reporting platform. People report problems with one photo; organizations get live maps, risk insights and routing to the party responsible.",
+      "CleanApp is a reporting platform for physical and digital problems. People submit observations with text and images; organizations can explore reports, maps and AI-assisted analysis.",
     sameAs: [...SOCIAL_LINKS.map((link) => link.href), ANDROID_APP_URL, IOS_APP_URL],
     contactPoint: {
       "@type": "ContactPoint",
@@ -83,16 +83,16 @@ export function softwareApplicationJsonLd() {
     "@type": ["SoftwareApplication", "MobileApplication"],
     "@id": APP_ID,
     name: "CleanApp",
-    alternateName: "CleanApp – Incident, Hazard & Bug Reporting",
+    alternateName: "CleanApp – Physical & Digital Problem Reporting",
     url: SITE_URL,
     image: `${SITE_URL}/cleanapp-logo-1200.png`,
     applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Incident reporting",
+    applicationSubCategory: "Problem reporting",
     operatingSystem: "iOS, Android, Web",
     installUrl: [IOS_APP_URL, ANDROID_APP_URL],
     downloadUrl: `${SITE_URL}/download`,
     description:
-      "One-tap incident, hazard, litter and bug reporting app. Photo in, AI-classified report out, routed to whoever is responsible.",
+      "Document physical and digital problems with text and optional images. Explore public reports, maps and AI-assisted analysis.",
     offers: {
       "@type": "Offer",
       price: "0",
@@ -101,13 +101,11 @@ export function softwareApplicationJsonLd() {
       url: `${SITE_URL}/pricing`,
     },
     featureList: [
-      "One-tap photo incident reporting",
-      "Hazard reporting with GPS location",
-      "Bug and digital issue reporting",
-      "AI classification and severity scoring",
-      "Automatic routing to responsible brand, property owner or city",
-      "Live incident map and dashboards",
-      "Rewards for reporters",
+      "Photo and screenshot problem reporting",
+      "Physical and digital report categories",
+      "Location and product context",
+      "AI-assisted report analysis",
+      "Public report map and organization views",
     ],
     publisher: { "@id": ORGANIZATION_ID },
   };

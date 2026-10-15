@@ -47,6 +47,7 @@ import CaseWorkspacePanel from "@/components/cases/CaseWorkspacePanel";
 import { CaseMatchCandidate, casesApiClient } from "@/lib/cases-api-client";
 import { navigateToCase } from "@/lib/case-navigation";
 import { getCanonicalReportPath } from "@/lib/report-links";
+import { reportMapCoordinates } from "@/lib/report-location";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
 import {
@@ -765,12 +766,8 @@ export default function GlobeView() {
   // Fly to a lon/lat with retries
   const flyToReport = useCallback(
     ({ lon, lat, zoom }: { lon?: number; lat?: number; zoom?: number }) => {
-      if (!lon || !lat) {
-        console.log("Lon or lat is not defined");
-        return;
-      }
-
-      const lonLat: [number, number] = [lon, lat];
+      const lonLat = reportMapCoordinates(lat, lon);
+      if (!lonLat) return;
 
       retryMapOperation(
         () => {
@@ -1945,8 +1942,9 @@ export default function GlobeView() {
           const isPhysical = classification === "physical";
 
           if (isPhysical) {
-            latitude = report.latitude;
-            longitude = report.longitude;
+            const coordinates = reportMapCoordinates(report.latitude, report.longitude);
+            if (!coordinates) return;
+            [longitude, latitude] = coordinates;
             color = getColorByValue(report.severity_level);
           }
 
@@ -2138,11 +2136,8 @@ export default function GlobeView() {
       const { lat, lon } = stringToLatLonColor(brandName || "other");
       const pointLatitude = isPhysicalUpdate ? latitude : lat;
       const pointLongitude = isPhysicalUpdate ? longitude : lon;
-      if (pointLatitude === undefined || pointLongitude === undefined) {
-        return;
-      }
-
-      const latLon: [number, number] = [pointLongitude, pointLatitude];
+      const latLon = reportMapCoordinates(pointLatitude, pointLongitude);
+      if (!latLon) return;
       if (!isEmbeddedMode && isPhysicalUpdate && selectedTab === "physical") {
         map.flyTo({
           center: latLon,
@@ -3740,7 +3735,7 @@ export default function GlobeView() {
       )}
 
       {isMobile && (
-        <div className="absolute bottom-12 right-4">
+        <div className="absolute bottom-28 right-4">
           <button
             className="p-3 bg-gray-800 rounded-md border border-gray-700 flex items-center gap-2"
             onClick={() => {
@@ -3936,7 +3931,7 @@ export default function GlobeView() {
 
       <div
         className={`absolute ${
-          isMobile ? `bottom-12 right-20` : "bottom-10 right-4"
+          isMobile ? `bottom-28 right-20` : "bottom-28 right-4"
         }`}
       >
         <ReportCounter selectedTab={selectedTab} />

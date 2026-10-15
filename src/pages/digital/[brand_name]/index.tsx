@@ -14,8 +14,12 @@ import { EmbeddedReportBackBar } from "@/components/report/PublicReportDetailPag
 import EvidenceFilters from "@/components/evidence/EvidenceFilters";
 import BrandOverview from "@/components/brand/BrandOverview";
 import type { ReportKindFilter, ReportSignalSort } from "@/lib/report-evidence";
+import Seo from "@/components/Seo";
+import { getBrandSeoProps, type BrandSeoProps } from "@/lib/brand-seo";
 
-export default function DigitalBrandPage() {
+export const getServerSideProps = getBrandSeoProps;
+
+export default function DigitalBrandPage({ seo }: BrandSeoProps) {
   const router = useRouter();
   const brandName = typeof router.query.brand_name === "string" ? router.query.brand_name : "";
   const locale = getCurrentLocale();
@@ -42,6 +46,7 @@ export default function DigitalBrandPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <Seo title={seo.title} description={seo.description} path={seo.path} noindex={!seo.found} />
       {isEmbedded ? <EmbeddedReportBackBar onBack={() => { void router.push({ pathname: "/", query: { tab: "digital" } }); }} /> : <PageHeader />}
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
         <h1 className="mb-1 text-3xl font-semibold tracking-tight text-gray-950 sm:text-4xl">{brandDisplayName || brandName}</h1>

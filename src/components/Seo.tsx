@@ -53,12 +53,6 @@ export default function Seo({
       />
       <link key="canonical" rel="canonical" href={canonical} />
       <link key="alt-en" rel="alternate" hrefLang="en" href={canonical} />
-      <link
-        key="alt-me"
-        rel="alternate"
-        hrefLang="cnr"
-        href={absoluteUrl(`/me${routePath === "/" ? "" : routePath}`)}
-      />
       <link key="alt-default" rel="alternate" hrefLang="x-default" href={canonical} />
 
       <meta key="og:type" property="og:type" content="website" />
@@ -82,7 +76,7 @@ export default function Seo({
         <script
           key={`jsonld-${index}`}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(doc) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(doc).replace(/</g, "\\u003c") }}
         />
       ))}
     </Head>

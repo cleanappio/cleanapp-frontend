@@ -10,10 +10,10 @@ const DESCRIPTION =
   "Official CleanApp logos, product images, company boilerplate and facts for journalists, partners and anyone writing about CleanApp.";
 
 const BOILERPLATE_SHORT =
-  "CleanApp is the one-tap incident, hazard and bug reporting app. A single photo becomes a structured report, classified by AI and routed to the brand or place responsible.";
+  "CleanApp helps people report physical and digital problems with a message, photo or screenshot, using AI to structure observations, connect related reports and help route useful information.";
 
 const BOILERPLATE_LONG =
-  "CleanApp is an AI-powered reporting platform for the physical and digital world. Anyone can report a safety hazard, a broken product, a damaged place or a software bug with one photo; CleanApp's AI classifies the report, scores its severity, identifies the brand or location involved and routes it to the organization that can act. Reporting is free and needs no account. Brands, property managers, venues and cities subscribe to CleanApp Pro and Enterprise for real-time alerts, AI insights, incident hotspot tracking and dashboards. CleanApp is available on iOS, Android and the web at cleanapp.io.";
+  "CleanApp is a reporting platform for physical places and digital products. People can describe a hazard, damaged place, product issue or software bug in their browser, adding a photo or screenshot if it helps. AI structures the observation, connects related reports and helps identify relevant brands, places and recipients. Reporting is free. Organization plans offer tools for teams working with reports about their brands and places. CleanApp is available on iOS, Android and the web at cleanapp.io; current organization plans are listed at cleanapp.io/pricing.";
 
 const ASSETS = [
   { label: "Primary logo (PNG, 1200×1200, white background)", href: "/cleanapp-logo-1200.png" },
@@ -21,15 +21,14 @@ const ASSETS = [
   { label: "Sticker logo (PNG)", href: "/cleanapp-sticker-logo.png" },
   { label: "App icon (PNG, 512×512)", href: "/icon-512.png" },
   { label: "Product image: one button for every problem (JPG)", href: "/hero-one-button.jpg" },
-  { label: "Product image: you spot, you earn, we fix (JPG)", href: "/hero-you-spot.jpg" },
   { label: "Social card (PNG, 1200×630)", href: "/cleanapp-social-card.png" },
 ];
 
 const FACTS = [
-  ["Product", "CleanApp – incident, hazard and bug reporting app"],
+  ["Product", "CleanApp – physical and digital problem reporting"],
   ["Platforms", "iOS, Android, web"],
-  ["Price", "Free to report. CleanApp Pro $99/month, Enterprise $499/month"],
-  ["Who it is for", "Reporters: anyone. Customers: brands, property managers, venues, cities, safety teams"],
+  ["Price", "Reporting is free. See the current organization plans."],
+  ["Who it is for", "People reporting problems; teams looking after brands, products, properties and public places"],
   ["Website", "https://www.cleanapp.io"],
   ["Press contact", "info@cleanapp.io"],
 ];
@@ -56,8 +55,8 @@ export default function PressPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-green-700">Press &amp; brand</p>
           <h1 className="mt-3 text-4xl font-bold text-gray-900">Writing about CleanApp</h1>
           <p className="mt-5 text-lg text-gray-600 leading-relaxed">
-            Everything you need to describe CleanApp accurately: approved boilerplate, logos,
-            product images and the facts. Use the assets as they are; do not alter the logo.
+            Short and long descriptions, logos, product images and company links.
+            Use the assets as they are; do not alter the logo.
           </p>
 
           <section className="mt-12 grid md:grid-cols-2 gap-6">
@@ -83,7 +82,7 @@ export default function PressPage() {
               {FACTS.map(([term, detail]) => (
                 <div key={term} className="py-3 grid sm:grid-cols-3 gap-2">
                   <dt className="text-sm font-semibold text-gray-900">{term}</dt>
-                  <dd className="sm:col-span-2 text-gray-700">{detail}</dd>
+                  <dd className="sm:col-span-2 text-gray-700">{detail}{term === "Price" && <> <Link href="/pricing" className="text-green-700 hover:underline">Plans &amp; pricing →</Link></>}</dd>
                 </div>
               ))}
             </dl>
@@ -118,7 +117,8 @@ export default function PressPage() {
             </ul>
             <p className="mt-6 text-gray-700">
               Questions, interviews, or data for a story: <a href="mailto:info@cleanapp.io" className="text-green-700 hover:underline">info@cleanapp.io</a>.
-              Learn more <Link href="/about" className="text-green-700 hover:underline">about CleanApp</Link>.
+              Learn more <Link href="/about" className="text-green-700 hover:underline">about CleanApp</Link>{" "}
+              or visit <Link href="/company" className="text-green-700 hover:underline">Company &amp; investors</Link>.
             </p>
           </section>
         </article>
