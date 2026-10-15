@@ -4,16 +4,16 @@ import { makeReportSeoProps, type ReportSeoProps } from "@/lib/report-seo";
 
 export const getServerSideProps = makeReportSeoProps("physical");
 
-export default function PhysicalReportDetailPage({ seo }: ReportSeoProps) {
+export default function PhysicalReportDetailPage({ seo, initialReport }: ReportSeoProps) {
   return (
     <>
       <Seo
         title={seo.title}
         description={seo.description}
         image={seo.image ?? undefined}
-        noindex={!seo.found}
+        noindex={!seo.found && !seo.unavailable}
       />
-      <PublicReportDetailPage expectedClassification="physical" />
+      <PublicReportDetailPage expectedClassification="physical" initialReport={initialReport} unavailable={seo.unavailable} />
     </>
   );
 }

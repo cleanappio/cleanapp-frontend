@@ -37,3 +37,8 @@ export function compactReportSummary(summary?: string, title?: string): string |
   }
   return value;
 }
+
+/** Only fresh public report paths supplied by the public preview can be linked. */
+export function publicReportHref(value: unknown): string | null {
+  return typeof value === "string" && /^\/(physical|digital)\/report\/rpt_[A-Za-z0-9_-]{22}$/.test(value) ? value : null;
+}

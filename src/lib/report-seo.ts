@@ -1,86 +1,48 @@
 import type { GetServerSideProps } from "next";
 import type { ReportClassification } from "@/lib/report-links";
-import { fetchPublicSeoJson, isPublicSeoObject, publicSeoText } from "@/lib/public-seo-fetch";
+import { fetchPublicSeoJson, isPublicSeoObject, publicSeoUnavailable } from "@/lib/public-seo-fetch";
+import { explicitlyNonpublic, projectPublicReport, safePublicReportId, type PublicReportView } from "@/lib/public-report-projection";
 
-/** Server-rendered metadata for a public report page, so crawlers and link previews see real content. */
 export type ReportSeoProps = {
-  seo: {
-    title: string;
-    description: string;
-    image: string | null;
-    found: boolean;
-  };
+  seo: { title: string; description: string; image: string | null; found: boolean; unavailable?: boolean };
+  initialReport: PublicReportView | null;
 };
-
 const LIVE_API = process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io";
 
-const CLASS_LABEL: Record<ReportClassification, string> = {
-  physical: "Hazard report",
-  digital: "Bug report",
-};
-
-/**
- * Fetch the report on the server and derive title/description/og:image.
- * Failures degrade to generic metadata; the client component still loads the report.
- */
-export function makeReportSeoProps(
-  classification: ReportClassification,
-): GetServerSideProps<ReportSeoProps> {
+/** Render only current public evidence, with the same allowlisted data for hydration. */
+export function makeReportSeoProps(classification: ReportClassification): GetServerSideProps<ReportSeoProps> {
   return async ({ params, res, locale }) => {
     res.setHeader("Cache-Control", "no-store");
     const publicId = typeof params?.public_id === "string" ? params.public_id : "";
-    const fallback: ReportSeoProps = {
-      seo: {
-        title: `${CLASS_LABEL[classification]} | CleanApp`,
-        description: "Explore public problem reports and their source context on CleanApp.",
-        image: null,
-        found: false,
-      },
+    if (!safePublicReportId(publicId)) return { notFound: true };
+    const unavailable: ReportSeoProps = {
+      seo: { title: "Report temporarily unavailable | CleanApp", description: "This public report is temporarily unavailable. Please try again shortly.", image: null, found: false, unavailable: true },
+      initialReport: null,
     };
-    if (!publicId || !/^[A-Za-z0-9_-]{1,128}$/.test(publicId)) return { notFound: true };
-
     try {
-      const { status, data } = await fetchPublicSeoJson(
-        `${LIVE_API}/api/v3/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`,
-      );
-      if (status === 404) return { notFound: true };
-      if (status !== 200 || !isPublicSeoObject(data) || !isPublicSeoObject(data.report) || data.report.public_id !== publicId) {
-        return { props: fallback };
-      }
-      const report = data.report;
-      if (data.is_public === false || report.is_public === false ||
-        (typeof data.visibility === "string" && data.visibility !== "public") ||
-        (typeof report.visibility === "string" && report.visibility !== "public")) return { props: fallback };
-      const analyses = Array.isArray(data.analysis) ? data.analysis.filter(isPublicSeoObject) : [];
-      const analysis =
-        analyses.find((item) => item.language === (locale || "en")) || analyses.find((item) => item.language === "en") || analyses[0];
-      // The legacy detail projection does not hydrate is_valid; its default
-      // false is not a reliable moderation signal. Visibility is checked above.
-      if (!analysis || (analysis.classification !== "physical" && analysis.classification !== "digital") || !publicSeoText(analysis.title)) return { props: fallback };
+      const { status, data } = await fetchPublicSeoJson(`${LIVE_API}/api/v3/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`);
+      if ([400, 401, 403, 404, 410].includes(status)) return { notFound: true };
+      if (status !== 200) { publicSeoUnavailable(res); return { props: unavailable }; }
+      if (explicitlyNonpublic(data) || (isPublicSeoObject(data) && explicitlyNonpublic(data.report))) return { notFound: true };
+      const report = projectPublicReport(data, publicId, locale || "en");
+      if (!report) { publicSeoUnavailable(res); return { props: unavailable }; }
+      const analysis = report.analysis[0];
       if (analysis.classification !== classification) return {
         redirect: { destination: `/${analysis.classification}/report/${encodeURIComponent(publicId)}`, permanent: false },
       };
-      const brand = publicSeoText(analysis.brand_display_name) || publicSeoText(analysis.brand_name);
-      const title = `${publicSeoText(analysis.title)}${brand ? ` – ${brand}` : ""} | CleanApp`;
-      const summary = publicSeoText(analysis.summary) || publicSeoText(analysis.description);
-      const description = summary
-        ? summary.length > 155 ? `${summary.slice(0, 152).trimEnd()}…` : summary
-        : fallback.seo.description;
-      const hasImage = typeof report.image === "string" && report.image.length > 0;
-      return {
-        props: {
-          seo: {
-            title,
-            description,
-            image: hasImage
-              ? `${LIVE_API}/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(publicId)}`
-              : null,
-            found: true,
-          },
-        },
-      };
+      const brand = analysis.brand_display_name || analysis.brand_name;
+      const title = `${analysis.title}${brand ? ` – ${brand}` : ""} | CleanApp`;
+      const summary = analysis.summary || "Public problem report with source context and AI-assisted analysis.";
+      const description = summary.length > 155 ? `${summary.slice(0, 152).trimEnd()}…` : summary;
+      // Only the sanitized evidence projection can authorize an original image.
+      // The legacy reader can retain bytes even when privacy rules suppress media.
+      const hasImage = report.evidence?.has_original_media === true && isPublicSeoObject(data) && isPublicSeoObject(data.report) && typeof data.report.image === "string" && data.report.image.length > 0;
+      const image = hasImage ? `${LIVE_API}/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(publicId)}` : null;
+      if (image) report.report.image = image;
+      return { props: { seo: { title, description, image, found: true }, initialReport: report } };
     } catch {
-      return { props: fallback };
+      publicSeoUnavailable(res);
+      return { props: unavailable };
     }
   };
 }
