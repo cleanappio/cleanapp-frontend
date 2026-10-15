@@ -55,6 +55,21 @@ jobs:
         if: env.TARGET_ENV == 'prod'
         run: python3 scripts/deploy-version.py seed --source-sha "$DEPLOY_SOURCE_SHA"
 
+      - name: Verify build upload excludes CI credentials
+        run: |
+          upload_manifest=$(mktemp "$RUNNER_TEMP/cleanapp-upload-manifest.XXXXXX")
+          trap 'rm -f "$upload_manifest"' EXIT
+          gcloud meta list-files-for-upload > "$upload_manifest"
+          python3 - "$upload_manifest" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          files = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+          if any(re.search(r"(^|/)gha-creds-.*\.json$", name) for name in files):
+              sys.exit("Build source upload must exclude CI credentials.")
+          PY
+
       - name: Build image and deploy to VM
         id: build
         run: |
