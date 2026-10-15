@@ -1,96 +1,80 @@
-import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import ReportComposer from "@/components/reporting/ReportComposer";
 import { LANDING_PAGES } from "@/content/landing-pages";
 
-const REPORTING_PAGES = LANDING_PAGES.filter((page) => !page.slug.startsWith("solutions/"));
-function firstSentence(text: string): string {
-  return text.split(/(?<=[.!?])\s/)[0];
-}
+const GUIDES = LANDING_PAGES.filter((page) => page.guide);
+const SOLUTIONS = LANDING_PAGES.filter((page) => page.audience === "organization");
 
-const SOLUTION_PAGES = LANDING_PAGES.filter((page) => page.slug.startsWith("solutions/"));
-
-/**
- * Indexable content below the full-screen globe on the homepage. The map is
- * visual-only to crawlers, so this section carries the H1, the value
- * proposition and links into the keyword page cluster.
- */
+/** Indexable context beneath the existing live-map experience. */
 export default function HomeSeoSection() {
-  // The native apps embed the map page; keep the embed map-only.
-  if (process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true") {
-    return null;
-  }
+  if (process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true") return null;
 
   return (
     <div className="bg-white">
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
-              The one-tap incident, hazard and bug reporting app
+            <p className="text-sm font-semibold uppercase tracking-widest text-green-800">CleanApp · Physical & digital problems</p>
+            <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
+              Something&apos;s wrong.<br />Who do you tell?
             </h1>
             <p className="mt-5 text-lg text-gray-700 leading-relaxed">
-              CleanApp turns a single photo into a structured report. Snap a safety hazard, a
-              broken product or a software bug; AI classifies it, scores its severity, identifies
-              the brand or place responsible and routes it to them. The map above shows reports
-              arriving from around the world in real time.
+              A pothole. A blocked entrance. A website that won&apos;t let you finish.
+              Tell us what happened. Add a photo or screenshot if it helps.
             </p>
-            <p className="mt-4 text-lg text-gray-700 leading-relaxed">
-              Reporting is free and needs no account. Brands, property managers and operators
-              subscribe for live alerts, AI insights and incident hotspot tracking.
-            </p>
+            <Link href="/about" className="mt-5 inline-block text-sm font-medium text-green-800 underline-offset-4 hover:underline">How CleanApp works →</Link>
           </div>
-          <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-lg">
-            <Image
-              src="/hero-one-button.jpg"
-              alt="One button for every problem: CleanApp capturing a pothole and a failed checkout"
-              fill
-              sizes="(min-width: 1024px) 560px, 100vw"
-              className="object-cover"
-            />
+          <div className="lg:pt-5">
+            <ReportComposer />
           </div>
         </div>
 
-        <div className="mt-10 grid sm:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">What you can report</h2>
-            <ul className="mt-3 space-y-2">
-              {REPORTING_PAGES.map((page) => (
-                <li key={page.slug}>
-                  <Link href={`/${page.slug}`} className="text-green-700 font-medium hover:underline">
-                    {page.navLabel}
-                  </Link>
-                  <span className="text-gray-600"> — {firstSentence(page.description)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Who CleanApp is for</h2>
-            <ul className="mt-3 space-y-2">
-              {SOLUTION_PAGES.map((page) => (
-                <li key={page.slug}>
-                  <Link href={`/${page.slug}`} className="text-green-700 font-medium hover:underline">
-                    {page.navLabel}
-                  </Link>
-                  <span className="text-gray-600"> — {firstSentence(page.description)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="mt-16 grid gap-10 border-t border-gray-200 pt-10 md:grid-cols-2 md:gap-16">
+          <section>
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">In a place you use</h2>
+            <p className="mt-3 text-gray-700 leading-relaxed">Litter, damaged infrastructure, a hazard or a barrier to access. Describe the condition and where it is.</p>
+            <Link href="/report-a-problem?kind=physical" className="mt-5 inline-block font-semibold text-green-800 hover:underline underline-offset-4">Report a physical problem →</Link>
+          </section>
+          <section>
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">On a screen you use</h2>
+            <p className="mt-3 text-gray-700 leading-relaxed">A broken website, app error or digital access barrier. Explain what you tried and what went wrong.</p>
+            <Link href="/report-a-problem?kind=digital" className="mt-5 inline-block font-semibold text-green-800 hover:underline underline-offset-4">Report a digital problem →</Link>
+          </section>
         </div>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/download" className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-md font-medium">
-            Get the free app
-          </Link>
-          <Link href="/about" className="border border-gray-300 hover:border-gray-500 text-gray-800 px-5 py-3 rounded-md font-medium">
-            About CleanApp
-          </Link>
-          <Link href="/pricing" className="border border-gray-300 hover:border-gray-500 text-gray-800 px-5 py-3 rounded-md font-medium">
-            Pricing
-          </Link>
-        </div>
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Make your report useful</h2>
+          <p className="mt-3 text-gray-700">A little context helps. Start with a short guide.</p>
+          <ul className="mt-5 grid sm:grid-cols-2 gap-x-10 divide-y sm:divide-y-0 divide-gray-200">
+            {GUIDES.map((page) => (
+              <li key={page.slug} className="border-b border-gray-200">
+                <Link href={`/${page.slug}`} className="flex min-h-14 items-center justify-between gap-4 py-4 font-medium text-green-800 hover:underline underline-offset-4">
+                  {page.navLabel}<span aria-hidden="true">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-sm text-gray-600 leading-relaxed">
+            Also explore <Link href="/incident-reporting" className="text-green-800 underline underline-offset-4">incident reporting</Link>,{" "}
+            <Link href="/hazard-reporting" className="text-green-800 underline underline-offset-4">hazards</Link>,{" "}
+            <Link href="/litter-reporting" className="text-green-800 underline underline-offset-4">litter and waste</Link> or{" "}
+            <Link href="/bug-reporting" className="text-green-800 underline underline-offset-4">software bugs</Link>.
+          </p>
+        </section>
+
+        <section className="mt-16 border-t border-gray-200 pt-10">
+          <p className="text-sm font-semibold uppercase tracking-widest text-green-800">For organizations</p>
+          <h2 className="mt-3 text-2xl font-bold tracking-tight text-gray-900">Understand the problems people notice.</h2>
+          <p className="mt-3 max-w-2xl text-gray-700 leading-relaxed">Explore physical and digital reports, AI-assisted analysis and maps for the places and products your team looks after.</p>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {SOLUTIONS.map((page) => <li key={page.slug}><Link href={`/${page.slug}`} className="font-medium text-green-800 hover:underline underline-offset-4">{page.navLabel} →</Link></li>)}
+          </ul>
+          <div className="mt-7 flex flex-wrap gap-6 text-sm font-semibold">
+            <Link href="/pricing" className="text-green-800 hover:underline underline-offset-4">Plans & pricing →</Link>
+            <Link href="/company" className="text-gray-700 hover:underline underline-offset-4">Company, partners & investors →</Link>
+          </div>
+        </section>
       </section>
       <Footer />
     </div>

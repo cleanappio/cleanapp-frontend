@@ -7,6 +7,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import Layout from "@/components/Layout";
 import Seo from "@/components/Seo";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import ReportWidget from "@/components/reporting/ReportWidget";
 
 export default function App({ Component, pageProps }: AppProps) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -26,6 +27,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <Layout>
         <Component {...pageProps} />
       </Layout>
+      <ReportWidget />
       <Toaster position="top-right" />
     </ErrorBoundary>
   );

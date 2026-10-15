@@ -3,32 +3,25 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import Seo from "@/components/Seo";
-import { LANDING_PAGES, type LandingPageContent } from "@/content/landing-pages";
-import {
-  ANDROID_APP_URL,
-  IOS_APP_URL,
-  breadcrumbJsonLd,
-  faqJsonLd,
-  jsonLdGraph,
-  webPageJsonLd,
-} from "@/lib/seo";
+import { LANDING_PAGES, reportingHref, type LandingPageContent } from "@/content/landing-pages";
+import { breadcrumbJsonLd, faqJsonLd, jsonLdGraph, webPageJsonLd } from "@/lib/seo";
 
 type Props = { page: LandingPageContent };
 
-/**
- * Renders one keyword landing page from src/content/landing-pages.ts.
- * Pure static markup so Next prerenders full HTML for crawlers.
- */
+/** Useful, prerendered answers with a direct path to the reporting flow. */
 export default function LandingPage({ page }: Props) {
   const path = `/${page.slug}`;
+  const isOrganization = page.audience === "organization";
+  const reportHref = reportingHref(page);
   const breadcrumb = [
     { name: "Home", path: "/" },
-    ...(page.breadcrumb ? [{ name: page.breadcrumb, path: "/report-a-problem" }] : []),
     { name: page.navLabel, path },
   ];
   const relatedPages = page.related
     .map((slug) => LANDING_PAGES.find((candidate) => candidate.slug === slug))
     .filter((candidate): candidate is LandingPageContent => Boolean(candidate));
+  const primaryHref = isOrganization ? "/pricing" : reportHref;
+  const primaryLabel = isOrganization ? "Explore organization plans" : "Report this problem";
 
   return (
     <>
@@ -44,108 +37,86 @@ export default function LandingPage({ page }: Props) {
       />
       <div className="min-h-screen bg-white">
         <PageHeader />
-
-        <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <nav aria-label="Breadcrumb" className="text-sm text-gray-500 mb-6">
-            {breadcrumb.map((crumb, index) => (
-              <span key={crumb.path}>
-                {index > 0 && <span className="mx-2">/</span>}
-                {index < breadcrumb.length - 1 ? (
-                  <Link href={crumb.path} className="hover:text-green-700">
-                    {crumb.name}
-                  </Link>
-                ) : (
-                  <span className="text-gray-700">{crumb.name}</span>
-                )}
-              </span>
-            ))}
-          </nav>
-
-          <header>
-            <h1 className="text-4xl font-bold text-gray-900 leading-tight">{page.h1}</h1>
-            <p className="mt-5 text-lg text-gray-700 leading-relaxed">{page.lead}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/download"
-                className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-md font-medium"
-              >
-                Get the free app
+        <header className="border-b border-green-100 bg-green-50/50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+            <nav aria-label="Breadcrumb" className="mb-8 text-sm text-gray-600">
+              <Link href="/" className="hover:text-green-800 hover:underline">Home</Link>
+              <span aria-hidden="true" className="mx-2">/</span>
+              <span aria-current="page">{page.navLabel}</span>
+            </nav>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-green-800">
+              CleanApp {isOrganization ? "for organizations" : "reporting"}
+            </p>
+            <h1 className="max-w-3xl text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
+              {page.h1}
+            </h1>
+            <p className="mt-5 max-w-2xl text-lg text-gray-700 leading-relaxed">{page.lead}</p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <Link href={primaryHref} className="inline-flex min-h-12 items-center justify-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
+                {primaryLabel}
               </Link>
-              <Link
-                href="/pricing"
-                className="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-md font-medium"
-              >
-                Plans for organizations
-              </Link>
-              <Link
-                href="/"
-                className="border border-gray-300 hover:border-gray-500 text-gray-800 px-5 py-3 rounded-md font-medium"
-              >
-                See the live map
+              <Link href={isOrganization ? "/redbull" : "/"} className="inline-flex min-h-12 items-center font-medium text-green-800 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
+                {isOrganization ? "See a public brand example" : "Explore public reports"} <span aria-hidden="true" className="ml-2">→</span>
               </Link>
             </div>
-          </header>
+            {!isOrganization && <p className="mt-3 text-sm text-gray-600">Report in your browser. No app download required.</p>}
+          </div>
+        </header>
 
-          {page.sections.map((section) => (
-            <section key={section.heading} className="mt-12">
-              <h2 className="text-2xl font-bold text-gray-900">{section.heading}</h2>
+        <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          {page.sections.map((section, index) => (
+            <section key={section.heading} className={index > 0 ? "mt-12" : undefined}>
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900">{section.heading}</h2>
               {section.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="mt-4 text-gray-700 leading-relaxed">
-                  {paragraph}
-                </p>
+                <p key={paragraph} className="mt-4 text-gray-700 leading-relaxed">{paragraph}</p>
               ))}
               {section.bullets && (
-                <ul className="mt-4 space-y-2 list-disc pl-6 text-gray-700">
-                  {section.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
+                <ul className="mt-4 space-y-3 list-disc pl-6 text-gray-700 marker:text-green-700">
+                  {section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
                 </ul>
               )}
             </section>
           ))}
 
           <section className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900">Frequently asked questions</h2>
-            <dl className="mt-4 divide-y divide-gray-200">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">Common questions</h2>
+            <div className="mt-4 divide-y divide-gray-200 border-y border-gray-200">
               {page.faqs.map((faq) => (
-                <div key={faq.question} className="py-4">
-                  <dt className="font-semibold text-gray-900">{faq.question}</dt>
-                  <dd className="mt-2 text-gray-700 leading-relaxed">{faq.answer}</dd>
-                </div>
+                <details key={faq.question} className="group py-5">
+                  <summary className="cursor-pointer font-semibold text-gray-900 hover:text-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-700">
+                    {faq.question}
+                  </summary>
+                  <p className="mt-3 text-gray-700 leading-relaxed">{faq.answer}</p>
+                </details>
               ))}
-            </dl>
+            </div>
           </section>
 
-          <section className="mt-12 bg-green-50 border border-green-200 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900">Start reporting in seconds</h2>
-            <p className="mt-2 text-gray-700">
-              CleanApp is free on iOS and Android. Organizations can claim their brand or area and
-              start receiving reports today.
+          <section className="mt-12 border-l-4 border-green-700 pl-6 py-2">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              {isOrganization ? "Start with the reports relevant to your team." : "You can start with what you saw."}
+            </h2>
+            <p className="mt-3 text-gray-700 leading-relaxed">
+              {isOrganization
+                ? "Explore current plans, or discuss your locations, products and workflow with CleanApp."
+                : "Describe the problem, add an image if it helps and send."}
             </p>
-            <div className="mt-4 flex flex-wrap gap-3 text-sm font-medium">
-              <a href={IOS_APP_URL} className="text-green-700 hover:underline" rel="noopener" target="_blank">
-                Download for iOS
-              </a>
-              <a href={ANDROID_APP_URL} className="text-green-700 hover:underline" rel="noopener" target="_blank">
-                Download for Android
-              </a>
-              <Link href="/signup" className="text-green-700 hover:underline">
-                Create an organization account
-              </Link>
+            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 font-semibold">
+              <Link href={primaryHref} className="text-green-800 underline underline-offset-4">{primaryLabel} →</Link>
+              {isOrganization
+                ? <a href="mailto:info@cleanapp.io" className="text-green-800 hover:underline underline-offset-4">Contact CleanApp</a>
+                : <Link href="/download" className="text-gray-700 hover:underline underline-offset-4">Get the iOS or Android app</Link>}
             </div>
           </section>
 
           {relatedPages.length > 0 && (
             <section className="mt-12">
-              <h2 className="text-xl font-bold text-gray-900">Related</h2>
-              <ul className="mt-3 flex flex-wrap gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">Explore further</h2>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                 {relatedPages.map((related) => (
                   <li key={related.slug}>
-                    <Link
-                      href={`/${related.slug}`}
-                      className="inline-block border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 hover:border-green-600 hover:text-green-700"
-                    >
-                      {related.navLabel}
+                    <Link href={`/${related.slug}`} className="block py-2 font-medium text-green-800 hover:underline underline-offset-4">
+                      {related.navLabel} <span aria-hidden="true">→</span>
                     </Link>
                   </li>
                 ))}
@@ -153,7 +124,6 @@ export default function LandingPage({ page }: Props) {
             </section>
           )}
         </article>
-
         <Footer />
       </div>
     </>

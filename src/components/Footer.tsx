@@ -3,20 +3,22 @@ import Link from "next/link";
 import { LANDING_PAGES } from "@/content/landing-pages";
 import { ANDROID_APP_URL, CLEANAPP_GPT_URL, IOS_APP_URL, SOCIAL_LINKS } from "@/lib/seo";
 
-const REPORTING_PAGES = LANDING_PAGES.filter((page) => !page.slug.startsWith("solutions/"));
-const SOLUTION_PAGES = LANDING_PAGES.filter((page) => page.slug.startsWith("solutions/"));
-
+const REPORT_LINKS = [
+  { label: "Report a problem", href: "/report-a-problem" },
+  ...LANDING_PAGES.filter((page) => page.guide).map((page) => ({ label: page.navLabel, href: `/${page.slug}` })),
+];
+const SOLUTION_LINKS = LANDING_PAGES.filter((page) => page.audience === "organization").map((page) => ({ label: page.navLabel, href: `/${page.slug}` }));
 const COMPANY_LINKS = [
   { label: "About CleanApp", href: "/about" },
   { label: "Blog", href: "/blog" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Pricing", href: "/pricing" },
   { label: "Press & brand", href: "/press" },
-  { label: "Live Report Map", href: "/" },
-  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Company & investors", href: "/company" },
+  { label: "Questions & answers", href: "/faq" },
+  { label: "Plans & pricing", href: "/pricing" },
+  { label: "Privacy policy", href: "/privacy" },
 ];
-
-const APP_LINKS = [
+const EXPLORE_LINKS = [
+  { label: "Public report map", href: "/" },
   { label: "Download the app", href: "/download" },
   { label: "CleanApp for iOS", href: IOS_APP_URL },
   { label: "CleanApp for Android", href: ANDROID_APP_URL },
@@ -24,27 +26,14 @@ const APP_LINKS = [
   { label: "Sign in", href: "/login" },
 ];
 
-function FooterColumn({
-  heading,
-  links,
-}: {
-  heading: string;
-  links: { label: string; href: string }[];
-}) {
+function FooterColumn({ heading, links }: { heading: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
-        {heading}
-      </h2>
-      <ul className="space-y-2">
+      <h2 className="mb-4 text-sm font-semibold text-gray-900">{heading}</h2>
+      <ul className="space-y-3">
         {links.map((link) => (
           <li key={link.href}>
-            <Link
-              href={link.href}
-              className="text-sm text-gray-600 hover:text-green-700"
-              target={link.href.startsWith("http") ? "_blank" : undefined}
-              rel={link.href.startsWith("http") ? "noopener" : undefined}
-            >
+            <Link href={link.href} className="text-sm text-gray-600 transition-colors hover:text-green-800 hover:underline underline-offset-4" target={link.href.startsWith("http") ? "_blank" : undefined} rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}>
               {link.label}
             </Link>
           </li>
@@ -54,48 +43,22 @@ function FooterColumn({
   );
 }
 
-/**
- * Site-wide footer and internal-link hub. Every marketing page links to every
- * keyword page from here so crawlers can reach the whole cluster in one hop.
- */
-const Footer = () => {
+export default function Footer() {
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 mt-16">
+    <footer className="mt-16 border-t border-gray-200 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          <FooterColumn
-            heading="Reporting"
-            links={REPORTING_PAGES.map((page) => ({
-              label: page.navLabel,
-              href: `/${page.slug}`,
-            }))}
-          />
-          <FooterColumn
-            heading="Solutions"
-            links={SOLUTION_PAGES.map((page) => ({
-              label: page.navLabel,
-              href: `/${page.slug}`,
-            }))}
-          />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-x-8 gap-y-10">
+          <FooterColumn heading="Report a problem" links={REPORT_LINKS} />
+          <FooterColumn heading="For organizations" links={SOLUTION_LINKS} />
           <FooterColumn heading="Company" links={COMPANY_LINKS} />
-          <FooterColumn heading="Get CleanApp" links={APP_LINKS} />
+          <FooterColumn heading="Explore CleanApp" links={EXPLORE_LINKS} />
           <FooterColumn heading="Follow" links={SOCIAL_LINKS} />
         </div>
-        <div className="mt-10 pt-6 border-t border-gray-200 text-sm text-gray-500">
-          <p>
-            CleanApp is the one-tap incident reporting, hazard reporting and bug
-            reporting app. Photograph any physical or digital problem; AI
-            classifies it and routes it to the brand, property owner or city
-            responsible. Free for reporters, with live maps and risk insights for
-            organizations.
-          </p>
-          <p className="mt-3">
-            © {new Date().getFullYear()} CleanApp. Trash is cash.
-          </p>
+        <div className="mt-10 border-t border-gray-200 pt-6 text-sm text-gray-600">
+          <p className="max-w-3xl leading-relaxed">CleanApp helps people report physical and digital problems with a message, photo or screenshot. Explore public reports, AI-assisted analysis and organization plans.</p>
+          <p className="mt-3">© {new Date().getFullYear()} CleanApp.</p>
         </div>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}
