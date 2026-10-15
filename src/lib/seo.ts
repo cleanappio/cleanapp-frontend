@@ -21,7 +21,7 @@ export const SOCIAL_LINKS = [
   { label: "YouTube", href: "https://www.youtube.com/@cleanappio" },
   { label: "Medium", href: "https://medium.com/@cleanapp" },
   { label: "Instagram", href: "https://www.instagram.com/cleanapp/" },
-  { label: "Telegram", href: "https://t.me/cleanapp" },
+  { label: "Telegram", href: "https://t.me/cleanappio" },
   { label: "GitHub", href: "https://github.com/cleanappio" },
 ];
 
