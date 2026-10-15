@@ -19,6 +19,12 @@ export function evidenceDate(value?: string | null, locale = "en"): string {
   return date.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
 }
 
+/** Only the server-projected native channel can identify a mobile submission. */
+export function cleanAppSubmissionLabel(evidence?: { intake_method?: string | null; intake_channel?: string | null }): string | null {
+  if (evidence?.intake_method !== "cleanapp_submission") return null;
+  return evidence.intake_channel === "mobile" ? "via CleanApp mobile" : "via CleanApp";
+}
+
 export type ReportContentKind = "firsthand" | "coverage" | "unknown";
 export type ReportKindFilter = ReportContentKind | "all";
 export type ReportSignalSort = "signal" | "recent" | "recurrence";

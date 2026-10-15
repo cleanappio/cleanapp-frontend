@@ -85,9 +85,21 @@ test('date stays sourced: observed first, published next, Added fallback only fo
 
 test('native reports retain their submission provenance without repeating source-type labels', () => {
   const closed = render({ ...item, evidence: { ...evidence, intake_method: 'cleanapp_submission', source_platform: 'sensor', source_url: null, source_published_at: null } }).split('<details')[0];
-  assert.match(closed, /Submitted to CleanApp/);
+  assert.match(closed, /via CleanApp/);
+  assert.doesNotMatch(closed, /via CleanApp mobile/);
   assert.match(closed, /Added/);
   assert.doesNotMatch(closed, /sensor|Personal experience|Imported|From Bluesky/);
+});
+
+test('brand rows identify mobile only with an explicit native mobile channel', () => {
+  const native = { ...item, evidence: { ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'mobile' } };
+  assert.match(render(native).split('<details')[0], /via CleanApp mobile/);
+  for (const intake_channel of ['web', 'share', 'legacy_v2', null, undefined]) {
+    const html = render({ ...native, evidence: { ...native.evidence, intake_channel } }).split('<details')[0];
+    assert.match(html, /via CleanApp/);
+    assert.doesNotMatch(html, /via CleanApp mobile/);
+  }
+  assert.doesNotMatch(render({ ...native, evidence: { ...native.evidence, intake_method: 'imported' } }).split('<details')[0], /via CleanApp/);
 });
 
 test('image-only and missing-source rows have no empty evidence boxes or invented wording', () => {
@@ -131,7 +143,7 @@ test('all-source views retain the plain source type while filtered views avoid r
 test('brand list uses striped rows and clickable title plus compact read action without a heavy card grid', () => {
   const html = renderToStaticMarkup(React.createElement(Dashboard, { items: [item, { ...item, discovery_token: 'second-token' }] }));
   assert.equal((html.match(/<article/g) || []).length, 2);
-  assert.match(html, /odd:bg-white even:bg-green-50\/50/);
+  assert.match(html, /odd:bg-white even:bg-green-100\/50/);
   assert.match(html, /<h3[^>]*><button[^>]*>Grok application freezes<\/button><\/h3>/);
   assert.equal((html.match(/Read report/g) || []).length, 2);
   assert.doesNotMatch(html, /View report|rounded-xl|<article[^>]*grid-cols|border-green-200/);

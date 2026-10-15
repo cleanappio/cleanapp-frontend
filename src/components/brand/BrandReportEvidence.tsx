@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { contentKind, evidenceDate, safeOriginalSourceUrl } from "@/lib/report-evidence";
+import { cleanAppSubmissionLabel, contentKind, evidenceDate, safeOriginalSourceUrl } from "@/lib/report-evidence";
 import { brandReportDate, compactReportSummary, reportSourceLabel } from "@/lib/brand-report-presentation";
 import type { PublicDiscoveryCard } from "@/types/public-discovery";
 
@@ -21,6 +21,7 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
   const sourceUrl = safeOriginalSourceUrl(evidence?.source_url);
   const sourceLabel = reportSourceLabel(evidence);
   const direct = evidence?.intake_method === "cleanapp_submission";
+  const submissionLabel = cleanAppSubmissionLabel(evidence);
   const imported = evidence?.intake_method === "imported";
   const count = recurrence?.counts_exact ? recurrence.supporting_report_count : null;
   const summary = compactReportSummary(item.summary, item.title);
@@ -32,7 +33,7 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
         {productLabel && <span className="font-semibold text-green-800">{productLabel}</span>}
         {showSourceKind && <span className="font-medium text-gray-700">{KIND_LABELS[contentKind(evidence?.report_kind)]}</span>}
         {date && <time dateTime={date.value}>{date.label} {date.formatted}</time>}
-        {direct ? <span>Submitted to CleanApp</span> : sourceUrl ? (
+        {submissionLabel ? <span>{submissionLabel}</span> : sourceUrl ? (
           <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="underline decoration-gray-300 underline-offset-4 transition-colors hover:text-green-800 hover:decoration-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700">
             {sourceLabel ? `From ${sourceLabel}` : "Original source"} <span aria-hidden="true">↗</span>
           </a>
@@ -65,7 +66,7 @@ export default function BrandReportEvidence({ item, productLabel, locale = "en",
               {summary && <div><h4 className="mb-1 text-xs font-semibold text-gray-900">CleanApp AI summary</h4><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{item.summary}</p></div>}
               <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                 <div><dt className="text-xs font-medium text-gray-900">Source type</dt><dd>{KIND_LABELS[contentKind(evidence?.report_kind)]}</dd></div>
-                <div><dt className="text-xs font-medium text-gray-900">How received</dt><dd>{direct ? "Submitted to CleanApp" : imported ? `Imported${sourceLabel ? ` from ${sourceLabel}` : ""}` : "Unknown"}</dd></div>
+                <div><dt className="text-xs font-medium text-gray-900">How received</dt><dd>{submissionLabel || (imported ? `Imported${sourceLabel ? ` from ${sourceLabel}` : ""}` : "Unknown")}</dd></div>
                 {evidence?.observed_at && <div><dt className="text-xs font-medium text-gray-900">Observed</dt><dd>{evidenceDate(evidence.observed_at, locale)}</dd></div>}
                 {evidence?.source_published_at && <div><dt className="text-xs font-medium text-gray-900">Published</dt><dd>{evidenceDate(evidence.source_published_at, locale)}</dd></div>}
                 {evidence?.ingested_at && <div><dt className="text-xs font-medium text-gray-900">Added to CleanApp</dt><dd>{evidenceDate(evidence.ingested_at, locale)}</dd></div>}
