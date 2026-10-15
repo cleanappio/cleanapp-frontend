@@ -1,9 +1,7 @@
-import { brandLabel } from "@/lib/report-evidence";
 import type { PublicDiscoveryBatch } from "@/types/public-discovery";
 
-export default function BrandOverview({ batch, product, locale = "en" }: {
+export default function BrandOverview({ batch, locale = "en" }: {
   batch: PublicDiscoveryBatch | null;
-  product: string;
   locale?: string;
 }) {
   const overview = batch?.overview;
@@ -20,7 +18,6 @@ export default function BrandOverview({ batch, product, locale = "en" }: {
         <span className="font-medium text-gray-900">{number.format(overview.reports_last_30_days)}</span> added in the past 30 days
         {" · "}<span className="font-medium text-gray-900">{number.format(overview.reports_last_7_days)}</span> in the past 7 days
       </p>
-      <p className="mt-2 text-xs text-gray-500">{product ? brandLabel(product) : "All products"} · All source types. Related reports are grouped below.</p>
     </section>
   );
 }

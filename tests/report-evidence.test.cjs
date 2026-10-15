@@ -107,24 +107,20 @@ test('summary gives raw report totals and additions without presenting grouped r
     kind_counts: { firsthand: 110, coverage: 2050, unknown: 4903, all: 7063 },
     overview: { total_reports: 7196, reports_last_30_days: 325, reports_last_7_days: 42, reports_previous_7_days: 80 },
   };
-  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch, product: '', locale: 'en' }));
+  const html = renderToStaticMarkup(React.createElement(BrandOverview, { batch, locale: 'en' }));
   assert.match(html, /7,196/);
   assert.match(html, /reports in CleanApp/);
   assert.match(html, /325<\/span> added in the past 30 days/);
   assert.match(html, /42<\/span> in the past 7 days/);
-  assert.match(html, /All products/);
-  assert.match(html, /All source types/);
   assert.doesNotMatch(html, /7,063|110|new issues|affected users/);
 });
 
-test('missing overview never invents a total; selected products remain explicit and zero is valid', () => {
-  assert.equal(renderToStaticMarkup(React.createElement(BrandOverview, { batch: { kind_counts: { all: 7063 } }, product: '' })), '');
+test('missing overview never invents a total and zero is valid', () => {
+  assert.equal(renderToStaticMarkup(React.createElement(BrandOverview, { batch: { kind_counts: { all: 7063 } } })), '');
   const html = renderToStaticMarkup(React.createElement(BrandOverview, {
-    batch: { overview: { total_reports: 0, reports_last_30_days: 0, reports_last_7_days: 0 } }, product: 'claude-code',
+    batch: { overview: { total_reports: 0, reports_last_30_days: 0, reports_last_7_days: 0 } },
   }));
   assert.match(html, />0<\/strong>/);
-  assert.match(html, /Claude Code/);
-  assert.doesNotMatch(html, /All products/);
 });
 
 test('compact report keeps validation and missing observation dates in collapsed details', () => {
