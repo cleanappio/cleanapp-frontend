@@ -9,7 +9,6 @@ User-agent: PerplexityBot
 User-agent: Google-Extended
 User-agent: Applebot-Extended
 User-agent: Bingbot
-Allow: /
 Disallow: /api/
 Disallow: /login
 Disallow: /signup
@@ -19,6 +18,7 @@ Disallow: /billing
 Disallow: /checkout
 Disallow: /areas_admin
 Disallow: /optout-confirmation
+Allow: /
 
 Sitemap: https://www.cleanapp.io/sitemap.xml
 Sitemap: https://www.cleanapp.io/sitemap-brands.xml
