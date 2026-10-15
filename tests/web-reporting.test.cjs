@@ -32,7 +32,7 @@ test('text-only and image-only drafts work, with UTF-8 byte limits after trimmin
   assert.throws(() => lib.newWebReportPayload('   '), /Describe the problem/);
 });
 
-test('draft identity and timestamp remain stable when payload is reused for retry', () => {
+test('draft identity stays stable on retry without fabricating an observation date', () => {
   const savedSession = '75d87241-c819-456e-ab22-95b5c64c878b';
   const lib = load({ window: { sessionStorage: {
     getItem() { return savedSession; },
@@ -45,14 +45,15 @@ test('draft identity and timestamp remain stable when payload is reused for retr
   assert.equal(first.annotation, 'A broken checkout');
   assert.equal(first.session_id, savedSession);
   assert.match(first.source_id, /^web_[a-f0-9-]{36}$/);
-  assert.equal(new Date(first.observed_at).toISOString(), first.observed_at);
+  assert.equal('observed_at' in first, false);
   assert.equal(JSON.stringify(first), serializedAttempt);
   const second = lib.newWebReportPayload('', '/9j/fresh-jpeg');
   assert.notEqual(first.source_id, second.source_id);
   assert.equal(first.session_id, second.session_id);
   assert.equal(second.image, '/9j/fresh-jpeg');
   assert.equal(second.annotation, '');
-  assert.deepEqual(Object.keys(second).sort(), ['annotation', 'channel', 'image', 'observed_at', 'session_id', 'source_id', 'version']);
+  assert.equal('observed_at' in second, false);
+  assert.deepEqual(Object.keys(second).sort(), ['annotation', 'channel', 'image', 'session_id', 'source_id', 'version']);
 });
 
 test('restricted storage and browsers without randomUUID do not block reporting', () => {

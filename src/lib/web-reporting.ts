@@ -14,7 +14,6 @@ export type WebReportPayload = {
   channel: "web";
   source_id: string;
   session_id: string;
-  observed_at: string;
   annotation: string;
   image?: string;
 };
@@ -96,7 +95,7 @@ export function validateReportDraft(text: string, hasImage: boolean): string | n
   return null;
 }
 
-/** Create once per draft/attempt; retries reuse source_id and observed_at. */
+/** Create once per draft/attempt; retries reuse source_id and payload bytes. */
 export function newWebReportPayload(annotation: string, image?: string): WebReportPayload {
   const error = validateReportDraft(annotation, Boolean(image));
   if (error) throw new Error(error);
@@ -105,7 +104,6 @@ export function newWebReportPayload(annotation: string, image?: string): WebRepo
     channel: "web",
     source_id: `web_${createUuid()}`,
     session_id: sessionId(),
-    observed_at: new Date().toISOString(),
     annotation: annotation.trim(),
     ...(image ? { image } : {}),
   };

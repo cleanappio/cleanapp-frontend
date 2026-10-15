@@ -21,13 +21,12 @@ Requests go directly to `${NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io
   "channel": "web",
   "source_id": "web_<random UUID>",
   "session_id": "<random session UUID>",
-  "observed_at": "<browser draft-creation timestamp in ISO format>",
   "annotation": "The report text",
   "image": "<optional raw JPEG base64, without a data: prefix>"
 }
 ```
 
-`observed_at` is generated when the browser creates the submission payload; it is not independently verified proof of when the issue occurred. Session IDs are provenance, not authentication or rate-limit exemptions. The browser does not send a wallet identity, coordinates or filename.
+The browser omits `observed_at`: the time of the actual observation is unknown unless the reporter describes it. The API records receipt time separately. Session IDs are provenance, not authentication or rate-limit exemptions. The browser does not send a wallet identity, coordinates or filename.
 
 A usable response requires a safe `receipt_id` plus a recognized `status`: `received`, `accepted`, `published`, `shadowed`, `quarantined` or `duplicate`. Optional `processing_status`, `publication_status`, `public_id` and `canonical_path` are parsed and bounded. Failed/rejected states and arbitrary redirect URLs are rejected. Only `/physical/report/<safe ID>` or `/digital/report/<safe ID>` are accepted as public report links. HTTP 200 alone is not success.
 
@@ -40,7 +39,7 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 3. The existing human analysis queue processes the report. Valid firsthand evidence can be promoted; invalid, coverage or unknown evidence stays for review. Importer-supplied model/operator fields cannot activate this adapter policy.
 4. An analyzed public physical/digital report can gain a canonical link. Processing/review states stay distinct in the receipt. Analyzer publication failures are retryable for web intake.
 
-Create a payload once and reuse it unchanged on retry, including `source_id`, image and timestamp. The listener uses source identity and a material hash for idempotency. Editing the draft creates a new payload; double submissions are locked while sending. Network, server, validation and rate-limit errors preserve the draft. Do not clear it or show success on the submit click. Queue replay uses the existing per-report analysis lock. This is not an exactly-once guarantee across the broker/database crash window.
+Create a payload once and reuse it unchanged on retry, including `source_id`, text and image. The listener uses source identity and a material hash for idempotency. Editing the draft creates a new payload; double submissions are locked while sending. Network, server, validation and rate-limit errors preserve the draft. Do not clear it or show success on the submit click. Queue replay uses the existing per-report analysis lock. This is not an exactly-once guarantee across the broker/database crash window.
 
 ## Limits, spam and privacy
 
