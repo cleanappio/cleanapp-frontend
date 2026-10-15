@@ -29,7 +29,7 @@ function EmbeddedPublicBrandPreview({
 }) {
   const { t } = useTranslations();
   const { items, totalCount, brandDisplayName, isLoading, error } =
-    usePublicReportsByBrand(brandName, getCurrentLocale());
+    usePublicReportsByBrand(brandName, getCurrentLocale(), true, { kind: "all", sort: "recent" });
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6">

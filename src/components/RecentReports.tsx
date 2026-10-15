@@ -183,7 +183,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ reportItem }) => {
         reportItem.classification === "digital" &&
         reportItem.brand_name
       ) {
-        const batch = await fetchPublicBrandReports(reportItem.brand_name, locale, 10);
+        const batch = await fetchPublicBrandReports(reportItem.brand_name, locale, 10, { kind: "all", sort: "recent" });
         setRecentReports(batch.items || []);
         return;
       }

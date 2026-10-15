@@ -147,7 +147,7 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
 
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=${n}&full_data=true`
+          `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v3/reports/by-brand?brand_name=${brand_name}&n=${n}&full_data=true&kind=all&sort=recent`
         );
 
         if (response.ok) {

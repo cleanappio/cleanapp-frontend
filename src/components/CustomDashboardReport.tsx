@@ -25,6 +25,7 @@ import { ReportWithAnalysis } from "./GlobeView";
 import Image from "next/image";
 import TextToImage from "./TextToImage";
 import { getCanonicalReportPath } from "@/lib/report-links";
+import ReportEvidence from "@/components/evidence/ReportEvidence";
 
 // Map controller component to set center and zoom
 function MapController({ center }: { center: [number, number] }) {
@@ -82,6 +83,21 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
       setError(null);
     }
   }, [reportItem, isAuthenticated]);
+
+  // Area feeds may predate evidence metadata. Enrich only the opened report.
+  useEffect(() => {
+    const publicId = reportItem?.report?.public_id;
+    if (!publicId) return;
+    let cancelled = false;
+    fetch(`/api/reports/by-public-id?public_id=${encodeURIComponent(publicId)}`)
+      .then(async (response) => {
+        if (!response.ok) return;
+        const detail = await response.json();
+        if (!cancelled) setFullReport(detail);
+      })
+      .catch(() => { /* Missing evidence remains explicitly unknown. */ });
+    return () => { cancelled = true; };
+  }, [reportItem?.report?.public_id]);
 
   const getGradientColor = (value: number, maxValue: number = 1) => {
     const percentage = (value / maxValue) * 100;
@@ -893,6 +909,15 @@ const CustomDashboardReport: React.FC<CustomDashboardReportProps> = ({
         {/* Content Section */}
         <div className="w-full lg:w-1/2 lg:h-full p-4 lg:p-6 lg:overflow-y-auto">
           <div className="space-y-4 lg:space-y-6">
+            <section className="border-b border-gray-200 pb-4" aria-label="Original report evidence">
+              <h2 className="mb-3 text-xl font-semibold text-gray-900">{analysis?.title || "Report evidence"}</h2>
+              <ReportEvidence
+                evidence={fullReport?.evidence || reportItem.evidence}
+                recurrence={fullReport?.recurrence || reportItem.recurrence}
+                summary={analysis?.summary || analysis?.description}
+                locale={getCurrentLocale()}
+              />
+            </section>
             {/* Location Info */}
             {report.latitude !== 0 && report.longitude !== 0 && (
               <div className="bg-gray-50 rounded-lg p-4">

@@ -28,19 +28,19 @@ const PageHeader: React.FC = () => {
                 alt={t("cleanAppLogo")}
                 width={200}
                 height={60}
-                className="h-12 w-auto"
+                className="h-10 w-auto max-w-[130px] object-contain sm:h-12 sm:max-w-none"
                 priority
               />
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <LanguageSwitcher />
             {!isLoading && (
               <>
                 {isAuthenticated ? (
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-700">{user?.email}</span>
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+                    <span className="max-w-[110px] truncate text-sm text-gray-700 sm:max-w-none">{user?.email}</span>
                     <button
                       onClick={handleLogout}
                       className="text-gray-500 hover:text-gray-700"
@@ -50,7 +50,7 @@ const PageHeader: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-x-4">
+                  <div className="flex items-center gap-2 sm:gap-4">
                     <Link
                       href="/login"
                       className="text-gray-500 hover:text-gray-700 text-sm font-medium"
@@ -59,7 +59,7 @@ const PageHeader: React.FC = () => {
                     </Link>
                     <Link
                       href="/signup"
-                      className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium"
+                      className="hidden rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 sm:inline-flex"
                     >
                       {t("getStarted")}
                     </Link>

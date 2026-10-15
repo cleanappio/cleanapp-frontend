@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import type { ReportWithAnalysis } from "@/components/GlobeView";
 import ImageDisplay from "@/components/ImageDisplay";
+import ReportEvidence from "@/components/evidence/ReportEvidence";
 import ReportContactStrategyPanel, {
   ReportContactStrategyResponse,
 } from "@/components/report/ReportContactStrategyPanel";
@@ -274,7 +275,7 @@ export default function PublicReportDetailPage({
     <>
       {!isEmbedded && (
         <nav className="mb-6">
-          <ol className="flex items-center space-x-2 text-sm text-gray-500">
+          <ol className="flex flex-wrap items-center gap-2 break-all text-sm text-gray-500">
             <li>
               <Link href="/" className="hover:text-blue-600 transition-colors">
                 CleanApp
@@ -303,60 +304,22 @@ export default function PublicReportDetailPage({
         </nav>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {matchingAnalysis?.title ||
-                  `${t("report")} ${report.report.public_id || publicId}`}
-              </h1>
-              <p className="text-gray-600">
-                {classification === "digital" && brandDisplay
-                  ? `${brandDisplay} • `
-                  : ""}
-                {t("reported")}:{" "}
-                {report.report.timestamp
-                  ? new Date(report.report.timestamp).toLocaleString()
-                  : t("unknown")}
-              </p>
-            </div>
-            <span className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full font-medium uppercase">
-              {classification}
-            </span>
-          </div>
-
-          {imageUrl ? (
-            <div className="mb-6">
-              <ImageDisplay imageUrl={imageUrl} />
-            </div>
-          ) : null}
-
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">
-              Summary
-            </h2>
-            <p className="text-gray-700 leading-relaxed">
-              {matchingAnalysis?.summary ||
-                matchingAnalysis?.description ||
-                t("noDescriptionAvailable")}
-            </p>
-          </div>
-
-          <div className="space-y-2 text-sm text-gray-600">
-            {matchingAnalysis?.severity_level !== undefined ? (
-              <p>
-                <span className="font-medium">Severity:</span>{" "}
-                {(matchingAnalysis.severity_level * 100).toFixed(0)}%
-              </p>
-            ) : null}
-            <p>
-              <span className="font-medium">Public ID:</span>{" "}
-              {report.report.public_id}
-            </p>
-          </div>
-        </div>
-      </div>
+      <article className="mb-6 border-b border-gray-200 pb-6">
+        <p className="mb-2 text-xs font-semibold text-green-800">
+          {classification === "digital" ? brandDisplay || "Digital report" : "Location observation"}
+        </p>
+        <h1 className="mb-4 text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+          {matchingAnalysis?.title || `${t("report")} ${report.report.public_id || publicId}`}
+        </h1>
+        {imageUrl && <div className="mb-5"><ImageDisplay imageUrl={imageUrl} /></div>}
+        <ReportEvidence
+          evidence={report.evidence}
+          recurrence={report.recurrence}
+          summary={matchingAnalysis?.summary || matchingAnalysis?.description}
+          locale={locale}
+        />
+        <p className="mt-4 break-all text-xs text-gray-500">Public ID: {report.report.public_id || publicId}</p>
+      </article>
 
       <ReportContactStrategyPanel
         strategy={contactStrategy}
@@ -365,7 +328,7 @@ export default function PublicReportDetailPage({
       />
 
       {!isEmbedded && (
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={() => router.push("/")}
             className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-md transition-colors"

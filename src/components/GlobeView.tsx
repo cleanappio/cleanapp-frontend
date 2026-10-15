@@ -1,3 +1,4 @@
+import type { ReportEvidence, ReportRecurrence } from "@/types/public-discovery";
 "use client";
 
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
@@ -216,6 +217,8 @@ export interface ReportAnalysis {
 export interface ReportWithAnalysis {
   report: Report;
   analysis: ReportAnalysis[];
+  evidence?: ReportEvidence;
+  recurrence?: ReportRecurrence;
 }
 
 // Responsive hook for mobile detection
@@ -1140,7 +1143,7 @@ export default function GlobeView() {
 
           const locale = getCurrentLocale();
           const encodedBrandName = encodeURIComponent(brandNameParam);
-          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
+          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1&kind=all&sort=recent`;
           console.log(
             "Fetching digital report with 'other' brand_name from URL:",
             apiUrl,
@@ -1300,7 +1303,7 @@ export default function GlobeView() {
           const locale = getCurrentLocale();
           // URL encode the brand_name to handle special characters
           const encodedBrandName = encodeURIComponent(brandNameParam);
-          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1`;
+          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1&kind=all&sort=recent`;
           console.log("Fetching digital report from URL:", apiUrl);
           fetch(apiUrl)
             .then((response) => {
