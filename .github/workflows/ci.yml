@@ -51,3 +51,13 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx next lint
       - run: npm run build
+      - name: Check rendered public search pages
+        run: |
+          npm start -- -p 3017 > /tmp/cleanapp-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:3017/report-a-problem -o /dev/null && break
+            sleep 1
+          done
+          python3 scripts/check-rendered-seo.py --base http://127.0.0.1:3017
