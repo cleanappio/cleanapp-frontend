@@ -15,6 +15,16 @@ export const ANDROID_APP_URL =
 export const IOS_APP_URL = "https://apps.apple.com/us/app/cleanapp/id6466403301";
 export const CLEANAPP_GPT_URL = "https://chatgpt.com/g/g-xXwTp3jI5-cleanapp";
 
+/** Official profiles, as listed on github.com/cleanappio. Used in footer and schema sameAs. */
+export const SOCIAL_LINKS = [
+  { label: "X", href: "https://x.com/cleanapp" },
+  { label: "YouTube", href: "https://www.youtube.com/@cleanappio" },
+  { label: "Medium", href: "https://medium.com/@cleanapp" },
+  { label: "Instagram", href: "https://www.instagram.com/cleanapp/" },
+  { label: "Telegram", href: "https://t.me/cleanapp" },
+  { label: "GitHub", href: "https://github.com/cleanappio" },
+];
+
 export const DEFAULT_TITLE =
   "CleanApp – Incident, Hazard & Bug Reporting App | Report Anything in One Tap";
 export const DEFAULT_DESCRIPTION =
@@ -47,13 +57,7 @@ export function organizationJsonLd() {
     image: `${SITE_URL}/cleanapp-logo-1200.png`,
     description:
       "CleanApp is an AI-powered incident, hazard and bug reporting platform. People report problems with one photo; organizations get live maps, risk insights and routing to the party responsible.",
-    sameAs: [
-      "https://x.com/cleanapp",
-      "https://t.me/cleanapp",
-      "https://github.com/cleanappio",
-      ANDROID_APP_URL,
-      IOS_APP_URL,
-    ],
+    sameAs: [...SOCIAL_LINKS.map((link) => link.href), ANDROID_APP_URL, IOS_APP_URL],
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",

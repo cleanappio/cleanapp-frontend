@@ -1,5 +1,6 @@
 import type { GetServerSideProps } from "next";
 import { LANDING_PAGES } from "@/content/landing-pages";
+import { ARTICLES } from "@/content/articles";
 import { absoluteUrl } from "@/lib/seo";
 
 type SitemapEntry = { path: string; priority: string; changefreq: string };
@@ -13,6 +14,9 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
     changefreq: "weekly",
   })),
   { path: "/about", priority: "0.8", changefreq: "monthly" },
+  { path: "/press", priority: "0.5", changefreq: "monthly" },
+  { path: "/blog", priority: "0.7", changefreq: "weekly" },
+  ...ARTICLES.map((article) => ({ path: `/blog/${article.slug}`, priority: "0.7", changefreq: "monthly" })),
   { path: "/faq", priority: "0.7", changefreq: "monthly" },
   { path: "/pricing", priority: "0.8", changefreq: "monthly" },
   { path: "/download", priority: "0.7", changefreq: "monthly" },
