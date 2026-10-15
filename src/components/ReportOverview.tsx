@@ -16,6 +16,8 @@ import TextToImage from "./TextToImage";
 import { ReportResponse } from "@/types/reports/api";
 import { authApiClient } from "@/lib/auth-api-client";
 import { navigateToCase } from "@/lib/case-navigation";
+import { getCanonicalReportPath } from "@/lib/report-links";
+import ReportNotifications from "@/components/report/ReportNotifications";
 import {
   casesApiClient,
   CaseSummary,
@@ -742,12 +744,6 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
               onCreateCase={createCaseFromReport}
             />
 
-            <ReportContactStrategyPanel
-              strategy={contactStrategy}
-              loading={contactStrategyLoading}
-              error={contactStrategyError}
-              compact
-            />
           </div>
         </div>
       </div>
@@ -901,15 +897,23 @@ const ReportOverview: React.FC<ReportOverviewProps> = ({
             compact
           />
 
-          <div className="mt-8">
-            <ReportContactStrategyPanel
-              strategy={contactStrategy}
-              loading={contactStrategyLoading}
-              error={contactStrategyError}
-              compact
-            />
-          </div>
         </div>
+      </div>
+      <div className="px-4 pb-6 sm:px-6">
+        {selectedPublicId ? (
+          <ReportNotifications
+            key={selectedPublicId}
+            publicId={selectedPublicId}
+            returnPath={getCanonicalReportPath(isDigital ? "digital" : "physical", selectedPublicId) || router.asPath}
+            locale={locale}
+          />
+        ) : null}
+        <ReportContactStrategyPanel
+          strategy={contactStrategy}
+          loading={contactStrategyLoading}
+          error={contactStrategyError}
+          compact
+        />
       </div>
     </div>
   );

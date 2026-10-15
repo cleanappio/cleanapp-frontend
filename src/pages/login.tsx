@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -8,6 +8,7 @@ import { useTranslations } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import PageHeader from '@/components/PageHeader';
 import LoginExplainer from '@/components/LoginExplainer';
+import { redirectAfterLoginOnce, safeAuthRedirect } from '@/lib/auth-redirect';
 
 interface LoginForm {
   email: string;
@@ -24,24 +25,22 @@ export default function LoginPage() {
   const { t } = useTranslations();
 
   const { register, handleSubmit, getValues, formState: { errors } } = useForm<LoginForm>();
+  const redirected = useRef(false);
+  const completeLogin = useCallback(() => {
+    redirectAfterLoginOnce(redirected, router.query.redirect, sessionStorage, (path) => router.replace(path));
+  }, [router]);
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!isAuthLoading && isAuthenticated) {
-      const redirectUrl = sessionStorage.getItem('authRedirect');
-      if (redirectUrl) {
-        sessionStorage.removeItem('authRedirect');
-        router.replace(redirectUrl);
-      } else {
-        router.replace('/dashboard');
-      }
+    if (router.isReady && !isAuthLoading && isAuthenticated) {
+      completeLogin();
     }
-  }, [isAuthenticated, isAuthLoading, router]);
+  }, [isAuthenticated, isAuthLoading, router.isReady, completeLogin]);
 
   // Handle redirect parameter
   useEffect(() => {
-    const { redirect } = router.query;
-    if (redirect && typeof redirect === 'string') {
+    const redirect = safeAuthRedirect(router.query.redirect);
+    if (redirect && !redirected.current) {
       // Store the redirect URL in session storage
       sessionStorage.setItem('authRedirect', redirect);
     }
@@ -53,14 +52,7 @@ export default function LoginPage() {
       await login(data.email, data.password);
       toast.success(t('welcomeBack'));
 
-      // Check for stored redirect URL
-      const redirectUrl = sessionStorage.getItem('authRedirect');
-      if (redirectUrl) {
-        sessionStorage.removeItem('authRedirect');
-        router.replace(redirectUrl);
-      } else {
-        router.replace('/dashboard');
-      }
+      completeLogin();
     } catch (error: any) {
       toast.error(error.response?.data?.error || t('invalidCredentials'));
     } finally {
