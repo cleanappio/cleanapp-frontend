@@ -20,8 +20,8 @@ function buildUrl(path: string, params: Record<string, string | number | undefin
   return url.toString();
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store" });
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { cache: "no-store", signal });
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }
@@ -62,14 +62,31 @@ export async function fetchPublicBrandReports(
   n: number = 12,
   query: PublicEvidenceQuery = {},
 ): Promise<PublicDiscoveryBatch> {
-  return fetchJson<PublicDiscoveryBatch>(
-    buildUrl("/api/v3/public/discovery/by-brand", {
-      brand_name: brandName,
-      lang,
-      n,
-      ...query,
-    }),
-  );
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error("Brand reports request timed out. Please retry."));
+      controller.abort();
+    }, 20_000);
+  });
+  try {
+    // Race the full JSON promise so the deadline also covers a stalled body.
+    return await Promise.race([
+      fetchJson<PublicDiscoveryBatch>(
+        buildUrl("/api/v3/public/discovery/by-brand", {
+          brand_name: brandName,
+          lang,
+          n,
+          ...query,
+        }),
+        controller.signal,
+      ),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function fetchPublicNearbyReports(
