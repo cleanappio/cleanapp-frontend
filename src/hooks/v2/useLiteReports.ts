@@ -14,6 +14,19 @@ export interface UseLiteReportsByTabReturn {
   appendDigitalLite: (reports: DigitalReportResponse[]) => void;
 }
 
+function appendWithDedupe(current: ReportResponse[], toAdd: ReportResponse[]) {
+  const seen = new Set<string>();
+  return [...toAdd, ...current].filter((item) => {
+    const classification = item?.classification as "physical" | "digital";
+    const key = classification === "physical"
+      ? `${(item as PhysicalReportResponse).latitude},${(item as PhysicalReportResponse).longitude},${(item as PhysicalReportResponse).severity_level}`
+      : (item as DigitalReportResponse).brand_name;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Fetches lite reports for both classifications and maintains separate arrays.
  * Digital uses full_data=true, Physical uses full_data=false.
@@ -104,43 +117,17 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
     fetchAll();
   }, [fetchAll]);
 
-  const appendWithDedupe = (
-    current: ReportResponse[],
-    toAdd: ReportResponse[]
-  ) => {
-    const seen = new Set<string>();
-    const merged = [...toAdd, ...current].filter((item) => {
-      const classification = item?.classification as "physical" | "digital";
-      if (classification === "physical") {
-        const physicalReport = item as PhysicalReportResponse;
-        const lat = physicalReport.latitude;
-        const long = physicalReport.longitude;
-        const severity_level = physicalReport.severity_level;
-        if (seen.has(lat + "," + long + "," + severity_level)) return false;
-        seen.add(lat + "," + long + "," + severity_level);
-        return true;
-      } else {
-        const digitalReport = item as DigitalReportResponse;
-        const brand_name = digitalReport.brand_name;
-        if (seen.has(brand_name)) return false;
-        seen.add(brand_name);
-        return true;
-      }
-    });
-    return merged;
-  };
-
-  const appendPhysicalLite = (reports: ReportResponse[]) => {
+  const appendPhysicalLite = useCallback((reports: PhysicalReportResponse[]) => {
     setPhysicalReports(
       (prev) => appendWithDedupe(prev, reports) as PhysicalReportResponse[]
     );
-  };
+  }, []);
 
-  const appendDigitalLite = (reports: ReportResponse[]) => {
+  const appendDigitalLite = useCallback((reports: DigitalReportResponse[]) => {
     setDigitalReports(
       (prev) => appendWithDedupe(prev, reports) as DigitalReportResponse[]
     );
-  };
+  }, []);
 
   return {
     physicalReports,

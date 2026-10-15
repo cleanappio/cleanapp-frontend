@@ -32,9 +32,11 @@ export async function fetchPublicLatest(
   classification: "physical" | "digital",
   lang: string,
   n: number = 10,
+  signal?: AbortSignal,
 ): Promise<PublicDiscoveryBatch> {
   return fetchJson<PublicDiscoveryBatch>(
     buildUrl("/api/v3/public/discovery/last", { classification, lang, n }),
+    signal,
   );
 }
 

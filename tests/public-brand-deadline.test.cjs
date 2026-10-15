@@ -135,3 +135,18 @@ test('other discovery requests retain their existing behavior without deadline',
   assert.deepEqual(await request, { reports: [] });
   assert.equal(h.clearedTimers, 0);
 });
+
+test('Latest forwards controller cancellation and preserves selected scope without caching', async () => {
+  const controller = new AbortController();
+  const h = harness(async (url, options) => {
+    const parsed = new URL(url);
+    assert.equal(parsed.pathname, '/api/v3/public/discovery/last');
+    assert.equal(parsed.searchParams.get('classification'), 'digital');
+    assert.equal(parsed.searchParams.get('lang'), 'en');
+    assert.equal(parsed.searchParams.get('n'), '10');
+    assert.equal(options.signal, controller.signal);
+    assert.equal(options.cache, 'no-store');
+    return { ok: true, json: async () => ({ items: [] }) };
+  });
+  assert.deepEqual(await h.api.fetchPublicLatest('digital', 'en', 10, controller.signal), { items: [] });
+});
