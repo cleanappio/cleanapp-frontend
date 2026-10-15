@@ -4,6 +4,7 @@ type Snapshot = {
   items: PublicDiscoveryCard[];
   loading: boolean;
   error: string | null;
+  refreshing: boolean;
 };
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -14,17 +15,18 @@ const REQUEST_TIMEOUT_MS = 15_000;
 export function startPublicLatestFeed(
   load: (signal: AbortSignal) => Promise<PublicDiscoveryBatch>,
   emit: (snapshot: Snapshot) => void,
+  initialItems: PublicDiscoveryCard[] = [],
 ) {
   let stopped = false;
   let inFlight = false;
   let queued = false;
-  let loaded = false;
+  let loaded = initialItems.length > 0;
   let generation = 0;
   let lastStarted = -Infinity;
   let controller: AbortController | undefined;
   let scheduled: ReturnType<typeof setTimeout> | undefined;
   let deadline: ReturnType<typeof setTimeout> | undefined;
-  let snapshot: Snapshot = { items: [], loading: true, error: null };
+  let snapshot: Snapshot = { items: initialItems, loading: !loaded, error: null, refreshing: false };
   const visible = () => document.visibilityState !== "hidden";
 
   function refresh() {
@@ -53,7 +55,7 @@ export function startPublicLatestFeed(
     inFlight = true;
     queued = false;
     lastStarted = Date.now();
-    snapshot = { ...snapshot, loading: !loaded, error: null };
+    snapshot = { ...snapshot, loading: !loaded, error: null, refreshing: true };
     emit(snapshot);
     try {
       const timeout = new Promise<never>((_, reject) => {
@@ -69,6 +71,7 @@ export function startPublicLatestFeed(
         items: Array.isArray(batch.items) ? batch.items : [],
         loading: false,
         error: null,
+        refreshing: false,
       };
       emit(snapshot);
     } catch (error) {
@@ -77,6 +80,7 @@ export function startPublicLatestFeed(
         ...snapshot,
         loading: false,
         error: error instanceof Error ? error.message : "Couldn’t refresh reports.",
+        refreshing: false,
       };
       emit(snapshot);
     } finally {

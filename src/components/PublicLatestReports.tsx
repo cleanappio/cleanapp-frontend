@@ -8,6 +8,9 @@ interface PublicLatestReportsProps {
   loading: boolean;
   error?: string | null;
   onItemClick: (item: PublicDiscoveryCard) => void | Promise<void>;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
@@ -15,6 +18,9 @@ const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
   loading,
   error,
   onItemClick,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }) => {
   const { t } = useTranslations();
   const isMobile = useIsMobile();
@@ -63,6 +69,17 @@ const PublicLatestReports: React.FC<PublicLatestReportsProps> = ({
                   </p>
                 </div>
               ))}
+              {hasMore && onLoadMore && (
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                  aria-busy={loadingMore}
+                  className="mt-3 mb-1 min-h-11 px-4 text-xs font-medium text-slate-200 underline underline-offset-4 hover:text-white disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </button>
+              )}
             </>
           )}
         </div>

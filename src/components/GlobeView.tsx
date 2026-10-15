@@ -420,6 +420,9 @@ export default function GlobeView() {
     loading: publicLatestLoading,
     error: publicLatestError,
     refresh: refreshPublicLatest,
+    hasMore: publicLatestHasMore,
+    loadingMore: publicLatestLoadingMore,
+    loadMore: loadMorePublicLatest,
   } = usePublicLatestReports(selectedTab);
 
   const {
@@ -3897,6 +3900,9 @@ export default function GlobeView() {
           items={publicLatestItems}
           loading={publicLatestLoading}
           error={publicLatestError}
+          hasMore={publicLatestHasMore}
+          loadingMore={publicLatestLoadingMore}
+          onLoadMore={loadMorePublicLatest}
           onItemClick={(item) => {
             void openPublicDiscoveryItem(item);
           }}

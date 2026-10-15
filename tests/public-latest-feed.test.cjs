@@ -30,7 +30,7 @@ function eventTarget() {
   };
 }
 
-function harness(loader, visibility = 'visible') {
+function harness(loader, visibility = 'visible', initialItems = []) {
   let now = 0;
   let nextId = 0;
   const timers = new Map();
@@ -52,7 +52,7 @@ function harness(loader, visibility = 'visible') {
   const feed = startPublicLatestFeed(signal => {
     calls.push({ signal, at: now });
     return loader(signal, calls.length);
-  }, snapshot => snapshots.push(snapshot));
+  }, snapshot => snapshots.push(snapshot), initialItems);
   return {
     feed, calls, snapshots, window, document,
     get latest() { return snapshots.at(-1); },
@@ -154,6 +154,20 @@ test('temporary refresh failure retains the last successful rows and recovery re
   h.feed.close();
 });
 
+test('same-scope expansion seeds retain readable rows during loading and failed replacement', async () => {
+  let reject;
+  const h = harness(() => new Promise((_resolve, fail) => { reject = fail; }), 'visible', [card('retained')]);
+  assert.equal(h.latest.loading, false);
+  assert.equal(h.latest.refreshing, true);
+  assert.equal(h.latest.items[0].discovery_token, 'retained');
+  reject(new Error('Expansion failed'));
+  await flush();
+  assert.equal(h.latest.refreshing, false);
+  assert.equal(h.latest.items[0].discovery_token, 'retained');
+  assert.match(h.latest.error, /Expansion failed/);
+  h.feed.close();
+});
+
 test('15s deadline aborts stalled loading and a late old response cannot replace recovery', async () => {
   let oldResolve;
   const h = harness((_signal, count) => count === 1
@@ -205,4 +219,29 @@ test('Latest keeps readable saved rows during a refresh failure, but reports ini
   const initial = render({ items: [], error: 'Request failed: 503' });
   assert.match(initial, /Request failed: 503/);
   assert.doesNotMatch(initial, /noReportsFound|Showing the last update/);
+});
+
+test('Load more is an accessible button wired to the handler and disabled during expansion', () => {
+  let clicks = 0;
+  const props = { items: [card('saved')], loading: false, onItemClick() {}, hasMore: true, onLoadMore() { clicks += 1; } };
+  const tree = PublicLatestReports(props);
+  function button(node) {
+    if (!node || typeof node !== 'object') return null;
+    if (node.type === 'button') return node;
+    for (const child of React.Children.toArray(node.props?.children)) {
+      const match = button(child);
+      if (match) return match;
+    }
+    return null;
+  }
+  const action = button(tree);
+  assert.equal(action.props.children, 'Load more');
+  assert.equal(action.props.type, 'button');
+  action.props.onClick();
+  assert.equal(clicks, 1);
+  const pending = renderToStaticMarkup(React.createElement(PublicLatestReports, { ...props, loadingMore: true }));
+  assert.match(pending, /<button[^>]*disabled=""[^>]*aria-busy="true"/);
+  assert.match(pending, /New web report/);
+  const capped = renderToStaticMarkup(React.createElement(PublicLatestReports, { ...props, hasMore: false }));
+  assert.doesNotMatch(capped, /Load more/);
 });
