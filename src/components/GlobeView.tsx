@@ -1,6 +1,6 @@
-import type { ReportEvidence, ReportRecurrence } from "@/types/public-discovery";
 "use client";
 
+import type { ReportEvidence, ReportRecurrence } from "@/types/public-discovery";
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";

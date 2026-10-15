@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import type { ReportWithAnalysis } from "@/components/GlobeView";
 import ImageDisplay from "@/components/ImageDisplay";
 import ReportEvidence from "@/components/evidence/ReportEvidence";
+import ReportNotifications from "@/components/report/ReportNotifications";
 import ReportContactStrategyPanel, {
   ReportContactStrategyResponse,
 } from "@/components/report/ReportContactStrategyPanel";
@@ -311,6 +312,12 @@ export default function PublicReportDetailPage({
         <h1 className="mb-4 text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
           {matchingAnalysis?.title || `${t("report")} ${report.report.public_id || publicId}`}
         </h1>
+        <ReportNotifications
+          key={report.report.public_id || publicId}
+          publicId={report.report.public_id || publicId!}
+          returnPath={getCanonicalReportPath(classification, report.report.public_id || publicId!) || asPath}
+          locale={locale}
+        />
         {imageUrl && <div className="mb-5"><ImageDisplay imageUrl={imageUrl} /></div>}
         <ReportEvidence
           evidence={report.evidence}
