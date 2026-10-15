@@ -6,6 +6,7 @@ import { resolvePublicDiscoveryToken } from "@/lib/public-discovery-api";
 import { PublicDiscoveryCard, PublicDiscoveryResolveResponse } from "@/types/public-discovery";
 import ReportEvidence from "@/components/evidence/ReportEvidence";
 import { getCurrentLocale } from "@/lib/i18n";
+import { brandLabel } from "@/lib/report-evidence";
 
 type Props = {
   items: PublicDiscoveryCard[];
@@ -43,11 +44,11 @@ export default function PublicBrandDashboard({ items, onOpenReport }: Props) {
       <div className="divide-y divide-gray-200">
         {items.map((item) => (
           <article key={item.discovery_token} className="py-6 first:pt-2" aria-label={item.title || "Report"}>
-            <p className="mb-2 text-xs font-semibold text-green-800">{item.brand_display_name || item.brand_name || (item.classification === "physical" ? "Location observation" : "Product issue")}{item.recurrence?.grouping === "related_issue_family" ? " · Related issue family" : ""}</p>
+            <p className="mb-2 text-xs font-semibold text-green-800">{item.brand_name ? brandLabel(item.brand_name, item.brand_display_name) : item.classification === "physical" ? "Location report" : "Product issue"}</p>
             <h3 className="mb-3 max-w-3xl break-words text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{item.title || "Untitled report"}</h3>
             <ReportEvidence evidence={item.evidence} recurrence={item.recurrence} summary={item.summary} locale={locale} />
             <button type="button" disabled={openingToken === item.discovery_token} onClick={() => { void handleOpen(item); }} className="mt-3 inline-flex min-h-[44px] items-center rounded-md border border-green-200 px-4 py-2 text-sm font-semibold text-green-800 transition-colors hover:bg-green-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700 disabled:opacity-60">
-              {openingToken === item.discovery_token ? "Opening report…" : "View report details"}
+              {openingToken === item.discovery_token ? "Opening report…" : "View report"}
             </button>
           </article>
         ))}
