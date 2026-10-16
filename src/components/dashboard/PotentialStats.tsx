@@ -20,17 +20,19 @@ export default function PotentialStats() {
   const hasActivity = recentBrands.length > 0 || recentLocations.length > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8">
+        <div className="flex items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-green-600" />
+            <Search className="w-5 h-5 text-green-700" />
             <h3 className="text-lg font-semibold text-gray-900">Your intelligence map</h3>
           </div>
-          <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full text-xs font-medium">
-            <Pause className="w-3 h-3" />
-            <span>Tracking paused</span>
-          </div>
+          {hasActivity && (
+            <div className="flex shrink-0 items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full text-xs font-medium">
+              <Pause className="w-3 h-3" />
+              <span>Tracking paused</span>
+            </div>
+          )}
         </div>
 
         {hasActivity ? (
@@ -61,12 +63,12 @@ export default function PotentialStats() {
                   {recentLocations.slice(0, 5).map((location) => (
                     <span
                       key={location.name}
-                      className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-default"
+                      className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors cursor-default"
                       title="No alerts"
                     >
                       <MapPin className="w-3 h-3" />
                       {location.name}
-                      <span className="text-xs text-blue-500/70 font-normal">· No alerts</span>
+                      <span className="text-xs text-gray-400 font-normal">· No alerts</span>
                     </span>
                   ))}
                 </div>
@@ -91,46 +93,46 @@ export default function PotentialStats() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-sm mb-2">No recent activity yet</p>
-            <p className="text-gray-400 text-xs">Search for brands or explore locations on the map to see your activity here</p>
+          <div className="rounded-xl border border-dashed border-gray-200 text-center px-4 py-8">
+            <p className="text-gray-700 text-sm font-medium mb-1">No recent activity yet</p>
+            <p className="text-gray-500 text-xs">Search for brands or explore locations on the map to see your activity here</p>
           </div>
         )}
       </div>
 
-      <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-purple-600" />
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 flex flex-col">
+        <div className="flex items-center gap-2 mb-5">
+          <Sparkles className="w-5 h-5 text-green-700" />
           <h3 className="text-lg font-semibold text-gray-900">What you could unlock</h3>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-purple-600" />
+        <ul className="space-y-4">
+          <li className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-green-700" />
             </div>
             <p className="text-sm text-gray-700">AI summaries for your tracked brands</p>
-          </div>
+          </li>
 
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Bell className="w-4 h-4 text-blue-600" />
+          <li className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-4 h-4 text-green-700" />
             </div>
             <p className="text-sm text-gray-700">Alerts for issues like the ones you viewed</p>
-          </div>
+          </li>
 
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-4 h-4 text-green-600" />
+          <li className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-4 h-4 text-green-700" />
             </div>
             <p className="text-sm text-gray-700">Trend comparisons over time</p>
-          </div>
-        </div>
+          </li>
+        </ul>
 
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-auto pt-6">
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-1 text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+            className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black transition-colors"
           >
             View plans
             <ArrowRight className="w-4 h-4" />
