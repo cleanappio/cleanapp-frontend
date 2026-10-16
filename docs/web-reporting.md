@@ -32,7 +32,9 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 
 `GET /receipts/:receipt_id` refreshes the same receipt. The receipt page is `/report-a-problem?receipt=<ID>`. The UI polls up to eight times with bounded delays while awaiting publication; a temporary polling outage retains the accepted receipt. It shows **View report** only when the backend supplies a safe canonical link. Receiving a report, publishing it, sending a notification and resolving the problem are separate events.
 
-While a receipt is processing, the shared receipt view shows **Generating receipt & escalation log.** with a spinner that respects reduced motion. Published and review states stop polling and restore **We’re on it.** with a checkmark. When the bounded polling window ends, the spinner also stops; the accepted receipt and its current status remain available through **Keep your receipt**. This progress copy does not assert that a notification was sent.
+While a receipt is processing, `ReportProgress` gently moves the existing CleanApp leaf up and to the right. One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
+
+The widget has no visible header or duplicate processing sentence, and its receipt actions are only **Keep your receipt** and **Report something else**. Its dialog retains a hidden accessible title and close button. The full receipt page retains **View report** when a safe public link is available. Published and review states stop polling, text cycling and motion, and show their actual status. When the bounded polling window ends, cycling and motion also stop; the accepted receipt remains available through **Keep your receipt**.
 
 ## Lifecycle and reliability
 

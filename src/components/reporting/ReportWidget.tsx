@@ -18,9 +18,8 @@ export default function ReportWidget() {
       <Dialog.Content className={styles.panel} aria-describedby={undefined} onOpenAutoFocus={event => {
         event.preventDefault(); document.querySelector<HTMLTextAreaElement>("[role='dialog'] textarea")?.focus();
       }}>
-        <div className={styles.header}><Dialog.Title className={styles.title}>CleanApp’s on the case.</Dialog.Title>
-          <Dialog.Close asChild><button type="button" className={`${styles.iconButton} ${styles.close}`} aria-label="Close reporting"><X size={20} aria-hidden="true" /></button></Dialog.Close>
-        </div>
+        <Dialog.Title className="sr-only">Report a problem</Dialog.Title>
+        <Dialog.Close asChild><button type="button" className={`${styles.iconButton} ${styles.close}`} aria-label="Close reporting"><X size={20} aria-hidden="true" /></button></Dialog.Close>
         <ReportComposer surface="widget" state={composerState} />
       </Dialog.Content>
     </Dialog.Portal>

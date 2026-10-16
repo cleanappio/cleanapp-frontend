@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowUp, Check, Loader2, Plus, X } from "lucide-react";
+import { ArrowUp, Loader2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { newWebReportPayload, prepareReportImage, readReportReceipt, reportApiBase, submissionError, trackReportEvent, validateReportDraft, type WebReportPayload, type WebReportReceipt } from "@/lib/web-reporting";
 import styles from "./ReportComposer.module.css";
+import ReportProgress from "./ReportProgress";
 
 function receiptIsProcessing(receipt: WebReportReceipt) {
   if (receipt.publication_status) return receipt.publication_status === "pending_analysis";
@@ -15,7 +16,7 @@ function receiptIsComplete(receipt: WebReportReceipt) {
   return receipt.processing_status === "analyzed" || receipt.status === "published" || Boolean(receipt.canonical_path);
 }
 
-export function ReportReceipt({ receipt: initialReceipt, onAnother }: { receipt: WebReportReceipt; onAnother?: () => void }) {
+export function ReportReceipt({ receipt: initialReceipt, onAnother, surface = "page" }: { receipt: WebReportReceipt; onAnother?: () => void; surface?: "widget" | "page" }) {
   const [receipt, setReceipt] = useState(initialReceipt);
   const [polling, setPolling] = useState(() => !receiptIsComplete(initialReceipt));
   useEffect(() => {
@@ -43,13 +44,14 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother }: { receipt:
     ? receipt.publication_status === "review_required"
     : ["shadowed", "quarantined"].includes(receipt.status);
   const processing = polling && receiptIsProcessing(receipt);
-  return <div className={styles.receipt} role="status" aria-live="polite">
-    {processing ? <Loader2 className={styles.spinner} size={30} color="#226536" aria-hidden="true" /> : <Check size={30} color="#226536" aria-hidden="true" />}
-    <h2>{processing ? "Generating receipt & escalation log." : "We’re on it."}</h2>
-    <p>{receipt.publication_status === "public" ? "Your report is ready to view." : review ? "Your report is received for review." : "Your report is received for processing."}</p>
-    {receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
-    <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>
-    {onAnother && <button type="button" className={styles.link} onClick={onAnother}>Report something else</button>}
+  const title = receipt.publication_status === "public" ? "Your report is ready to view." : review ? "Your report is under review." : "We’re on it.";
+  return <div className={styles.receipt}>
+    <ReportProgress processing={processing} receiptId={receipt.receipt_id} title={title} />
+    <div className={styles.receiptActions}>
+      {surface !== "widget" && receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
+      <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>
+      {onAnother && <button type="button" className={styles.link} onClick={onAnother}>Report something else</button>}
+    </div>
   </div>;
 }
 
@@ -125,7 +127,7 @@ export default function ReportComposer({ surface = "page", state }: { surface?: 
     }
   }
 
-  if (receipt) return <ReportReceipt receipt={receipt} onAnother={() => setReceipt(null)} />;
+  if (receipt) return <ReportReceipt receipt={receipt} surface={surface} onAnother={() => setReceipt(null)} />;
   return <form className={styles.composer} onSubmit={submit} aria-label="Report a problem" aria-busy={sending || preparing}>
     <div className={styles.box} onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (!sending) void addImage(e.dataTransfer.files[0]); }}>
       <label htmlFor={`${id}-message`} className="sr-only">What’s wrong?</label>
