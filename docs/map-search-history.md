@@ -51,7 +51,7 @@ map totals as filtered briefing totals. Do not restore the old fallback that
 presented a partial list length as an exact corpus total. Public live previews
 invalidate the cached map snapshot; they do not establish a new brand total.
 
-The full evidence briefing remains reachable from the brand page. Its expensive
+The full evidence briefing remains reachable through "Open brand page." Its expensive
 whole-cohort reader is a separate limitation; bypassing it for map previews does
 not establish that its exact grouping/count query has been optimized.
 

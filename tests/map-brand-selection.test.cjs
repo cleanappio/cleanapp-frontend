@@ -68,6 +68,13 @@ const summaries = [
 ];
 const selection = state => JSON.parse(JSON.stringify(state.embeddedPublicReport));
 
+test('repeated brand query parameters do not crash or load an ambiguous brand', () => {
+  const h = harness({ tab: 'digital', brand_name: ['google', 'microsoft'] }, summaries);
+  assert.doesNotThrow(() => h.state.openFromUrl());
+  assert.equal(h.state.embeddedPublicReport, null);
+  assert.equal(h.requests.length, 0);
+});
+
 test('Google and Microsoft map summary clicks open bounded brand selection without a full report lookup', () => {
   for (const summary of summaries) {
     const h = harness({ tab: 'digital', seq: '99' }, summaries);

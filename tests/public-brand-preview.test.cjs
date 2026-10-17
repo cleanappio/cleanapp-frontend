@@ -174,13 +174,13 @@ test('embedded brand shows bounded sample separately from map total and preserve
   const render = report => renderToStaticMarkup(React.createElement(Dialog, { report, onClose() {}, onOpenReport }));
   const html = render({ kind: 'brand', brandName: 'google', total: 123456 });
   assert.match(html, /Reports on map: 123,456/); assert.match(html, /Recent reports/); assert.match(html, /1 report in this preview/);
-  assert.match(html, /href="\/digital\/google\?kind=all&amp;sort=recent"/); assert.match(html, /View all reports/);
+  assert.match(html, /href="\/digital\/google"/); assert.match(html, /Open brand page/);
   assert.equal(dashboardProps.items, preview.items); assert.equal(dashboardProps.onOpenReport, onOpenReport);
   assert.equal(dashboardProps.activeKind, 'all');
   assert.doesNotMatch(render({ kind: 'brand', brandName: 'google' }), /Reports on map/);
   preview = { ...preview, items: [], error: 'Unavailable' };
   const failed = render({ kind: 'brand', brandName: 'google' });
-  assert.match(failed, /role="alert"/); assert.match(failed, /Try again/); assert.match(failed, /View all reports/); assert.doesNotMatch(failed, /0 reports/);
+  assert.match(failed, /role="alert"/); assert.match(failed, /Try again/); assert.match(failed, /Open brand page/); assert.doesNotMatch(failed, /0 reports/);
   assert.match(render({ kind: 'report', publicId: id, classification: 'digital' }), /Canonical detail/);
   assert.equal(detailProps.publicId, id); assert.equal(detailProps.expectedClassification, 'digital'); assert.equal(detailProps.presentation, 'embedded');
 });

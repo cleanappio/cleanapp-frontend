@@ -982,7 +982,9 @@ export default function GlobeView() {
     }
 
     const seqParam = router.query.seq;
-    const brandNameParam = router.query.brand_name as string | undefined;
+    const brandNameParam = typeof router.query.brand_name === "string"
+      ? router.query.brand_name
+      : undefined;
     const tabParam = router.query.tab as string | undefined;
 
     // Prioritize seq over brand_name if both are present

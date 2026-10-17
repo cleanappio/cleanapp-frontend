@@ -62,8 +62,8 @@ function EmbeddedPublicBrandPreview({
           <PublicBrandDashboard items={items} pageBrand={brandName} activeKind="all" onOpenReport={onOpenReport} />
         </>
       )}
-      <Link href={`/digital/${encodeURIComponent(brandName)}?kind=all&sort=recent`} className="mt-5 inline-flex min-h-[44px] items-center font-semibold text-green-800 hover:text-green-950">
-        View all reports <span aria-hidden="true" className="ml-1">→</span>
+      <Link href={`/digital/${encodeURIComponent(brandName)}`} className="mt-5 inline-flex min-h-[44px] items-center font-semibold text-green-800 hover:text-green-950">
+        Open brand page <span aria-hidden="true" className="ml-1">→</span>
       </Link>
     </div>
   );
