@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
-import { useTranslations } from '@/lib/i18n';
+import useReportCounter from '@/hooks/useReportCounter';
 
 interface BrandSummary {
   brand_name: string;
   brand_display_name: string;
   total: number;
-}
-
-interface LiveStats {
-  digitalReports: number;
-  totalBrands: number;
-  physicalReports: number;
-  locations: number;
-  topBrands: BrandSummary[];
-  isLoading: boolean;
 }
 
 // Curated intelligence variations for the carousel
@@ -65,19 +57,27 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+// Rounds down so the "+" is always true: 1,091,281 -> "1.09M+", 188,962 -> "188K+".
+function formatFloor(num: number): string {
+  if (num >= 1_000_000) return `${(Math.floor(num / 10_000) / 100).toFixed(2)}M+`;
+  if (num >= 1_000) return `${Math.floor(num / 1_000)}K+`;
+  return num.toLocaleString();
+}
+
+function formatUpdated(iso?: string): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 export default function HeroPanel() {
-  const { t } = useTranslations();
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [shuffledWords, setShuffledWords] = useState<string[]>([]);
   const [showBrands, setShowBrands] = useState(true); // Toggle between brands and locations
-  const [stats, setStats] = useState<LiveStats>({
-    digitalReports: 0,
-    totalBrands: 0,
-    physicalReports: 78000, // Fallback for physical reports
-    locations: 12283, // Fallback for locations (78000 / 6.35)
-    topBrands: [],
-    isLoading: true,
-  });
+  const [brands, setBrands] = useState<{ total: number; top: BrandSummary[] } | null>(null);
+  const [brandsError, setBrandsError] = useState(false);
+  const { reportCounter, isLoading: countsLoading, error: countsError } = useReportCounter();
 
   // Shuffle words on mount
   useEffect(() => {
@@ -102,117 +102,142 @@ export default function HeroPanel() {
   }, []);
 
   useEffect(() => {
-    const fetchLiveStats = async () => {
+    const fetchBrands = async () => {
       try {
-        // Fetch digital reports (brands)
-        const digitalResponse = await fetch(
+        const response = await fetch(
           `${process.env.NEXT_PUBLIC_RENDERER_API_URL || 'https://renderer.cleanapp.io'}/api/v4/brands/summary?classification=digital&lang=en`
         );
-        const digitalData: BrandSummary[] = await digitalResponse.json();
-
-        const digitalReports = digitalData.reduce((sum, b) => sum + b.total, 0);
-        const totalBrands = digitalData.filter(b => b.total > 0).length;
-
-        const topBrands = digitalData
-          .filter(b => b.brand_name.toLowerCase() !== 'other')
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 5);
-
-        // Use fallback values for physical reports since API doesn't support it
-        const physicalReports = 78000;
-        const locations = Math.floor(physicalReports / 6.35);
-
-        setStats({
-          digitalReports,
-          totalBrands,
-          physicalReports,
-          locations,
-          topBrands,
-          isLoading: false,
+        const data: BrandSummary[] = await response.json();
+        setBrands({
+          total: data.filter((b) => b.total > 0).length,
+          top: data
+            .filter((b) => b.brand_name.toLowerCase() !== 'other')
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 3),
         });
       } catch (error) {
-        console.error('Failed to fetch live stats:', error);
-        setStats(prev => ({ ...prev, isLoading: false }));
+        console.error('Failed to fetch brand summary:', error);
+        setBrandsError(true);
       }
     };
 
-    fetchLiveStats();
+    fetchBrands();
   }, []);
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M+`;
-    if (num >= 1000) return `${Math.floor(num / 1000)}K+`;
-    return num.toString();
-  };
+  const digitalReports = reportCounter.total_digital_reports;
+  const physicalReports = reportCounter.total_physical_reports;
+  const hasCounts = !countsLoading && !countsError && reportCounter.total_reports > 0;
+  const updatedAt = formatUpdated((reportCounter as { last_updated?: string }).last_updated);
 
-  if (stats.isLoading || shuffledWords.length === 0) {
-    return (
-      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 mb-8">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-8 w-64 bg-gray-700 rounded mb-4"></div>
-          <div className="h-4 w-96 bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  const figures = [
+    { label: 'Total reports', value: reportCounter.total_reports },
+    { label: 'Digital reports', value: digitalReports },
+    { label: 'Physical reports', value: physicalReports },
+    { label: 'Brands', value: brands?.total ?? 0 },
+  ];
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 mb-8 relative overflow-hidden">
-      {/* Animated background dots */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-4 left-8 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <div className="absolute top-12 right-16 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <div className="absolute bottom-8 left-1/4 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <div className="absolute bottom-16 right-1/3 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-8 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-      </div>
+    <section className="relative overflow-hidden rounded-2xl bg-gray-900 px-6 py-10 sm:px-10 text-white mb-8">
+      {/* Subtle grid + glow, echoing the live map */}
+      <div
+        className="absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+        aria-hidden="true"
+      />
+      <div className="absolute -top-24 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full bg-green-500/20 blur-3xl" aria-hidden="true" />
 
-      <div className="relative z-10 text-center">
+      <div className="relative text-center">
         {/* Word Carousel - The main focus */}
-        <div className="flex items-center justify-center mb-6">
-          <Sparkles className="w-5 h-5 text-green-400 mr-2" />
-          <span className="text-green-400 uppercase tracking-wider text-sm font-medium">Live</span>
-          <span
-            className="mx-2 text-white font-bold text-xl md:text-2xl transition-all duration-300"
-            key={currentWordIndex}
-          >
-            {shuffledWords[currentWordIndex]}
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1.5 text-green-400 uppercase tracking-wider text-sm font-semibold">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+            </span>
+            Live
           </span>
-          <span className="text-green-400 uppercase tracking-wider text-sm font-medium">Intelligence</span>
+          <span className="inline-block min-w-[9ch] text-3xl sm:text-4xl font-bold tracking-tight" aria-live="polite">
+            {shuffledWords.length > 0 ? (
+              <span key={currentWordIndex} className="dashboard-word-in inline-block">
+                {shuffledWords[currentWordIndex]}
+              </span>
+            ) : (
+              <span className="invisible">BRAND</span>
+            )}
+          </span>
+          <span className="text-green-400 uppercase tracking-wider text-sm font-semibold">Intelligence</span>
         </div>
 
         {/* Stats carousel - slow (10 seconds) */}
-        <p className="text-gray-300 text-lg mb-6 transition-opacity duration-500">
-          CleanApp is tracking{' '}
-          {showBrands ? (
-            <>
-              <span className="text-green-400 font-bold">{formatNumber(stats.digitalReports)} reports</span>
-              {' '}across{' '}
-              <span className="text-green-400 font-bold">{stats.totalBrands.toLocaleString()}+ brands</span>
-            </>
+        <p className="mt-5 min-h-[1.75rem] text-gray-300 text-lg">
+          {hasCounts && (brands || brandsError) ? (
+            <span key={showBrands ? 'brands' : 'locations'} className="dashboard-word-in inline-block">
+              CleanApp is tracking{' '}
+              {showBrands ? (
+                <>
+                  <span className="text-white font-semibold">{formatFloor(digitalReports)} reports</span>
+                  {brands ? (
+                    <>
+                      {' '}across{' '}
+                      <span className="text-white font-semibold">{brands.total.toLocaleString()}+ brands</span>
+                    </>
+                  ) : (
+                    ' about digital products and services'
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-white font-semibold">{formatFloor(physicalReports)} reports</span>
+                  {' '}across{' '}
+                  <span className="text-white font-semibold">physical locations worldwide</span>
+                </>
+              )}
+            </span>
           ) : (
-            <>
-              <span className="text-green-400 font-bold">{formatNumber(stats.physicalReports)} reports</span>
-              {' '}across{' '}
-              <span className="text-green-400 font-bold">{stats.locations.toLocaleString()}+ locations</span>
-            </>
+            <span className="inline-block h-4 w-72 max-w-full animate-pulse rounded bg-gray-700 align-middle" />
           )}
         </p>
 
-        {stats.topBrands.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-gray-400 text-sm">Top brands this week:</span>
-            {stats.topBrands.slice(0, 3).map((brand, i) => (
-              <span key={brand.brand_name} className="inline-flex items-center">
-                <span className="bg-gray-700/60 text-white px-3 py-1 rounded-full text-sm">
-                  {brand.brand_display_name}
-                </span>
-                {i < 2 && <span className="text-gray-600 mx-1">,</span>}
-              </span>
+        {brands && brands.top.length > 0 && (
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-gray-400 text-sm">Most-reported brands:</span>
+            {brands.top.map((brand) => (
+              <Link
+                key={brand.brand_name}
+                href={`/digital/${encodeURIComponent(brand.brand_name)}`}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white hover:border-green-400/60 hover:bg-white/10 transition-colors"
+              >
+                {brand.brand_display_name}
+              </Link>
             ))}
           </div>
         )}
       </div>
-    </div>
+
+      {/* Exact figures from the live report counter */}
+      <dl className="relative mt-10 grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
+        {figures.map((figure) => (
+          <div key={figure.label} className="bg-gray-900/90 px-4 py-4 sm:px-5 text-left">
+            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{figure.label}</dt>
+            <dd className="mt-1 text-xl sm:text-2xl font-bold tabular-nums">
+              {(figure.label === 'Brands' ? brands : hasCounts) ? (
+                figure.value.toLocaleString()
+              ) : (figure.label === 'Brands' ? brandsError : countsError) ? (
+                <span className="text-gray-500">—</span>
+              ) : (
+                <span className="inline-block h-6 w-24 animate-pulse rounded bg-gray-700 align-middle" />
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {updatedAt && hasCounts && (
+        <p className="relative mt-3 text-right text-xs text-gray-500">Counts refresh every 30 seconds · last updated {updatedAt}</p>
+      )}
+    </section>
   );
 }

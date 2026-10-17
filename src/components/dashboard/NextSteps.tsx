@@ -19,19 +19,19 @@ function StepButton({ icon: Icon, label, href, isPersonalized }: StepButtonProps
   return (
     <button
       onClick={() => router.push(href)}
-      className={`flex items-center justify-between w-full p-4 rounded-lg border transition-all group ${isPersonalized
-          ? 'border-green-300 bg-green-50/50 hover:border-green-500 hover:bg-green-50'
-          : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+      className={`flex items-center justify-between w-full p-4 rounded-xl border transition-all group ${isPersonalized
+          ? 'border-green-600 bg-green-50 hover:bg-green-100'
+          : 'border-gray-200 hover:border-green-600 hover:bg-green-50/50'
         }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isPersonalized
-            ? 'bg-green-100 group-hover:bg-green-200'
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${isPersonalized
+            ? 'bg-green-600'
             : 'bg-gray-100 group-hover:bg-green-100'
           }`}>
-          <Icon className={`w-5 h-5 ${isPersonalized ? 'text-green-600' : 'text-gray-600 group-hover:text-green-600'}`} />
+          <Icon className={`w-5 h-5 ${isPersonalized ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
         </div>
-        <span className={`font-medium text-left ${isPersonalized ? 'text-green-700' : 'text-gray-800 group-hover:text-green-700'}`}>
+        <span className={`font-medium text-left ${isPersonalized ? 'text-gray-900' : 'text-gray-800 group-hover:text-gray-900'}`}>
           {label}
         </span>
       </div>
@@ -94,8 +94,8 @@ export default function NextSteps() {
   ].slice(0, 3); // Only show 3 steps
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Continue where you left off</h2>
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 h-full">
+      <h2 className="text-lg font-semibold text-gray-900 mb-5">Continue where you left off</h2>
       <div className="space-y-3">
         {steps.map((step) => (
           <StepButton key={step.label} {...step} />
