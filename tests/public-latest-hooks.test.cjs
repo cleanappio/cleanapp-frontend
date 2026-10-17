@@ -37,13 +37,13 @@ function hooks() {
   };
 }
 
-function load(relative, replacements) {
+function load(relative, replacements, globals = {}) {
   const filename = path.resolve(__dirname, relative);
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, module: { exports }, process,
+  vm.runInNewContext(compiled, { exports, module: { exports }, process, ...globals,
     require: name => { assert.ok(name in replacements, `unexpected dependency ${name}`); return replacements[name]; },
   }, { filename });
   return exports;
@@ -238,4 +238,154 @@ test('lite-map append callbacks stay stable across live updates while preserving
   assert.deepEqual(Array.from(updated.physicalReports, item => item.severity_level), [0.4, 0.7]);
   assert.equal(updated.digitalReports.length, 2);
   assert.equal(updated.digitalReports[0].total, 2, 'new representative replaces the old brand node');
+});
+
+function digitalSummaryHook(visibility = 'visible') {
+  const h = hooks();
+  let now = 0;
+  let nextTimer = 0;
+  let physicalRequests = 0;
+  const requests = [];
+  const timers = new Map();
+  function eventTarget() {
+    const listeners = new Map();
+    return {
+      addEventListener(name, callback) { if (!listeners.has(name)) listeners.set(name, new Set()); listeners.get(name).add(callback); },
+      removeEventListener(name, callback) { listeners.get(name)?.delete(callback); },
+      dispatch(name) { for (const callback of listeners.get(name) || []) callback(); },
+      get listenerCount() { return [...listeners.values()].reduce((count, callbacks) => count + callbacks.size, 0); },
+    };
+  }
+  const window = eventTarget();
+  const document = Object.assign(eventTarget(), { visibilityState: visibility });
+  class Clock extends Date { static now() { return now; } }
+  const { useLiteReportsByTabV2 } = load('../src/hooks/v2/useLiteReports.ts', {
+    react: h.react, '@/lib/i18n': { getCurrentLocale: () => 'en' },
+  }, {
+    window, document, AbortController, Date: Clock,
+    setTimeout(callback, delay) { const id = ++nextTimer; timers.set(id, { callback, at: now + delay }); return id; },
+    clearTimeout(id) { timers.delete(id); },
+    fetch(url, options = {}) {
+      if (url.includes('/reports/points')) {
+        physicalRequests += 1;
+        return Promise.resolve({ json: async () => [] });
+      }
+      assert.ok(url.endsWith('/api/v4/brands/summary?classification=digital&lang=en'));
+      return new Promise((resolve, reject) => requests.push({ resolve, reject, signal: options.signal, at: now }));
+    },
+  });
+  return {
+    requests, window, document,
+    render() { h.begin(); return useLiteReportsByTabV2(); },
+    commit() { h.commit(); },
+    unmount() { h.unmount(); },
+    respond(index, rows) { requests[index].resolve({ ok: true, json: async () => rows }); },
+    snapshot() { return Array.from(this.render().digitalReports, item => [item.brand_name, item.total]); },
+    get physicalRequests() { return physicalRequests; },
+    get timerCount() { return timers.size; },
+    async advance(ms) {
+      const target = now + ms;
+      for (;;) {
+        const due = [...timers.entries()].filter(([, timer]) => timer.at <= target).sort((a, b) => a[1].at - b[1].at)[0];
+        if (!due) break;
+        const [id, timer] = due;
+        now = timer.at;
+        timers.delete(id);
+        timer.callback();
+        await new Promise(setImmediate);
+      }
+      now = target;
+      await new Promise(setImmediate);
+    },
+  };
+}
+
+test('digital summary invalidation bursts coalesce with a minute gap and retain authoritative snapshots', async () => {
+  const h = digitalSummaryHook();
+  const first = h.render(); h.commit();
+  assert.equal(h.requests.length, 1, 'the first summary load starts immediately');
+  for (let index = 0; index < 100; index++) first.invalidateDigital();
+  assert.equal(h.requests.length, 1, 'live events cannot overlap the initial whole-index download');
+  h.respond(0, [{ brand_name: 'google', total: 30000 }, { brand_name: 'microsoft', total: 22000 }]);
+  await h.advance(0);
+  assert.deepEqual(h.snapshot(), [['google', 30000], ['microsoft', 22000]], 'events cannot invalidate a successful in-flight snapshot');
+  assert.equal(h.render().invalidateDigital, first.invalidateDigital, 'the live callback remains stable across renders');
+  await h.advance(59_999);
+  assert.equal(h.requests.length, 1);
+  for (let index = 0; index < 100; index++) first.invalidateDigital();
+  await h.advance(1);
+  assert.equal(h.requests.length, 2, 'all bursts share one trailing refresh at60 seconds');
+  assert.deepEqual(h.snapshot(), [['google', 30000], ['microsoft', 22000]], 'pending refresh cannot replace totals with preview counts');
+  h.respond(1, [{ brand_name: 'google', total: 29000 }, { brand_name: 'microsoft', total: 0 }, { brand_name: 'new-brand', total: 7 }]);
+  await h.advance(0);
+  const updated = [['google', 29000], ['microsoft', 0], ['new-brand', 7]];
+  assert.deepEqual(h.snapshot(), updated, 'successful snapshots permit decreases, zero, and new brands');
+
+  first.invalidateDigital();
+  await h.advance(60_000);
+  h.requests[2].resolve({ ok: false, status: 503 });
+  await h.advance(0);
+  assert.deepEqual(h.snapshot(), updated);
+  assert.match(h.render().errors.digital, /503/);
+  assert.equal(h.render().loading.digital, false);
+  assert.equal(h.physicalRequests, 1, 'digital events do not reload physical points');
+  h.unmount();
+});
+
+test('digital summary invalidation pauses hidden and resumes on visibility, focus, or online', async () => {
+  const h = digitalSummaryHook('hidden');
+  const first = h.render(); h.commit();
+  first.invalidateDigital();
+  assert.equal(h.requests.length, 0);
+  h.document.visibilityState = 'visible';
+  h.document.dispatch('visibilitychange');
+  assert.equal(h.requests.length, 1);
+  h.respond(0, [{ brand_name: 'google', total: 30000 }]);
+  await h.advance(0);
+  h.window.dispatch('focus');
+  h.window.dispatch('online');
+  h.document.visibilityState = 'hidden';
+  await h.advance(60_000);
+  assert.equal(h.requests.length, 1, 'a pending timer cannot start a hidden download');
+  h.document.visibilityState = 'visible';
+  h.document.dispatch('visibilitychange');
+  assert.equal(h.requests.length, 2);
+  h.respond(1, [{ brand_name: 'google', total: 30001 }]);
+  await h.advance(0);
+  assert.deepEqual(h.snapshot(), [['google', 30001]]);
+  h.unmount();
+  assert.equal(h.timerCount, 0);
+  assert.equal(h.window.listenerCount, 0);
+  assert.equal(h.document.listenerCount, 0);
+  first.invalidateDigital();
+  assert.equal(h.requests.length, 2, 'unmounted callbacks cannot revive downloads');
+});
+
+test('digital summary deadline covers the response body and cleanup ignores late results', async () => {
+  const h = digitalSummaryHook();
+  const first = h.render(); h.commit();
+  let finishBody;
+  h.requests[0].resolve({ ok: true, json: () => new Promise(resolve => { finishBody = resolve; }) });
+  await h.advance(0);
+  await h.advance(15_000);
+  assert.equal(h.requests[0].signal.aborted, true);
+  assert.match(h.render().errors.digital, /timed out/);
+  assert.equal(h.render().loading.digital, false);
+  first.invalidateDigital();
+  await h.advance(45_000);
+  assert.equal(h.requests.length, 2);
+  h.respond(1, [{ brand_name: 'google', total: 30000 }]);
+  await h.advance(0);
+  finishBody([{ brand_name: 'google', total: 1 }]);
+  await h.advance(0);
+  assert.deepEqual(h.snapshot(), [['google', 30000]], 'late timed-out JSON cannot overwrite recovery');
+  first.invalidateDigital();
+  await h.advance(60_000);
+  assert.equal(h.requests.length, 3);
+  h.unmount();
+  assert.equal(h.requests[2].signal.aborted, true);
+  assert.equal(h.timerCount, 0);
+  h.respond(2, [{ brand_name: 'google', total: 1 }]);
+  await h.advance(0);
+  assert.deepEqual(h.snapshot(), [['google', 30000]], 'cleanup ignores a late in-flight replacement');
 });
