@@ -224,6 +224,56 @@ test('brand page keeps cached category counts, overview and display name while s
   assert.match(recovered, /Retry/);
 });
 
+test('failed and empty later pages retain Previous without an invented next page or inverted range', () => {
+  const offsets = [];
+  const metadata = { counts_exact: true, kind_counts: { firsthand: 14, coverage: 0, unknown: 0, all: 14 } };
+  let view = { items: [], batch: null, metadata, metadataRetained: true, products: ['openai'],
+    brandDisplayName: 'OpenAI', totalCount: 0, isLoading: false, isRefreshing: false, error: 'Request failed: 503',
+    hasScopedCounts: false, isPreview: false, hasCompletedRequest: true, refresh() {},
+  };
+  const load = modules({
+    ...common,
+    react: { ...React, useEffect() {}, useState(initial) {
+      return initial === 0 ? [12, next => offsets.push(next)] : [initial, () => {}];
+    } },
+    '@/components/Seo': { __esModule: true, default: noop }, '@/lib/brand-seo': {},
+    '@/lib/auth-store': { useAuthStore: selector => selector({ isAuthenticated: false }) },
+    '@/hooks/usePublicReportsByBrand': { usePublicReportsByBrand: () => view },
+    '@/hooks/useReportsByBrand': { useReportsByBrand: () => ({}) },
+    '@/components/brand/SubscribedBrandDashboard': { __esModule: true, default: noop },
+    '@/components/brand/CleanIntelligencePanel': { __esModule: true, default: noop },
+    '@/components/report/PublicReportDetailPage': { EmbeddedReportBackBar: noop },
+  });
+  const Page = load('../src/pages/digital/[brand_name]/index.tsx').default;
+  const props = { seo: { found: true, title: 'OpenAI reports', path: '/digital/openai' }, initialPreview: null };
+  const find = (node, predicate) => {
+    if (!node || typeof node !== 'object') return null;
+    if (predicate(node)) return node;
+    return React.Children.toArray(node.props?.children).map(child => find(child, predicate)).find(Boolean);
+  };
+  for (const emptyBatch of [null, { items: [], has_more: false }]) {
+    view = { ...view, batch: emptyBatch, error: emptyBatch ? null : 'Request failed: 503' };
+    const tree = Page(props);
+    const nav = find(tree, node => node.type === 'nav' && node.props['aria-label'] === 'Report pages');
+    assert.ok(nav, 'a failed later page must retain a route back');
+    const previous = find(nav, node => node.type === 'button' && node.props.children === 'Previous');
+    const next = find(nav, node => node.type === 'button' && node.props.children === 'Next');
+    assert.equal(previous.props.disabled, false);
+    assert.equal(next.props.disabled, true);
+    previous.props.onClick();
+    assert.equal(offsets.at(-1), 0);
+    const html = renderToStaticMarkup(tree);
+    assert.match(html, /Page 2/);
+    assert.doesNotMatch(html, /Results 13[–-]12/);
+    assert.match(html, /\(14\)/, 'scoped totals stay separate from the missing page');
+  }
+  const filters = find(Page(props), node => typeof node.type === 'function' && node.type.name === 'EvidenceFilters');
+  filters.props.onKind('coverage');
+  filters.props.onSort('recurrence');
+  filters.props.onProduct('openai');
+  assert.deepEqual(offsets.slice(-3), [0, 0, 0], 'every source, sort and product change starts at page one');
+});
+
 test('canonical evidence links allow new tabs and modified clicks in embedded report dialogs', () => {
   let opened = 0;
   const load = modules({

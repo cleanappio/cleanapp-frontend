@@ -161,6 +161,17 @@ test('plain source filters avoid jargon and retain exact per-view counts', () =>
   assert.match(html, /Reports from people describing their own experience/);
 });
 
+test('product selector stays available without counts so a failed product can return to All products', () => {
+  const html = renderToStaticMarkup(React.createElement(EvidenceFilters, {
+    kind: 'all', sort: 'recent', product: 'windows', products: ['microsoft', 'windows'], batch: null,
+    onKind() {}, onSort() {}, onProduct() {},
+  }));
+  assert.match(html, /aria-label="Product"/);
+  assert.match(html, /value="">All products/);
+  assert.match(html, /value="windows" selected=""/);
+  assert.doesNotMatch(html, /\(\d[\d,]*\)/, 'missing scoped counts cannot become company-wide or made-up totals');
+});
+
 test('personal experiences retain direct versus imported provenance', () => {
   const imported = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence })).split('<details')[0];
   assert.match(imported, /Personal experience/);

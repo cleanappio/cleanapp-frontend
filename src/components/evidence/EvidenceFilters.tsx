@@ -8,15 +8,17 @@ const FILTERS: { value: ReportKindFilter; label: string; description: string }[]
   { value: "all", label: "All reports", description: "Reports from every source type." },
 ];
 
-export default function EvidenceFilters({ kind, sort, product, batch, onKind, onSort, onProduct }: {
+export default function EvidenceFilters({ kind, sort, product, products, batch, onKind, onSort, onProduct }: {
   kind: ReportKindFilter;
   sort: ReportSignalSort;
   product: string;
+  products?: string[];
   batch: PublicBrandMetadata | null;
   onKind: (kind: ReportKindFilter) => void;
   onSort: (sort: ReportSignalSort) => void;
   onProduct: (product: string) => void;
 }) {
+  const productOptions = products ?? batch?.scope?.products ?? [];
   return (
     <div className="mb-4 border-b border-gray-200">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -28,7 +30,7 @@ export default function EvidenceFilters({ kind, sort, product, batch, onKind, on
           ))}
         </div>
         <div className="mb-1 flex max-w-full flex-wrap gap-3">
-          {!!batch?.scope?.products?.length && <label className="flex items-center gap-2 text-xs text-gray-600"><span className="sr-only sm:not-sr-only">Product</span><select aria-label="Product" value={product} onChange={(event) => onProduct(event.target.value)} className="min-h-[44px] max-w-[136px] sm:max-w-[190px] rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-900"><option value="">All products</option>{batch.scope.products.map((name) => <option key={name} value={name}>{brandLabel(name)}</option>)}</select></label>}
+          {!!productOptions.length && <label className="flex items-center gap-2 text-xs text-gray-600"><span className="sr-only sm:not-sr-only">Product</span><select aria-label="Product" value={product} onChange={(event) => onProduct(event.target.value)} className="min-h-[44px] max-w-[136px] sm:max-w-[190px] rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-900"><option value="">All products</option>{productOptions.map((name) => <option key={name} value={name}>{brandLabel(name)}</option>)}</select></label>}
           <label className="flex items-center gap-2 text-xs text-gray-600"><span className="sr-only sm:not-sr-only">Sort</span><select aria-label="Sort reports" value={sort} onChange={(event) => onSort(event.target.value as ReportSignalSort)} className="min-h-[44px] rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-900"><option value="recent">Recent</option><option value="signal">Most relevant</option><option value="recurrence">Most reported</option></select></label>
         </div>
       </div>

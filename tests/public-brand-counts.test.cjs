@@ -228,3 +228,20 @@ test('returning to a previously completed view still starts a distinct request a
   assert.equal(view.metadataRetained, true);
   assert.equal(view.error, 'Request failed: 503');
 });
+
+test('product recovery choices survive uncached product failure without leaking company-wide counts', async () => {
+  const h = harness(); h.render();
+  const company = await h.respond(0, batch());
+  let view = h.render({ query: { kind: 'all', sort: 'recent', product: 'windows' } });
+  assert.deepEqual(Array.from(view.products), ['microsoft', 'windows']);
+  assert.equal(view.metadata, null, 'product choices must not carry company-wide counts into a selected product');
+  view = await h.fail(1);
+  assert.equal(view.metadata, null);
+  assert.deepEqual(Array.from(view.products), ['microsoft', 'windows']);
+  view = h.render({ query: { kind: 'all', sort: 'recent' } });
+  assert.equal(view.metadata, company.metadata);
+  view = h.render({ locale: 'fr' });
+  assert.deepEqual(Array.from(view.products), []);
+  view = h.render({ brand: 'google', locale: 'en' });
+  assert.deepEqual(Array.from(view.products), []);
+});

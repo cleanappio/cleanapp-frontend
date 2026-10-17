@@ -51,6 +51,7 @@ export function usePublicReportsByBrand(
   const [page, setPage] = useState<ReportPage | null>(seedMatches && initialBatch ? { view: viewScope, batch: initialBatch, preview: true } : null);
   const [snapshots, setSnapshots] = useState<Record<string, CountSnapshot>>({});
   const [displayNames, setDisplayNames] = useState<Record<string, string>>(seedDisplayName ? { [brandScope]: seedDisplayName } : {});
+  const [productChoices, setProductChoices] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const requestScope = JSON.stringify([viewScope, revision]);
@@ -80,9 +81,12 @@ export function usePublicReportsByBrand(
           nextBatch.items.find(item => item.brand_name?.toLowerCase() === brandName.toLowerCase())?.brand_display_name;
         if (displayName) setDisplayNames(current => ({ ...current, [brandScope]: displayName }));
         const metadata = exactMetadata(nextBatch);
-        if (metadata) setSnapshots(current => ({
-          ...current, [countScope]: { metadata, request, receivedAt: new Date().toISOString() },
-        }));
+        if (metadata) {
+          setSnapshots(current => ({
+            ...current, [countScope]: { metadata, request, receivedAt: new Date().toISOString() },
+          }));
+          if (metadata.scope) setProductChoices(current => ({ ...current, [brandScope]: metadata.scope!.products }));
+        }
       })
       .catch(err => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Load failed"); })
       .finally(() => {
@@ -109,6 +113,7 @@ export function usePublicReportsByBrand(
     metadata: snapshot?.metadata || null,
     metadataRetained: Boolean(snapshot && snapshot.request !== attempt),
     metadataReceivedAt: snapshot?.receivedAt,
+    products: active ? productChoices[brandScope] || [] : [],
     isPreview: Boolean(currentPage?.preview),
     totalCount: hasScopedCounts ? currentBatch!.total_count! : items.length,
     highPriority: currentBatch?.high_priority_count ?? 0,
