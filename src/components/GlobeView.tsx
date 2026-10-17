@@ -2668,13 +2668,18 @@ export default function GlobeView() {
 
     const timeoutId = setTimeout(() => {
       const normalized = searchTerm.trim().toLowerCase();
-      const match = latestReports.find((item) => {
+      // Prefer the company itself before products mentioning it in their names.
+      const match = (latestReports.find((item) =>
+        item.classification === "digital" && item.brand_name?.toLowerCase() === normalized,
+      ) || latestReports.find((item) =>
+        item.classification === "digital" && item.brand_display_name?.toLowerCase() === normalized,
+      ) || latestReports.find((item) => {
         return (
           item.classification === "digital" &&
           (item.brand_name?.toLowerCase().includes(normalized) ||
             item.brand_display_name?.toLowerCase().includes(normalized))
         );
-      }) as DigitalReportResponse | undefined;
+      })) as DigitalReportResponse | undefined;
 
       if (match) {
         setMatchingBrand({

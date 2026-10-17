@@ -68,6 +68,28 @@ const summaries = [
 ];
 const selection = state => JSON.parse(JSON.stringify(state.embeddedPublicReport));
 
+test('typed company names prefer their exact saved totals over products mentioning the company', () => {
+  const expression = effects.find(effect => effect.includes('const normalized = searchTerm.trim().toLowerCase()'));
+  assert.ok(expression);
+  for (const summary of summaries) {
+    let matched;
+    const context = vm.createContext({
+      searchTerm: ` ${summary.brand_display_name.toUpperCase()} `, isDigital: true,
+      latestReports: [
+        { classification: 'digital', brand_name: 'aaa-product', brand_display_name: `A product from ${summary.brand_display_name}`, total: 1 },
+        { ...summary, brand_name: 'bbb-display-alias', total: 2 },
+        summary,
+      ],
+      setMatchingBrand: value => { matched = value; },
+      setTimeout: callback => { callback(); return 1; }, clearTimeout() {},
+    });
+    vm.runInContext(ts.transpileModule(`(${expression})();`, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, context);
+    assert.deepEqual(JSON.parse(JSON.stringify(matched)), {
+      brand_name: summary.brand_name, brand_display_name: summary.brand_display_name, total: summary.total,
+    });
+  }
+});
+
 test('repeated brand query parameters do not crash or load an ambiguous brand', () => {
   const h = harness({ tab: 'digital', brand_name: ['google', 'microsoft'] }, summaries);
   assert.doesNotThrow(() => h.state.openFromUrl());
