@@ -429,7 +429,7 @@ export default function GlobeView() {
     physicalReports: latestPhysicalReportsV2,
     digitalReports: latestDigitalReportsV2,
     appendPhysicalLite: appendPhysicalLiteV2,
-    appendDigitalLite: appendDigitalLiteV2,
+    invalidateDigital: invalidateDigitalLiteV2,
   } = useLiteReportsByTabV2();
 
   // Helper function to check if we should use seq instead of brand_name for digital reports
@@ -482,6 +482,18 @@ export default function GlobeView() {
 
   const openResolvedPublicReport = useCallback(
     (resolved: PublicDiscoveryResolveResponse) => {
+      if (resolved.kind === "brand" && resolved.brand_name) {
+        const summary = latestDigitalReportsV2.find(
+          (item) => item.brand_name.toLowerCase() === resolved.brand_name?.toLowerCase(),
+        );
+        setEmbeddedPublicReport({
+          kind: "brand",
+          brandName: resolved.brand_name,
+          brandDisplayName: summary?.brand_display_name,
+          total: summary?.total,
+        });
+        return;
+      }
       if (isEmbeddedMode || isReactNativeWebView) {
         if (resolved.kind === "report" && resolved.public_id) {
           setEmbeddedPublicReport({
@@ -491,19 +503,12 @@ export default function GlobeView() {
           });
           return;
         }
-        if (resolved.kind === "brand" && resolved.brand_name) {
-          setEmbeddedPublicReport({
-            kind: "brand",
-            brandName: resolved.brand_name,
-          });
-          return;
-        }
       }
       if (resolved.canonical_path) {
         void router.push(resolved.canonical_path);
       }
     },
-    [isReactNativeWebView, router],
+    [isReactNativeWebView, latestDigitalReportsV2, router],
   );
 
   const openCanonicalReport = useCallback(
@@ -522,6 +527,24 @@ export default function GlobeView() {
     },
     [openResolvedPublicReport],
   );
+
+  const closeEmbeddedPublicReport = useCallback(() => {
+    const closingBrand = embeddedPublicReport?.kind === "brand";
+    setEmbeddedPublicReport(null);
+    if (!closingBrand) return;
+    setSeq(null);
+    setSelectedBrandName(null);
+    setReportWithAnalysis(null);
+    setSelectedReport(null);
+    setIsLoadingReportFromUrl(false);
+    lastFetchedSeqRef.current = null;
+    lastFetchedBrandRef.current = null;
+    openingFromClickRef.current = false;
+    const query = { ...router.query };
+    delete query.brand_name;
+    delete query.seq;
+    void router.push({ pathname: "/", query }, undefined, { shallow: true });
+  }, [embeddedPublicReport, router]);
 
   const openPublicDiscoveryItem = useCallback(
     async (item: PublicDiscoveryCard) => {
@@ -559,16 +582,6 @@ export default function GlobeView() {
         return false;
       }
 
-      if (isEmbeddedMode || isReactNativeWebView) {
-        openResolvedPublicReport({
-          kind: "brand",
-          classification: "digital",
-          brand_name: report.brand_name,
-          canonical_path: `/digital/${encodeURIComponent(report.brand_name)}`,
-        });
-        return true;
-      }
-
       if (shouldUseSeqForDigital(report.brand_name)) {
         const reportSeq = report.seq;
         if (!reportSeq) {
@@ -589,21 +602,27 @@ export default function GlobeView() {
         return true;
       }
 
+      setEmbeddedPublicReport({
+        kind: "brand",
+        brandName: report.brand_name,
+        brandDisplayName: report.brand_display_name,
+        total: report.total,
+      });
+      const query: Record<string, string | string[] | undefined> = {
+        ...router.query, tab: "digital", brand_name: report.brand_name,
+      };
+      delete query.seq;
       void router.push(
         {
           pathname: "/",
-          query: {
-            ...router.query,
-            tab: "digital",
-            brand_name: report.brand_name,
-          },
+          query,
         },
         undefined,
         { shallow: true },
       );
       return true;
     },
-    [isReactNativeWebView, openCanonicalReport, openResolvedPublicReport, router, shouldUseSeqForDigital],
+    [openCanonicalReport, router, shouldUseSeqForDigital],
   );
 
   const openReportFromAnalysis = useCallback(
@@ -963,7 +982,9 @@ export default function GlobeView() {
     }
 
     const seqParam = router.query.seq;
-    const brandNameParam = router.query.brand_name as string | undefined;
+    const brandNameParam = typeof router.query.brand_name === "string"
+      ? router.query.brand_name
+      : undefined;
     const tabParam = router.query.tab as string | undefined;
 
     // Prioritize seq over brand_name if both are present
@@ -1271,7 +1292,7 @@ export default function GlobeView() {
           setSeq(null);
           lastFetchedSeqRef.current = null;
 
-          setIsLoadingReportFromUrl(true);
+          setIsLoadingReportFromUrl(false);
           lastFetchedBrandRef.current = brandNameParam;
           // Set selectedBrandName immediately to prevent modal from closing
           setSelectedBrandName(brandNameParam);
@@ -1295,75 +1316,28 @@ export default function GlobeView() {
             // The useEffect in useReportTabs will sync the state from the URL
           }
 
-          const locale = getCurrentLocale();
-          // URL encode the brand_name to handle special characters
-          const encodedBrandName = encodeURIComponent(brandNameParam);
-          const apiUrl = `${process.env.NEXT_PUBLIC_LIVE_API_URL}/api/v4/reports/by-brand?brand_name=${encodedBrandName}&n=1&kind=all&sort=recent`;
-          console.log("Fetching digital report from URL:", apiUrl);
-          fetch(apiUrl)
-            .then((response) => {
-              console.log(
-                "Digital report fetch response status:",
-                response.status,
-              );
-              if (!response.ok) {
-                throw new Error(
-                  `Failed to fetch digital report: ${response.status}`,
-                );
-              }
-              return response.json();
-            })
-            .then((data: { reports: ReportWithAnalysis[] }) => {
-              console.log("Digital report fetch response data:", data);
-              if (data.reports && data.reports.length > 0) {
-                const filteredData = filterAnalysesByLanguage(
-                  data.reports,
-                  locale,
-                );
-                const reportData = filteredData[0] || data.reports[0];
-                console.log("Setting digital report data:", reportData);
-
-                setReportWithAnalysis(reportData);
-                // selectedBrandName is already set above, just ensure seq is cleared
-                setSeq(null); // Clear seq for digital reports
-
-                const brandName =
-                  reportData.analysis[0]?.brand_name || brandNameParam;
-                const brandDisplayName =
-                  reportData.analysis[0]?.brand_display_name || "Other";
-                const digitalReport = {
-                  ...reportData.report,
-                  classification: "digital",
-                  brand_name: brandName,
-                  brand_display_name: brandDisplayName,
-                  total: 1,
-                } as DigitalReportResponse;
-                setSelectedReport(digitalReport);
-                const { lat, lon } = stringToLatLonColor(brandName);
-                flyToReport({ lon: lon, lat: lat });
-
-                console.log("Opening modal for digital report");
-                setIsCleanAppProOpen(true);
-                setIsLoadingReportFromUrl(false);
-              } else {
-                console.error("No reports found in response:", data);
-                // throw new Error("No reports found for brand");
-              }
-            })
-            .catch((error) => {
-              console.error("Error fetching digital report from URL:", error);
-              setIsLoadingReportFromUrl(false);
-              lastFetchedBrandRef.current = null;
-              // Remove brand_name from URL on error
-              const query = { ...router.query };
-              delete query.brand_name;
-              router.push({ pathname: "/", query }, undefined, {
-                shallow: true,
-              });
-            });
+          const summary = latestDigitalReportsV2.find(
+            (item) => item.brand_name.toLowerCase() === brandNameParam.toLowerCase(),
+          );
+          setReportWithAnalysis(null);
+          setSelectedReport(null);
+          setIsCleanAppProOpen(false);
+          setEmbeddedPublicReport({
+            kind: "brand",
+            brandName: summary?.brand_name || brandNameParam,
+            brandDisplayName: summary?.brand_display_name,
+            total: summary?.total,
+          });
+          const { lat, lon } = stringToLatLonColor(summary?.brand_name || brandNameParam);
+          flyToReport({ lon, lat });
         }
       }
     } else {
+      if (embeddedPublicReport?.kind === "brand" && selectedBrandName) {
+        setEmbeddedPublicReport(null);
+        setSelectedBrandName(null);
+        lastFetchedBrandRef.current = null;
+      }
       // If both seq and brand_name are removed from URL, close modal
       // But don't close if we just opened from a click (URL update is async)
       // Also don't close if we're currently loading a report from URL
@@ -1399,6 +1373,24 @@ export default function GlobeView() {
     isLoadingReportFromUrl,
     flyToReport,
   ]);
+
+  // Deep links can open before the renderer index arrives. Fill metadata from
+  // that authoritative snapshot without fetching the full brand corpus.
+  useEffect(() => {
+    if (embeddedPublicReport?.kind !== "brand") return;
+    const summary = latestDigitalReportsV2.find(
+      (item) => item.brand_name.toLowerCase() === embeddedPublicReport.brandName.toLowerCase(),
+    );
+    if (summary && (embeddedPublicReport.total !== summary.total ||
+      embeddedPublicReport.brandDisplayName !== summary.brand_display_name)) {
+      setEmbeddedPublicReport({
+        kind: "brand",
+        brandName: summary.brand_name,
+        brandDisplayName: summary.brand_display_name,
+        total: summary.total,
+      });
+    }
+  }, [embeddedPublicReport, latestDigitalReportsV2]);
 
   // Ref to track if we're currently updating the URL to prevent infinite loops
   const isUpdatingUrlRef = useRef(false);
@@ -2562,6 +2554,7 @@ export default function GlobeView() {
       onOpen: refreshPublicLatest,
       onMessage(data) {
         let refreshLatest = false;
+        let refreshDigital = false;
         const chunks = String(data)
           .split("\n")
           .map((chunk) => chunk.trim())
@@ -2606,15 +2599,8 @@ export default function GlobeView() {
                 } as PhysicalReportResponse,
               ]);
             } else if (classification === "digital") {
-              appendDigitalLiteV2([
-                {
-                  classification: "digital",
-                  brand_name: selectedAnalysis.brand_name || "other",
-                  brand_display_name:
-                    selectedAnalysis.brand_display_name || "Other",
-                  total: 1,
-                } as DigitalReportResponse,
-              ]);
+              // Live previews have no total. Reload the authoritative summary.
+              refreshDigital = true;
             }
 
             if (classification === "digital" || physicalCoordinates) {
@@ -2640,12 +2626,13 @@ export default function GlobeView() {
             refreshLatest = true;
           }
         }
+        if (refreshDigital) invalidateDigitalLiteV2();
         if (refreshLatest) refreshPublicLatest();
       },
     });
   }, [
     animateLiveUpdate,
-    appendDigitalLiteV2,
+    invalidateDigitalLiteV2,
     appendPhysicalLiteV2,
     pickPublicLiveAnalysis,
     refreshPublicLatest,
@@ -2681,13 +2668,18 @@ export default function GlobeView() {
 
     const timeoutId = setTimeout(() => {
       const normalized = searchTerm.trim().toLowerCase();
-      const match = latestReports.find((item) => {
+      // Prefer the company itself before products mentioning it in their names.
+      const match = (latestReports.find((item) =>
+        item.classification === "digital" && item.brand_name?.toLowerCase() === normalized,
+      ) || latestReports.find((item) =>
+        item.classification === "digital" && item.brand_display_name?.toLowerCase() === normalized,
+      ) || latestReports.find((item) => {
         return (
           item.classification === "digital" &&
           (item.brand_name?.toLowerCase().includes(normalized) ||
             item.brand_display_name?.toLowerCase().includes(normalized))
         );
-      }) as DigitalReportResponse | undefined;
+      })) as DigitalReportResponse | undefined;
 
       if (match) {
         setMatchingBrand({
@@ -3523,7 +3515,7 @@ export default function GlobeView() {
                   onClick={() => {
                     clearSelectedPlace();
                     trackBrandSearch(matchingBrand.brand_display_name);
-                    router.push(`/digital/${matchingBrand.brand_name}`);
+                    openReportFromSummary({ classification: "digital", ...matchingBrand });
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -3631,7 +3623,7 @@ export default function GlobeView() {
                   onClick={() => {
                     clearSelectedPlace();
                     trackBrandSearch(matchingBrand.brand_display_name);
-                    router.push(`/digital/${matchingBrand.brand_name}`);
+                    openReportFromSummary({ classification: "digital", ...matchingBrand });
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -3920,7 +3912,7 @@ export default function GlobeView() {
 
       <EmbeddedPublicReportDialog
         report={embeddedPublicReport}
-        onClose={() => setEmbeddedPublicReport(null)}
+        onClose={closeEmbeddedPublicReport}
         onOpenReport={openResolvedPublicReport}
       />
 
