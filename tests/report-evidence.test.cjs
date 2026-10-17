@@ -153,10 +153,23 @@ test('plain source filters avoid jargon and retain exact per-view counts', () =>
     batch: { counts_exact: true, kind_counts: { firsthand: 110, coverage: 2050, unknown: 4903, all: 7063 } },
     onKind() {}, onSort() {}, onProduct() {},
   }));
-  for (const label of ['Personal experiences', 'News &amp; discussion', 'Other reports', 'All reports', 'Recent', 'Relevance']) assert.match(html, new RegExp(label));
+  for (const label of ['Personal experiences', 'News &amp; discussion', 'Other reports', 'All reports', 'Recent', 'Most relevant', 'Most reported']) assert.match(html, new RegExp(label));
   assert.doesNotMatch(html, /Firsthand|Coverage|Unclassified/);
   for (const count of ['110', '2,050', '4,903', '7,063']) assert.match(html, new RegExp(count));
+  assert.match(html, /value="signal">Most relevant<\/option>/);
+  assert.match(html, /value="recurrence">Most reported<\/option>/);
   assert.match(html, /Reports from people describing their own experience/);
+});
+
+test('product selector stays available without counts so a failed product can return to All products', () => {
+  const html = renderToStaticMarkup(React.createElement(EvidenceFilters, {
+    kind: 'all', sort: 'recent', product: 'windows', products: ['microsoft', 'windows'], batch: null,
+    onKind() {}, onSort() {}, onProduct() {},
+  }));
+  assert.match(html, /aria-label="Product"/);
+  assert.match(html, /value="">All products/);
+  assert.match(html, /value="windows" selected=""/);
+  assert.doesNotMatch(html, /\(\d[\d,]*\)/, 'missing scoped counts cannot become company-wide or made-up totals');
 });
 
 test('personal experiences retain direct versus imported provenance', () => {

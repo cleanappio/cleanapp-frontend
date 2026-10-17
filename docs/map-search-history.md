@@ -51,9 +51,27 @@ map totals as filtered briefing totals. Do not restore the old fallback that
 presented a partial list length as an exact corpus total. Public live previews
 invalidate the cached map snapshot; they do not establish a new brand total.
 
-The full evidence briefing remains reachable through "Open brand page." Its expensive
-whole-cohort reader is a separate limitation; bypassing it for map previews does
-not establish that its exact grouping/count query has been optimized.
+The full evidence briefing remains reachable through "Open brand page." The map
+preview repair alone did not fix its expensive whole-cohort reader. The follow-up
+recovery reuses the existing projected reader from backend PR #174 and the
+previously prepared cohort cache (`26fe095b`, `claude/brand-cohort-cache`), integrated
+in backend PR #186. The cached cohort is independent of kind, sort and page;
+publication checks and source/family grouping still run per request. Refreshes
+are serialized, and snapshots expire after the refresh interval plus read budget
+(120 seconds with the production settings). Dirty source projections are
+restricted immediately until their privacy generation is recomputed.
+
+Frontend PR #53 connects the SSR preview to one canonical briefing request and
+retains validated category counts while changing sort or page. Count metadata is
+scoped to brand, language and product; rows remain scoped to the exact requested
+view. Saved counts are labeled during a failed update. Product choices and
+backward pagination remain available when a request fails. These repairs do not
+substitute the renderer's raw report totals for grouped briefing counts.
+
+Before treating the recovery as deployed, check the listener's source version,
+that cached briefing responses include `snapshot_at`, and actual browser behavior.
+The backend cache defaults off and requires explicit runtime activation; merging
+its source alone does not enable it.
 
 ## Runtime evidence recorded on 2026-10-17
 

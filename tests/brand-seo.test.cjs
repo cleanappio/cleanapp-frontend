@@ -21,6 +21,7 @@ test('brand SSR uses a bounded exact-brand preview, preserving Firsthand and can
   assert.equal(result.headers['Cache-Control'], 'no-store');
   const preview = result.page.props.initialPreview;
   assert.equal(preview.kind, 'firsthand'); assert.equal(preview.counts_exact, false);
+  assert.equal(preview.brand_name, 'openai'); assert.equal(preview.brand_display_name, 'OpenAI');
   assert.equal(preview.items[0].canonical_path, row.canonical_path);
   assert.equal(preview.items[0].evidence.excerpt, row.excerpt);
   assert.equal(preview.total_count, undefined);
@@ -33,6 +34,7 @@ test('known public brand with no firsthand observations remains a truthful empty
   assert.equal(result.page.props.seo.found, true);
   assert.equal(result.page.props.initialPreview.items.length, 0);
   assert.equal(result.page.props.initialPreview.kind, 'firsthand');
+  assert.equal(result.page.props.initialPreview.brand_display_name, 'OpenAI');
 });
 
 test('preview rejects mismatched identities, non-firsthand rows, unsafe links and oversized batches', async () => {

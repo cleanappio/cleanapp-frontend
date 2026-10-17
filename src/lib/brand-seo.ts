@@ -57,7 +57,7 @@ export const getBrandSeoProps: GetServerSideProps<BrandSeoProps> = async ({ para
     if (data.reports.length > 0 && items.length === 0) { publicSeoUnavailable(res); return { props: fallback }; }
     return { props: {
       seo: { title: `${display} reports | CleanApp`, description: `Explore recent firsthand reports associated with ${display}, their original source context and clearly labeled AI summaries.`, path: `/digital/${encodeURIComponent(canonicalName)}`, found: true },
-      initialPreview: { items, count: items.length, kind: "firsthand", sort: "recent", offset: 0, has_more: false, counts_exact: false },
+      initialPreview: { items, count: items.length, brand_name: canonicalName, brand_display_name: display, kind: "firsthand", sort: "recent", offset: 0, has_more: false, counts_exact: false },
     } };
   } catch {
     publicSeoUnavailable(res);
