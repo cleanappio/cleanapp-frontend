@@ -1,8 +1,8 @@
-import type { PublicDiscoveryBatch } from "@/types/public-discovery";
+import type { PublicBrandMetadata } from "@/types/public-discovery";
 import { brandLabel } from "@/lib/report-evidence";
 
 export default function BrandOverview({ batch, locale = "en", brandName, brandDisplayName }: {
-  batch: PublicDiscoveryBatch | null;
+  batch: PublicBrandMetadata | null;
   locale?: string;
   brandName?: string;
   brandDisplayName?: string;

@@ -91,11 +91,12 @@ test('successful brand body clears timer and preserves filters and response', as
     assert.equal(parsed.pathname, '/api/v3/public/discovery/by-brand');
     assert.equal(parsed.searchParams.get('kind'), 'coverage');
     assert.equal(parsed.searchParams.get('offset'), '12');
+    assert.equal(parsed.searchParams.get('sort'), 'recurrence');
     assert.equal(options.cache, 'no-store');
     signal = options.signal;
     return { ok: true, json: () => new Promise(resolve => { finishBody = resolve; }) };
   });
-  const request = h.api.fetchPublicBrandReports('openai', 'en', 12, { kind: 'coverage', offset: 12 });
+  const request = h.api.fetchPublicBrandReports('openai', 'en', 12, { kind: 'coverage', sort: 'recurrence', offset: 12 });
   await flush();
   h.advance(19_999);
   finishBody(body);
@@ -134,6 +135,47 @@ test('other discovery requests retain their existing behavior without deadline',
   finishFetch({ ok: true, json: async () => ({ reports: [] }) });
   assert.deepEqual(await request, { reports: [] });
   assert.equal(h.clearedTimers, 0);
+});
+
+test('external cancellation aborts headers or a stalled body and removes the deadline', async () => {
+  for (const bodyStarted of [false, true]) {
+    const external = new AbortController();
+    let signal;
+    const h = harness((_url, options) => {
+      signal = options.signal;
+      return bodyStarted ? Promise.resolve({ ok: true, json: () => new Promise(() => {}) }) : new Promise(() => {});
+    });
+    const request = h.api.fetchPublicBrandReports('microsoft', 'en', 12, { sort: 'recurrence' }, external.signal);
+    const cancelled = assert.rejects(request, { name: 'AbortError' });
+    await flush();
+    external.abort();
+    await cancelled;
+    assert.equal(signal.aborted, true);
+    assert.equal(h.pendingTimers, 0);
+    assert.equal(h.clearedTimers, 1);
+  }
+});
+
+test('an already cancelled brand view starts no request or timer', async () => {
+  const external = new AbortController(); external.abort();
+  let calls = 0;
+  const h = harness(() => { calls++; return new Promise(() => {}); });
+  await assert.rejects(h.api.fetchPublicBrandReports('google', 'en', 12, {}, external.signal), { name: 'AbortError' });
+  assert.equal(calls, 0);
+  assert.equal(h.pendingTimers, 0);
+});
+
+test('completed brand requests remove the external abort listener', async () => {
+  const external = new AbortController();
+  let signal;
+  const h = harness(async (_url, options) => {
+    signal = options.signal;
+    return { ok: true, json: async () => ({ items: [] }) };
+  });
+  await h.api.fetchPublicBrandReports('microsoft', 'en', 12, {}, external.signal);
+  external.abort();
+  assert.equal(signal.aborted, false);
+  assert.equal(h.pendingTimers, 0);
 });
 
 test('Latest forwards controller cancellation and preserves selected scope without caching', async () => {

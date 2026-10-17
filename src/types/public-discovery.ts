@@ -62,6 +62,9 @@ export type PublicDiscoveryCard = {
 export type PublicDiscoveryBatch = {
   items: PublicDiscoveryCard[];
   count: number;
+  /** Bounded previews retain company identity even when their sample is empty. */
+  brand_name?: string;
+  brand_display_name?: string;
   total_count?: number;
   high_priority_count?: number;
   medium_priority_count?: number;
@@ -71,6 +74,8 @@ export type PublicDiscoveryBatch = {
   has_more?: boolean;
   kind_counts?: Record<ReportKindFilter, number>;
   counts_exact?: boolean;
+  /** Cohort membership/source snapshot time; publication guards are checked per response. */
+  snapshot_at?: string;
   overview?: {
     total_reports: number;
     reports_last_30_days: number;
@@ -98,6 +103,10 @@ export type PublicPhysicalPoint = {
   severity_level: number;
   count?: number;
 };
+
+/** Counts share a brand/product universe independently of kind, ordering and page. */
+export type PublicBrandMetadata = Pick<PublicDiscoveryBatch,
+  "kind_counts" | "counts_exact" | "overview" | "scope" | "snapshot_at">;
 
 export type PublicBrandSummary = {
   classification: "digital";

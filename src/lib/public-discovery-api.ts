@@ -63,8 +63,16 @@ export async function fetchPublicBrandReports(
   lang: string,
   n: number = 12,
   query: PublicEvidenceQuery = {},
+  signal?: AbortSignal,
 ): Promise<PublicDiscoveryBatch> {
+  const cancellationError = () => Object.assign(new Error("Brand reports request cancelled"), { name: "AbortError" });
+  if (signal?.aborted) throw cancellationError();
   const controller = new AbortController();
+  let onAbort: (() => void) | undefined;
+  const cancellation = new Promise<never>((_, reject) => {
+    onAbort = () => { controller.abort(); reject(cancellationError()); };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
     timeout = setTimeout(() => {
@@ -85,9 +93,11 @@ export async function fetchPublicBrandReports(
         controller.signal,
       ),
       deadline,
+      cancellation,
     ]);
   } finally {
     clearTimeout(timeout);
+    if (onAbort) signal?.removeEventListener("abort", onAbort);
   }
 }
 

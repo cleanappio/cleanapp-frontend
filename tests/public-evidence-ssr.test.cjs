@@ -151,7 +151,7 @@ function hookHarness(fetchPublicBrandReports) {
   };
 }
 
-test('page initial query keeps SSR preview through hydration with no full-briefing request; changed scope hides it', () => {
+test('hydration starts one full query while retaining SSR preview; changed views hide it', () => {
   let calls = 0;
   const harness = hookHarness(() => { calls++; return new Promise(() => {}); });
   const pageQuery = { kind: 'firsthand', sort: 'recent', product: '', offset: 0 };
@@ -160,20 +160,68 @@ test('page initial query keeps SSR preview through hydration with no full-briefi
   assert.equal(state.isPreview, true);
   assert.equal(state.items.length, 1);
   assert.equal(state.batch, preview);
-  assert.equal(state.hasCompletedRequest, true);
-  assert.equal(calls, 0);
-  const coverage = harness.render('openai', 'en', true, { ...pageQuery, kind: 'coverage' }, preview);
+  assert.equal(state.hasCompletedRequest, false);
+  assert.equal(state.isRefreshing, true);
   assert.equal(calls, 1);
+  harness.render('openai', 'en', true, pageQuery, preview);
+  assert.equal(calls, 1, 'ordinary rerenders must not restart hydration');
+  const coverage = harness.render('openai', 'en', true, { ...pageQuery, kind: 'coverage' }, preview);
+  assert.equal(calls, 2);
   assert.equal(coverage.items.length, 0);
   assert.equal(coverage.batch, null);
   assert.equal(coverage.isLoading, true);
   const nativeEmpty = harness.render('openai', 'en', true, pageQuery, preview);
   assert.equal(nativeEmpty.isPreview, true);
   assert.equal(nativeEmpty.isLoading, false);
-  assert.equal(calls, 1);
+  assert.equal(calls, 3);
   nativeEmpty.refresh();
   harness.render('openai', 'en', true, pageQuery, preview);
-  assert.equal(calls, 2);
+  assert.equal(calls, 4);
+});
+
+test('brand page keeps cached category counts, overview and display name while sorting fails', () => {
+  const metadata = {
+    counts_exact: true, kind_counts: { firsthand: 2, coverage: 3, unknown: 0, all: 5 },
+    scope: { brand_name: 'microsoft', product: null, products: ['microsoft'], includes_products: false },
+    overview: { total_reports: 8, reports_last_30_days: 4, reports_last_7_days: 1 },
+    snapshot_at: '2026-10-16T10:00:00Z',
+  };
+  let view = { items: [], batch: null, metadata, metadataRetained: true, metadataReceivedAt: '2026-10-17T11:00:00Z',
+    brandDisplayName: 'Microsoft', totalCount: 0, isLoading: true, isRefreshing: false, error: null,
+    hasScopedCounts: false, isPreview: false, hasCompletedRequest: true, refresh() {},
+  };
+  const load = modules({
+    ...common,
+    'next/router': { useRouter: () => ({ ...router, query: { brand_name: 'microsoft' } }) },
+    '@/components/Seo': { __esModule: true, default: noop }, '@/lib/brand-seo': {},
+    '@/lib/auth-store': { useAuthStore: selector => selector({ isAuthenticated: false }) },
+    '@/hooks/usePublicReportsByBrand': { usePublicReportsByBrand: () => view },
+    '@/hooks/useReportsByBrand': { useReportsByBrand: () => ({}) },
+    '@/components/brand/SubscribedBrandDashboard': { __esModule: true, default: noop },
+    '@/components/brand/CleanIntelligencePanel': { __esModule: true, default: noop },
+    '@/components/report/PublicReportDetailPage': { EmbeddedReportBackBar: noop },
+    '@/components/brand/PublicBrandDashboard': { __esModule: true, default: () => React.createElement('p', {}, 'Saved Microsoft report') },
+  });
+  const Page = load('../src/pages/digital/[brand_name]/index.tsx').default;
+  const render = () => renderToStaticMarkup(React.createElement(Page, {
+    seo: { found: true, title: 'Microsoft reports', path: '/digital/microsoft' }, initialPreview: null,
+  }));
+  for (const error of [null, 'Request failed: 503']) {
+    view = { ...view, isLoading: !error, error };
+    const html = render();
+    assert.match(html, /<h1[^>]*>Microsoft<\/h1>/);
+    for (const count of [2, 3, 0, 5]) assert.match(html, new RegExp(`\\(${count}\\)`));
+    assert.match(html, />8<\/strong>/, 'overview retains raw report total instead of the grouped all count');
+    assert.match(html, /Counts from the last successful update/);
+    assert.doesNotMatch(html, /Saved Microsoft report/);
+  }
+  view = { ...view, batch: { items: [card] }, items: [card], isLoading: false, isRefreshing: true, error: null };
+  assert.match(render(), /Updating reports and counts.*Saved Microsoft report/);
+  view = { ...view, isRefreshing: false, error: 'Request failed: 503' };
+  const recovered = render();
+  assert.match(recovered, /Showing the last loaded view/);
+  assert.match(recovered, /Saved Microsoft report/);
+  assert.match(recovered, /Retry/);
 });
 
 test('canonical evidence links allow new tabs and modified clicks in embedded report dialogs', () => {
