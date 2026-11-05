@@ -34,6 +34,8 @@ The historical `fastFEdeploy.sh` is no longer invoked by active CI. It still con
 
 `python3 scripts/aws-deploy.py` prints a read-only plan. `--execute --build-only --source-sha <event-sha>` builds without host access. A real update additionally requires explicit SSH/host/Compose configuration. Build arguments are existing public `NEXT_PUBLIC_*` configuration only; private Docker/Compose diagnostics are not printed.
 
+Both build-only and production runs export images by their exact build tags, then derive each portable `image_id` from the SHA256 of the raw config bytes referenced by Docker-save's `manifest.json`. The archive must contain exactly the selected tags and matching linux/amd64 configs with the expected source and version labels. The runner's original build ID is retained separately as `runner_image_id`: Docker's containerd and classic image stores can report different IDs for the same image. The target still requires the imported and running image IDs to equal the verified config digest exactly.
+
 For a real Linux image-build smoke before merge, run the existing workflow on the PR branch with `build_only=true`. That separate job has only repository read permission, uses public placeholders with API endpoints on localhost, and builds the full frontend image without SSH, OIDC or any AWS calls. It never starts application containers or publishes `.version`. The production job remains main-only and is excluded when `build_only` is selected. Embedded production remains unchanged unless explicitly selected in a later production deployment.
 
 ## Runner ingress without public SSH
