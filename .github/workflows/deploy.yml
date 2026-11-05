@@ -1,92 +1,120 @@
 name: Deploy frontend
 
-# Every merge to main builds the frontend image with Cloud Build and restarts
-# the container on the prod VM, using the same fastFEdeploy.sh that was
-# previously run by hand. Manual runs can target dev instead.
-#
-# Required repository secret:
-#   GCP_SA_KEY  - JSON key for github-deployer@cleanup-mysql-v2.iam.gserviceaccount.com
-#                 (Cloud Build Editor, Artifact Registry Writer, Storage Object Admin,
-#                  Compute Instance Admin v1, Service Account User, Secret Manager Secret Accessor)
-
+# Runner build and checked image stream to an explicit AWS host; no GCP registry.
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Target environment"
-        type: choice
-        options: [prod, dev]
-        default: prod
+      with_embedded:
+        description: "Also update the existing embedded frontend"
+        type: boolean
+        default: false
 
 concurrency:
-  group: deploy-${{ github.event.inputs.environment || 'prod' }}
+  group: deploy-prod
   cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
       contents: write
+      id-token: write
     env:
-      TARGET_ENV: ${{ github.event.inputs.environment || 'prod' }}
       DEPLOY_SOURCE_SHA: ${{ github.sha }}
-      CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+      AWS_REGION: us-east-2
+      AWS_EC2_SECURITY_GROUP_ID: ${{ vars.AWS_EC2_SECURITY_GROUP_ID }}
+      AWS_INGRESS_STATE_BASENAME: frontend-aws-ingress.json
     steps:
       - uses: actions/checkout@v4
         with:
-          # Needed so the .version bump below can be pushed back.
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.sha }}
-
-      - uses: google-github-actions/auth@v2
+      - uses: actions/setup-python@v5
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: cleanup-mysql-v2
-
+          python-version: '3.12'
+      - name: Check portable deployment coordinator
+        run: python3 -m unittest discover -s tests -p 'test_aws*.py'
       - name: Seed latest automated production version
-        if: env.TARGET_ENV == 'prod'
         run: python3 scripts/deploy-version.py seed --source-sha "$DEPLOY_SOURCE_SHA"
-
-      - name: Verify build upload excludes CI credentials
+      - name: Assume narrow runner-ingress role with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: cleanapp-frontend-${{ github.run_id }}
+          unset-current-credentials: true
+          mask-aws-account-id: true
+      - name: Allow only this runner IPv4 for SSH
         run: |
-          upload_manifest=$(mktemp "$RUNNER_TEMP/cleanapp-upload-manifest.XXXXXX")
-          trap 'rm -f "$upload_manifest"' EXIT
-          gcloud meta list-files-for-upload > "$upload_manifest"
-          python3 - "$upload_manifest" <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          files = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
-          if any(re.search(r"(^|/)gha-creds-.*\.json$", name) for name in files):
-              sys.exit("Build source upload must exclude CI credentials.")
-          PY
-
-      - name: Build image and deploy to VM
+          python3 scripts/aws-ci-ingress.py open \
+            --group-id "$AWS_EC2_SECURITY_GROUP_ID" --region "$AWS_REGION" \
+            --state-file "$RUNNER_TEMP/$AWS_INGRESS_STATE_BASENAME"
+      - name: Build and deploy verified images to AWS
         id: build
+        env:
+          AWS_DEPLOY_HOST: ${{ vars.AWS_DEPLOY_HOST }}
+          AWS_DEPLOY_DIR: ${{ vars.AWS_DEPLOY_DIR }}
+          AWS_COMPOSE_FILES_JSON: ${{ vars.AWS_COMPOSE_FILES_JSON }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.AWS_DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.AWS_DEPLOY_SSH_KNOWN_HOSTS }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          # Transitional only; remove paid Google callers before billing exit.
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          WITH_EMBEDDED: ${{ github.event.inputs.with_embedded == 'true' && 'true' || 'false' }}
         run: |
-          chmod +x fastFEdeploy.sh
-          ./fastFEdeploy.sh -e "$TARGET_ENV" --source-sha "$DEPLOY_SOURCE_SHA" --metadata-file "$RUNNER_TEMP/frontend-build.json"
+          set -euo pipefail
+          umask 077
+          test -n "$DEPLOY_SSH_PRIVATE_KEY"
+          test -n "$DEPLOY_SSH_KNOWN_HOSTS"
+          key_file=$(mktemp "$RUNNER_TEMP/cleanapp-aws-key.XXXXXX")
+          hosts_file=$(mktemp "$RUNNER_TEMP/cleanapp-aws-hosts.XXXXXX")
+          trap 'rm -f "$key_file" "$hosts_file"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$key_file"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$hosts_file"
+          unset DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+          flags=()
+          if [ "$WITH_EMBEDDED" = true ]; then flags+=(--with-embedded); fi
+          python3 scripts/aws-deploy.py --execute \
+            --source-sha "$DEPLOY_SOURCE_SHA" \
+            --identity-file "$key_file" --known-hosts-file "$hosts_file" \
+            --metadata-file "$RUNNER_TEMP/frontend-build.json" "${flags[@]}"
           echo "version=$(python3 scripts/deploy-version.py read)" >> "$GITHUB_OUTPUT"
-
+      - name: Check runner-ingress cleanup state
+        id: ingress-state
+        if: always()
+        run: |
+          if [ -s "$RUNNER_TEMP/$AWS_INGRESS_STATE_BASENAME" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Refresh narrow OIDC role for ingress cleanup
+        if: always() && steps.ingress-state.outputs.exists == 'true'
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-session-name: cleanapp-frontend-${{ github.run_id }}
+          unset-current-credentials: true
+          mask-aws-account-id: true
+      - name: Remove only this runner SSH rule
+        if: always() && steps.ingress-state.outputs.exists == 'true'
+        run: |
+          python3 scripts/aws-ci-ingress.py close \
+            --group-id "$AWS_EC2_SECURITY_GROUP_ID" --region "$AWS_REGION" \
+            --state-file "$RUNNER_TEMP/$AWS_INGRESS_STATE_BASENAME"
       - name: Commit version bump
-        if: env.TARGET_ENV == 'prod'
+        if: always() && !cancelled() && steps.build.outcome == 'success'
         env:
           BUILT_VERSION: ${{ steps.build.outputs.version }}
         run: python3 scripts/deploy-version.py publish --source-sha "$DEPLOY_SOURCE_SHA" --version "$BUILT_VERSION"
-
       - name: Smoke test
-        if: always() && !cancelled() && env.TARGET_ENV == 'prod' && steps.build.outcome == 'success'
+        if: always() && !cancelled() && steps.build.outcome == 'success'
         run: |
-          # The container needs a little time after restart; retry for up to ~2 minutes.
           for path in / /incident-reporting /sitemap.xml /robots.txt; do
             for attempt in $(seq 1 12); do
               code=$(curl -s -o /dev/null -w "%{http_code}" "https://www.cleanapp.io$path")
@@ -96,12 +124,19 @@ jobs:
             echo "$path -> $code"
             [ "$code" = "200" ] || exit 1
           done
-
       - name: Notify search engines (IndexNow)
-        if: env.TARGET_ENV == 'prod'
         run: |
-          # Bing, Yahoo, DuckDuckGo and others pick up IndexNow pings; key file lives in public/.
           urls=$(curl -s https://www.cleanapp.io/sitemap.xml | grep -o '<loc>[^<]*</loc>' | sed 's/<\/\?loc>//g' | python3 -c 'import sys,json; print(json.dumps([u.strip() for u in sys.stdin if u.strip()]))')
           curl -s -o /dev/null -w "IndexNow -> %{http_code}\n" -X POST https://api.indexnow.org/indexnow \
             -H "Content-Type: application/json; charset=utf-8" \
             -d "{\"host\":\"www.cleanapp.io\",\"key\":\"6198de183ff2b7b95116057ea654c51c\",\"keyLocation\":\"https://www.cleanapp.io/6198de183ff2b7b95116057ea654c51c.txt\",\"urlList\":$urls}"
+      - name: Retain deployment identity and ingress cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-frontend-deploy-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/frontend-build.json
+            ${{ runner.temp }}/frontend-aws-ingress.json
+          if-no-files-found: ignore
+          retention-days: 7
