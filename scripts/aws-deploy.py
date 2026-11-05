@@ -72,6 +72,98 @@ def stage_source(directory, source_sha, version):
     return context
 
 
+def archive_image_ids(archive, images, source_sha, version):
+    """Bind saved tags to raw OCI config digests, portable across image stores.
+
+    A containerd runner's image ID can identify a manifest, while the classic
+    target identifies the same image by its config. Derive the target ID from
+    the exact exported bytes rather than relaxing the target's identity guard.
+    """
+    expected = {image["tag"] for image in images}
+    if not expected or len(expected) != len(images):
+        raise ValueError("Expected image tags must be nonempty and unique")
+
+    def document(raw):
+        def unique(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("Image archive JSON contains duplicate keys")
+                result[key] = value
+            return result
+        return json.loads(raw, object_pairs_hook=unique)
+
+    with tarfile.open(archive, "r:gz") as saved:
+        members = {}
+        for member in saved.getmembers():
+            if member.name in members:
+                raise ValueError("Image archive contains duplicate member names")
+            members[member.name] = member
+
+        def read(name, limit):
+            member = members.get(name)
+            if member is None or not member.isfile() or not 0 < member.size <= limit:
+                raise ValueError("Image archive metadata is missing or invalid")
+            with saved.extractfile(member) as handle:
+                return handle.read()
+
+        manifest = document(read("manifest.json", 1024 * 1024))
+        if not isinstance(manifest, list) or not manifest or len(manifest) > len(expected):
+            raise ValueError("Image archive manifest has unexpected image entries")
+        identities = {}
+        for entry in manifest:
+            tags = entry.get("RepoTags") if isinstance(entry, dict) else None
+            if not isinstance(tags, list) or not tags:
+                raise ValueError("Image archive must bind every entry to expected tags")
+            for tag in tags:
+                if not isinstance(tag, str) or tag not in expected or tag in identities:
+                    raise ValueError("Image archive has extra or duplicate tags")
+                # Reserve each tag before parsing the shared config, including
+                # duplicates within this entry's RepoTags list.
+                identities[tag] = None
+            config_name = entry.get("Config")
+            if not isinstance(config_name, str):
+                raise ValueError("Image archive config reference is invalid")
+            config_path = re.fullmatch(r"(?:([0-9a-f]{64})\.json|blobs/sha256/([0-9a-f]{64}))", config_name)
+            if not config_path:
+                raise ValueError("Image archive config reference is not content addressed")
+            raw = read(config_name, 16 * 1024 * 1024)
+            digest = hashlib.sha256(raw).hexdigest()
+            if digest != (config_path[1] or config_path[2]):
+                raise ValueError("Image archive config digest mismatch")
+            config = document(raw)
+            if not isinstance(config, dict) or config.get("os") != "linux" or config.get("architecture") != "amd64":
+                raise ValueError("Image archive config must be linux/amd64")
+            runtime = config.get("config")
+            labels = runtime.get("Labels") if isinstance(runtime, dict) else None
+            if not isinstance(labels, dict) or labels.get("org.opencontainers.image.revision") != source_sha or labels.get("org.opencontainers.image.version") != version:
+                raise ValueError("Image archive source/version label mismatch")
+            for tag in tags:
+                identities[tag] = "sha256:" + digest
+        if set(identities) != expected:
+            raise ValueError("Image archive is missing expected tags")
+        return identities
+
+
+def export_images(archive, images, source_sha, version):
+    # A containerd manifest ID is not necessarily a usable config-ID lookup.
+    # Export the exact build tags and retain runner IDs only as audit evidence.
+    process = subprocess.Popen(["docker", "image", "save", *(image["tag"] for image in images)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        with archive.open("wb") as handle, gzip.GzipFile(fileobj=handle, mode="wb", compresslevel=1) as zipped:
+            shutil.copyfileobj(process.stdout, zipped, 1024 * 1024)
+    finally:
+        process.stdout.close()
+        code = process.wait()
+    if code != 0:
+        raise RuntimeError("Image archive export failed; target was not touched")
+    identities = archive_image_ids(archive, images, source_sha, version)
+    for image in images:
+        image["image_id"] = identities[image["tag"]]
+    with archive.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true", help="Build/import/activate; otherwise print a read-only plan")
@@ -131,17 +223,11 @@ def main(argv=None):
             image_id = iid.read_text().strip()
             if not re.fullmatch(r"sha256:[0-9a-f]{64}", image_id):
                 raise ValueError("Build did not produce an immutable image ID")
-            manifest["images"].append({"mode": mode, "tag": tag, "image_id": image_id})
+            manifest["images"].append({"mode": mode, "tag": tag, "runner_image_id": image_id})
+        archive = directory / "images.tar.gz"
+        digest = export_images(archive, manifest["images"], args.source_sha, version)
+        manifest["archive_sha256"] = digest
         if not args.build_only:
-            archive = directory / "images.tar.gz"
-            process = subprocess.Popen(["docker", "image", "save", *(image["image_id"] for image in manifest["images"])], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            with archive.open("wb") as handle, gzip.GzipFile(fileobj=handle, mode="wb", compresslevel=1) as zipped:
-                shutil.copyfileobj(process.stdout, zipped, 1024 * 1024)
-            process.stdout.close()
-            if process.wait() != 0:
-                raise RuntimeError("Image archive export failed; target was not touched")
-            with archive.open("rb") as handle:
-                digest = hashlib.file_digest(handle, "sha256").hexdigest()
             request = manifest | {"archive_sha256": digest, "compose_files": compose_files, "remote_dir": args.remote_dir}
             with archive.open("rb") as handle:
                 result = subprocess.run(ssh + [protocol_command("receive", request)], stdin=handle, capture_output=True, check=False)

@@ -9,6 +9,7 @@ import os
 import subprocess
 from pathlib import Path
 import tempfile
+import tarfile
 import unittest
 from unittest import mock
 
@@ -27,6 +28,95 @@ def load(name, path):
 
 CLIENT = load("aws_frontend_deploy", ROOT / "scripts/aws-deploy.py")
 REMOTE = load("aws_frontend_remote", ROOT / "scripts/aws-deploy-remote.py")
+
+
+class ArchiveIdentityTests(unittest.TestCase):
+    """Real Docker-save metadata fixtures; no Docker daemon or cloud required."""
+    VERSION = "1.0.448"
+    TAG = "cleanapp-frontend:aws-full-1.0.448-" + SHA[:12]
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.archive = Path(self.temporary.name) / "images.tar.gz"
+
+    def fixture(self, *, containerd=False, tags=None, config_updates=None, duplicate_member=False,
+                duplicate_entry=False, missing_config=False, tampered_config=False):
+        config = {"os": "linux", "architecture": "amd64", "config": {"Labels": {
+            "org.opencontainers.image.revision": SHA,
+            "org.opencontainers.image.version": self.VERSION}}, "rootfs": {"type": "layers", "diff_ids": []}}
+        config.update(config_updates or {})
+        raw = json.dumps(config, separators=(",", ":")).encode()
+        digest = hashlib.sha256(raw).hexdigest()
+        config_path = "blobs/sha256/" + digest if containerd else digest + ".json"
+        entry = {"Config": config_path, "RepoTags": [self.TAG] if tags is None else tags, "Layers": []}
+        entries = [entry, entry] if duplicate_entry else [entry]
+        members = [("manifest.json", json.dumps(entries).encode())]
+        if not missing_config:
+            members.append((config_path, raw + b" " if tampered_config else raw))
+        if duplicate_member:
+            members.append(members[-1])
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w") as archive:
+            for name, data in members:
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        return buffer.getvalue(), "sha256:" + digest
+
+    def validate(self, data, images=None):
+        import gzip
+        self.archive.write_bytes(gzip.compress(data))
+        return CLIENT.archive_image_ids(self.archive, images or [{"tag": self.TAG}], SHA, self.VERSION)
+
+    def test_classic_and_containerd_archives_derive_the_same_portable_config_id(self):
+        for containerd in (False, True):
+            with self.subTest(containerd=containerd):
+                data, config_id = self.fixture(containerd=containerd)
+                runner_id = NEW if containerd else config_id
+                images = [{"mode": "full", "tag": self.TAG, "runner_image_id": runner_id}]
+                process = mock.Mock(stdout=io.BytesIO(data))
+                process.wait.return_value = 0
+                with mock.patch.object(CLIENT.subprocess, "Popen", return_value=process) as export:
+                    checksum = CLIENT.export_images(self.archive, images, SHA, self.VERSION)
+                self.assertEqual(images[0]["image_id"], config_id)
+                self.assertEqual(images[0]["runner_image_id"], runner_id)
+                self.assertEqual(checksum, hashlib.sha256(self.archive.read_bytes()).hexdigest())
+                self.assertEqual(export.call_args.args[0], ["docker", "image", "save", self.TAG])
+
+    def test_tag_scope_rejects_extra_missing_duplicate_or_untagged_images(self):
+        for tags, expected in (([self.TAG, "unexpected:latest"], None),
+                               ([self.TAG, self.TAG], None), ([], None),
+                               ([self.TAG], [{"tag": self.TAG}, {"tag": "missing:latest"}])):
+            with self.subTest(tags=tags, expected=expected):
+                data, _ = self.fixture(tags=tags)
+                with self.assertRaisesRegex(ValueError, "tags"):
+                    self.validate(data, expected)
+
+    def test_selected_full_and_embedded_tags_can_share_one_verified_config(self):
+        embedded = self.TAG.replace("aws-full-", "aws-embedded-")
+        data, config_id = self.fixture(containerd=True, tags=[self.TAG, embedded])
+        self.assertEqual(self.validate(data, [{"tag": self.TAG}, {"tag": embedded}]),
+                         {self.TAG: config_id, embedded: config_id})
+
+    def test_archive_rejects_missing_duplicate_or_tampered_config(self):
+        for options in ({"missing_config": True}, {"duplicate_member": True},
+                        {"duplicate_entry": True}, {"tampered_config": True}):
+            with self.subTest(options=options):
+                data, _ = self.fixture(**options)
+                with self.assertRaises(ValueError):
+                    self.validate(data)
+
+    def test_archive_rejects_wrong_source_version_and_platform_even_with_valid_digest(self):
+        for update in ({"os": "windows"}, {"architecture": "arm64"},
+                       {"config": {"Labels": {"org.opencontainers.image.revision": "b" * 40,
+                                                "org.opencontainers.image.version": self.VERSION}}},
+                       {"config": {"Labels": {"org.opencontainers.image.revision": SHA,
+                                                "org.opencontainers.image.version": "1.0.999"}}}):
+            with self.subTest(update=update):
+                data, _ = self.fixture(config_updates=update)
+                with self.assertRaises(ValueError):
+                    self.validate(data)
 
 
 class DeploymentTests(unittest.TestCase):
@@ -105,6 +195,13 @@ class DeploymentTests(unittest.TestCase):
             result = REMOTE.receive(self.request, io.BytesIO(archive))
         self.assertTrue(result["imported"])
         self.assertIn("load", command.call_args_list[0].args[0])
+
+    def test_imported_id_must_still_equal_the_portable_config_id_exactly(self):
+        archive = b"sample archive"
+        self.request["archive_sha256"] = hashlib.sha256(archive).hexdigest()
+        with mock.patch.object(REMOTE, "command", side_effect=["Loaded", OLD]):
+            with self.assertRaisesRegex(ValueError, "identity mismatch"):
+                REMOTE.receive(self.request, io.BytesIO(archive))
 
     def test_update_preserves_other_frontend_pin_and_updates_only_selected_role(self):
         pin = self.directory / "docker-compose.aws-frontend-images.yml"
