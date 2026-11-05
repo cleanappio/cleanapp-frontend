@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Restricted image import/activation protocol; sent over authenticated SSH."""
 import base64
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -85,7 +88,55 @@ def atomic_json(path, value):
     temporary.replace(path)
 
 
+@contextlib.contextmanager
+def deployment_lock(directory):
+    """Share one stable private inode with weekly backup and cold restore."""
+    directory = Path(directory)
+    if not directory.is_absolute():
+        raise ValueError("Deployment lock parent must be absolute")
+    parent = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    descriptor = None
+    try:
+        info = os.fstat(parent)
+        if info.st_uid != os.geteuid() or info.st_mode & 0o022:
+            raise ValueError("Deployment lock parent must be deployer-owned and not publicly writable")
+        name = ".deployment-and-backup.lock"
+        descriptor = os.open(name, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=parent)
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600:
+            raise ValueError("Deployment lock must be a private single-link deployer-owned regular file")
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        current = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        if (current.st_dev, current.st_ino) != (info.st_dev, info.st_ino):
+            raise ValueError("Deployment lock inode changed while waiting")
+        try:
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(parent)
+
+
+def require_active_runtime(run):
+    """A CI trigger must not bypass the one-writer migration/restore fence."""
+    isolated = "/etc/cleanapp-runtime/ISOLATED"
+    active = "/etc/cleanapp-runtime/ACTIVE"
+    run(["sudo", "-n", "test", "!", "-e", isolated])
+    run(["sudo", "-n", "test", "!", "-L", isolated])
+    run(["sudo", "-n", "test", "-f", active])
+    run(["sudo", "-n", "test", "!", "-L", active])
+
+
 def activate(request, run=command, ready=None):
+    directory = validate_request(request)
+    with deployment_lock(directory):
+        require_active_runtime(run)
+        return _activate_locked(request, run, ready)
+
+
+def _activate_locked(request, run=command, ready=None):
     directory = validate_request(request)
     docker = ["sudo", "-n", "docker"]
     if run(docker + ["info", "--format", "{{.Architecture}}"]) not in {"x86_64", "amd64"}:

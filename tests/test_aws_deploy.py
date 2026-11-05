@@ -40,9 +40,17 @@ class DeploymentTests(unittest.TestCase):
                         "compose_files": [str(self.baseline)], "archive_sha256": "0" * 64,
                         "images": [{"mode": "full", "image_id": NEW}]}
         self.calls = []
+        self.active = True
+        self.isolated = False
 
     def docker(self, args):
         self.calls.append(args)
+        if args[:3] == ["sudo", "-n", "test"]:
+            if args[-1] == "/etc/cleanapp-runtime/ISOLATED" and self.isolated:
+                raise RuntimeError("fixture runtime is isolated")
+            if args[3] == "-f" and args[-1] == "/etc/cleanapp-runtime/ACTIVE" and not self.active:
+                raise RuntimeError("fixture runtime is not active")
+            return ""
         if "{{.Architecture}}" in args:
             return "x86_64"
         if "config" in args:
@@ -140,6 +148,20 @@ class DeploymentTests(unittest.TestCase):
         self.request["compose_files"] = [private_baseline]
         REMOTE.activate(self.request, self.docker, lambda request, run: None)
         self.assertIn(["sudo", "-n", "test", "-f", private_baseline], self.calls)
+
+    def test_isolated_runtime_refuses_activation_before_pins_or_restart(self):
+        self.isolated = True
+        with self.assertRaisesRegex(RuntimeError, "isolated"):
+            REMOTE.activate(self.request, self.docker, lambda request, run: None)
+        self.assertFalse(any("up" in args for args in self.calls))
+        self.assertFalse((self.directory / "docker-compose.aws-frontend-images.yml").exists())
+
+    def test_inactive_runtime_refuses_activation_before_pins_or_restart(self):
+        self.active = False
+        with self.assertRaisesRegex(RuntimeError, "not active"):
+            REMOTE.activate(self.request, self.docker, lambda request, run: None)
+        self.assertFalse(any("up" in args for args in self.calls))
+        self.assertFalse((self.directory / "docker-compose.aws-frontend-images.yml").exists())
 
     def test_wrong_compose_container_name_fails_before_activation(self):
         def wrong(args):

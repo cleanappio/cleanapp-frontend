@@ -18,6 +18,12 @@ Private runtime credentials remain in restricted host files. The workflow uses t
 
 The runner uses Python 3.12. The target needs Docker/Compose, Python 3, noninteractive sudo access to Docker and `test -f`, and the selected frontend roles already running. This updates current production roles; it does not bootstrap or start dormant services. The default is full frontend only; manual workflow input can also update the existing embedded role. No dev host is created.
 
+`Dockerfile.aws` uses Node 22 to match existing CI and base-image definitions. The real Linux smoke caught newer npm lockfile validation under Node 24; this migration keeps application dependencies and the lockfile unchanged.
+
+Activation takes an exclusive advisory lock on `/opt/cleanapp/deploy/.deployment-and-backup.lock`, shared with weekly backup and cold restore. The deployer-owned parent must not be group/world writable; the lock must be a non-symlink, single-link regular file owned by the deployer with mode `0600`. Existing lock ownership/mode/inode are preserved. The lock covers pin inspection, restart, readiness and rollback, and releases on exceptions; runner builds and SSH archive upload do not hold it.
+
+Activation also requires `/etc/cleanapp-runtime/ACTIVE` to be a regular non-symlink file and `/etc/cleanapp-runtime/ISOLATED` to be absent, including dangling symlinks. Sudo must allow the helper's `test -f`, `test ! -e` and `test ! -L` checks. A queued GitHub run cannot bypass the migration/restore one-writer fence.
+
 Pins live in `docker-compose.aws-frontend-images.yml` as JSON/YAML with `pull_policy: never`. Backend pins use `docker-compose.aws-backend-images.yml`. Reboot/watchdog/runbook Compose commands must include both after the portable baseline; never broadly apply historical source manifests to recreate dormant roles.
 
 Before activation the helper records old image IDs. A failed start or local readiness probe restores those loaded IDs. Successful release manifests contain only source SHA, version, IDs/tags, archive checksum and prior IDs; resolved runtime environments are never exported. Coordinate database rollback separately with the migration data boundary.
