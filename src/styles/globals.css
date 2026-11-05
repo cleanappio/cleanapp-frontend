@@ -197,3 +197,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Dashboard hero: rotating word and stat line */
+@keyframes dashboardWordIn {
+  from { opacity: 0; transform: translateY(0.4em); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.dashboard-word-in { animation: dashboardWordIn 0.45s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-word-in { animation: none; }
+}

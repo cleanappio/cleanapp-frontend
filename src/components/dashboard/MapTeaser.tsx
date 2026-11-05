@@ -1,13 +1,13 @@
 import { useRouter } from 'next/router';
 import { useTranslations } from '@/lib/i18n';
-import { ArrowRight, Lock } from 'lucide-react';
+import { ArrowRight, Map as MapIcon } from 'lucide-react';
 
 export default function MapTeaser() {
   const router = useRouter();
   const { t } = useTranslations();
 
   return (
-    <div className="relative bg-gray-900 rounded-2xl overflow-hidden mb-8 group">
+    <div className="relative bg-gray-900 rounded-2xl overflow-hidden mb-8 group border border-gray-200">
       {/* Background gradient to simulate map */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800">
         {/* Simulated report dots */}
@@ -44,10 +44,10 @@ export default function MapTeaser() {
       <div className="absolute inset-0 backdrop-blur-[2px] bg-gray-900/30"></div>
 
       {/* Content */}
-      <div className="relative z-10 h-80 flex flex-col items-center justify-center text-center px-6">
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 max-w-md">
-          <div className="w-14 h-14 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7 text-green-400" />
+      <div className="relative z-10 min-h-[22rem] py-10 flex flex-col items-center justify-center text-center px-6">
+        <div className="bg-gray-900/70 border border-white/10 backdrop-blur-md rounded-2xl p-8 max-w-md">
+          <div className="w-12 h-12 bg-green-500/15 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <MapIcon className="w-6 h-6 text-green-400" />
           </div>
           <h3 className="text-xl font-bold text-white mb-2">Live Map Preview</h3>
           <p className="text-gray-300 mb-6">
@@ -55,7 +55,7 @@ export default function MapTeaser() {
           </p>
           <button
             onClick={() => router.push('/')}
-            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors group"
+            className="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 px-5 py-3 rounded-lg text-sm font-semibold transition-colors group"
           >
             Explore the map
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
