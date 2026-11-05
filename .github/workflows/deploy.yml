@@ -41,12 +41,21 @@ jobs:
           python3 - <<'PY'
           import importlib.util
           import os
+          import subprocess
           from pathlib import Path
 
           path = Path("scripts/aws-deploy.py").resolve()
           spec = importlib.util.spec_from_file_location("aws_frontend_build", path)
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
+          checked_command = module.run
+          def public_build_output(arguments, **kwargs):
+              if arguments[:2] == ["docker", "build"]:
+                  # This read-only job has no secrets and uses only placeholders.
+                  subprocess.run(arguments, check=True, **kwargs)
+                  return ""
+              return checked_command(arguments, **kwargs)
+          module.run = public_build_output
           # Build validation must not call production API endpoints.
           for name in module.PUBLIC:
               if name.endswith("_URL") and name not in {"APPSTORE_URL", "PLAYSTORE_URL"}:
