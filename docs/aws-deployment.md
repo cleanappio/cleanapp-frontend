@@ -28,6 +28,8 @@ The historical `fastFEdeploy.sh` is no longer invoked by active CI. It still con
 
 `python3 scripts/aws-deploy.py` prints a read-only plan. `--execute --build-only --source-sha <event-sha>` builds without host access. A real update additionally requires explicit SSH/host/Compose configuration. Build arguments are existing public `NEXT_PUBLIC_*` configuration only; private Docker/Compose diagnostics are not printed.
 
+For a real Linux image-build smoke before merge, run the existing workflow on the PR branch with `build_only=true`. That separate job has only repository read permission, uses public placeholders with API endpoints on localhost, and builds the full frontend image without SSH, OIDC or any AWS calls. It never starts application containers or publishes `.version`. The production job remains main-only and is excluded when `build_only` is selected. Embedded production remains unchanged unless explicitly selected in a later production deployment.
+
 ## Runner ingress without public SSH
 
 The workflow is restricted to `refs/heads/main`. Its OIDC role must trust audience `sts.amazonaws.com` and exact subject `repo:cleanappio/cleanapp-frontend:ref:refs/heads/main`. The GitHub read-only customization API currently reports default legacy subjects with immutable subjects disabled. Recheck that setting if the repository changes it; do not widen trust with wildcards or an environment subject.

@@ -4,6 +4,10 @@ name: Deploy frontend
 on:
   workflow_dispatch:
     inputs:
+      build_only:
+        description: "Build a Linux frontend image with public placeholders; no host or cloud access"
+        type: boolean
+        default: false
       with_embedded:
         description: "Also update the existing embedded frontend"
         type: boolean
@@ -14,8 +18,54 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-smoke:
+    if: inputs.build_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build exact Linux image without host or cloud access
+        env:
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: pk.placeholder
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: placeholder
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          import os
+          from pathlib import Path
+
+          path = Path("scripts/aws-deploy.py").resolve()
+          spec = importlib.util.spec_from_file_location("aws_frontend_build", path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          # Build validation must not call production API endpoints.
+          for name in module.PUBLIC:
+              if name.endswith("_URL") and name not in {"APPSTORE_URL", "PLAYSTORE_URL"}:
+                  os.environ["NEXT_PUBLIC_" + name] = "http://127.0.0.1:8080"
+          raise SystemExit(module.main([
+              "--execute", "--build-only", "--source-sha", os.environ["GITHUB_SHA"],
+              "--metadata-file", str(Path(os.environ["RUNNER_TEMP"]) / "frontend-image-smoke.json"),
+          ]))
+          PY
+      - name: Retain Linux image identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image-smoke-${{ github.sha }}
+          path: ${{ runner.temp }}/frontend-image-smoke.json
+          if-no-files-found: ignore
+          retention-days: 7
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && !inputs.build_only
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
