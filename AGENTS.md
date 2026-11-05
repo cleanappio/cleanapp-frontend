@@ -15,8 +15,9 @@ when a rule changes.
 - Never force-push `main`.
 
 ## Deploys
-- Every merge to `main` deploys to prod via `.github/workflows/deploy.yml`
-  (Cloud Build → Artifact Registry → `cleanapp-prod` VM). There is no staging.
+- Production deploys run manually from `main` via `.github/workflows/deploy.yml`
+  (runner Docker build → verified image archive → explicit AWS host). Enable automatic
+  app-change deployment only after migration cutover; workflow-only merges must not replace captured production images.
 - Deploys queue (concurrency group); a failed build never reaches the VM.
 - The workflow commits `.version` back to `main` with `[skip ci]`. Never edit
   `.version` by hand and never rebase that commit away.
