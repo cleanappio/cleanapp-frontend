@@ -25,7 +25,6 @@ jobs:
       NEXT_PUBLIC_AUTH_API_URL: http://localhost:8080
       NEXT_PUBLIC_REPORT_PROCESSING_API_URL: http://localhost:8080
       NEXT_PUBLIC_LIVE_API_URL: http://localhost:8080
-      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: http://localhost:8080
       NEXT_PUBLIC_WEBSITE_URL: http://localhost:8080
       NEXT_PUBLIC_RENDERER_API_URL: http://localhost:8080
       NEXT_PUBLIC_REF_API_URL: http://localhost:8080

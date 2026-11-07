@@ -36,7 +36,6 @@ jobs:
         env:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
           NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: pk.placeholder
-          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: placeholder
         run: |
           python3 - <<'PY'
           import importlib.util
@@ -121,8 +120,6 @@ jobs:
           DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.AWS_DEPLOY_SSH_KNOWN_HOSTS }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
-          # Transitional only; remove paid Google callers before billing exit.
-          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           WITH_EMBEDDED: ${{ github.event.inputs.with_embedded == 'true' && 'true' || 'false' }}
         run: |
           set -euo pipefail

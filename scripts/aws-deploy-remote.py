@@ -227,7 +227,11 @@ def wait_ready(request, run):
                 # A redirect to the old public host must not prove target readiness.
                 with urllib.request.build_opener(NoRedirect()).open("http://127.0.0.1:" + str(port) + "/", timeout=3) as response:
                     if running == "true" and response.status == 200:
-                        remaining.remove(mode)
+                        # A healthy homepage does not prove that server-only Places credentials work.
+                        with urllib.request.build_opener(NoRedirect()).open("http://127.0.0.1:" + str(port) + "/api/geocode?lat=47.3769&lng=8.5417", timeout=10) as location:
+                            data = json.load(location)
+                            if location.status == 200 and data.get("success") is True and data.get("provider") == "amazon-location" and isinstance(data.get("address"), str) and data["address"]:
+                                remaining.remove(mode)
             except Exception:
                 pass
         if remaining:
