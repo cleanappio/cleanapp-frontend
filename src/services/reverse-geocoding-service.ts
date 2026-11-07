@@ -1,7 +1,7 @@
 /**
  * Reverse Geocoding Service
  * Converts latitude and longitude coordinates to human-readable addresses
- * using Google Maps Geocoding API
+ * using the CleanApp Amazon Location endpoint
  */
 
 // ==================== INTERFACES ====================
@@ -52,14 +52,6 @@ export interface GoogleGeocodeResponse {
   }>;
 }
 
-// ==================== CONSTANTS ====================
-
-const GEO_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-if (!GEO_API_KEY) {
-  console.warn("GEO_API_KEY environment variable is not set");
-}
-
 // ==================== VALIDATION FUNCTIONS ====================
 
 /**
@@ -69,7 +61,7 @@ const validateCoordinates = (
   latitude: number,
   longitude: number
 ): string | null => {
-  if (!latitude || !longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return "Latitude and longitude are required";
   }
 
@@ -81,16 +73,6 @@ const validateCoordinates = (
     return "Invalid longitude value. Must be between -180 and 180";
   }
 
-  return null;
-};
-
-/**
- * Validates API key configuration
- */
-const validateApiKey = (): string | null => {
-  if (!GEO_API_KEY) {
-    return "Geocoding API key is not configured";
-  }
   return null;
 };
 

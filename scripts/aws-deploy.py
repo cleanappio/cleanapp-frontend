@@ -28,7 +28,7 @@ PUBLIC = {
     "REPORT_COUNT_URL": "http://api.cleanapp.io:8080/valid-reports-count",
     "PLAYSTORE_URL": "https://play.google.com/store/apps/details?id=com.cleanapp",
     "APPSTORE_URL": "https://apps.apple.com/us/app/cleanapp/id6466403301",
-    "STRIPE_PUBLISHABLE_KEY": "", "MAPBOX_ACCESS_TOKEN": "", "GOOGLE_MAPS_API_KEY": "",
+    "STRIPE_PUBLISHABLE_KEY": "", "MAPBOX_ACCESS_TOKEN": "",
 }
 
 

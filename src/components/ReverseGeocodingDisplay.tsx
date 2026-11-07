@@ -44,7 +44,7 @@ export const ReverseGeocodingDisplay: React.FC<
               </button>
             </div>
           ) : address && address !== "0" ? (
-            <p className={textClassName}>{address}</p>
+            <div><p className={textClassName}>{address}</p><a className="text-xs underline" href="https://docs.aws.amazon.com/location/latest/developerguide/data-attribution.html" target="_blank" rel="noopener noreferrer">Address data: Amazon Location</a></div>
           ) : (
             <p className={textClassName}>--</p>
           )}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Search, MapPin } from 'lucide-react';
 import { Area } from '@/lib/areas-api-client';
 
-// Google Maps API response types
+// CleanApp place-search response types
 interface GoogleMapsPlace {
   place_id: string;
   formatted_address: string;
@@ -17,7 +17,7 @@ interface GoogleMapsPlace {
   name: string;
 }
 
-interface GoogleMapsResponse {
+interface PlacesSearchResponse {
   results: GoogleMapsPlace[];
   status: string;
 }
@@ -102,10 +102,10 @@ export default function SearchableMap({
     setIsSearching(true);
     try {
       const encodedQuery = encodeURIComponent(query);
-      const url = `/api/places-search?query=${encodedQuery}`;
+      const url = `/api/places-search?query=${encodedQuery}&lat=${mapCenter[0]}&lng=${mapCenter[1]}`;
       
       const response = await fetch(url);
-      const data: GoogleMapsResponse = await response.json();
+      const data: PlacesSearchResponse = await response.json();
 
       if (data.status === 'OK' && data.results.length > 0) {
         const results: SearchResult[] = data.results.map(place => ({
@@ -196,6 +196,7 @@ export default function SearchableMap({
 
   return (
     <div className="w-full h-full relative">
+      {searchResults.length > 0 && <a className="absolute bottom-2 left-2 z-[1000] bg-white px-2 py-1 text-xs underline" href="https://docs.aws.amazon.com/location/latest/developerguide/data-attribution.html" target="_blank" rel="noopener noreferrer">Place data: Amazon Location</a>}
       {/* Map Container */}
       <div 
         className={fullScreen ? "overflow-hidden" : "border border-gray-300 rounded-lg overflow-hidden"}
