@@ -37,6 +37,18 @@ const nextConfig = {
       },
     ];
   },
+  // Tracked report links in notification emails (www.cleanapp.io/r/<token>).
+  // The backend records the view and redirects on to the public report page.
+  // See cleanapp_back_end_v2 docs/architecture/notification-outcomes.md.
+  async redirects() {
+    return [
+      {
+        source: "/r/:token",
+        destination: `${process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"}/api/v3/r/:token`,
+        permanent: false,
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Exclude canvas native module from server-side builds
     if (isServer) {
