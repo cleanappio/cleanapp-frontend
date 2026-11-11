@@ -17,6 +17,7 @@ export const translations: {
     edit: "Edit",
     submit: "Submit",
     back: "Back",
+    goBack: "Go back",
     next: "Next",
     previous: "Previous",
     close: "Close",

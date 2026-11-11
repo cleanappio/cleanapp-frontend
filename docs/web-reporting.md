@@ -34,6 +34,8 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 
 While a receipt is processing, `ReportProgress` gently moves the existing CleanApp leaf up and to the right. One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
 
+On the page surface, `ReceiptStatus` lists recorded facts under the title: received, analyzed and published (or held for review), and, once a public ID exists, the public notification summary (first recipient and latest send time) or "No notification recorded yet." It also prints the receipt and report IDs and tells a waiting reporter they can leave and return through the receipt link. It shows nothing inferred from elapsed time and nothing in the widget.
+
 The widget has no visible header or duplicate processing sentence, and its receipt actions are only **Keep your receipt** and **Report something else**. Its dialog retains a hidden accessible title and close button. The full receipt page retains **View report** when a safe public link is available. Published and review states stop polling, text cycling and motion, and show their actual status. When the bounded polling window ends, cycling and motion also stop; the accepted receipt remains available through **Keep your receipt**.
 
 ## Lifecycle and reliability
