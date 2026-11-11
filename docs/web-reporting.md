@@ -64,6 +64,15 @@ No location is requested by this composer. Missing location remains unknown in r
 
 Run TypeScript, the web-reporting and report-location tests, and a production build. Check desktop/mobile keyboard behavior, text-only and image-only reporting, invalid/oversized input, failed requests with retry, actual server receipt and safe public link, widget draft retention and embedded mode. `scripts/check-rendered-seo.py` checks rendered HTML/navigation separately. Use mocks or an isolated backend for synthetic submissions; a rendering check must never POST reports. Production monitoring should distinguish receipt failures, analysis/review delay, publication and notification outcomes.
 
+## Outcome timeline on the receipt
+
+The public notification summary carries `timeline`: what came back after a
+report was sent (opened, acknowledged with a ticket reference, reply received,
+could not be delivered, no response yet, fixed). `ReceiptStatus` appends those
+lines under "Sent to ...". It is free for everyone, including the reporter;
+only the per-recipient log stays behind the subscription. An empty or missing
+`timeline` adds nothing to the page.
+
 ## Notification links
 
 `/r/<token>` is not a page. `next.config.js` redirects it to the backend

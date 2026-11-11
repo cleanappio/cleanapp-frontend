@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchReportNotifications, notificationDate, type ReportNotificationSummary } from "@/lib/report-notifications";
+import { fetchReportNotifications, notificationDate, outcomeLabel, type ReportNotificationSummary } from "@/lib/report-notifications";
 import type { WebReportReceipt } from "@/lib/web-reporting";
 import styles from "./ReportComposer.module.css";
 
@@ -58,6 +58,19 @@ export default function ReceiptStatus({ receipt, processing, review, surface }: 
           </span>
         </li>
       ) : null}
+      {published ? (sent?.timeline || []).map((event) => {
+        const label = outcomeLabel(event);
+        if (!label) return null;
+        const at = notificationDate(event.at, "en");
+        // Bounces and silence are facts too, but not successes: no check mark.
+        const good = event.type !== "bounced" && event.type !== "no_response";
+        return (
+          <li key={event.type} className={good ? undefined : styles.statusPending}>
+            <span className={styles.statusMark} aria-hidden="true">{good ? "✓" : "·"}</span>
+            <span>{label}{at ? ` · ${at}` : ""}</span>
+          </li>
+        );
+      }) : null}
     </ol>
     {!published && !review ? <p className={styles.statusNote}>You can leave this page. Keep your receipt link and come back to see where your report went.</p> : null}
     <p className={styles.statusRef}>Receipt {receipt.receipt_id}{receipt.public_id && published ? ` · Report ${receipt.public_id}` : ""}</p>
