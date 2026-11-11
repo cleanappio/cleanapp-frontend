@@ -63,3 +63,11 @@ No location is requested by this composer. Missing location remains unknown in r
 ## Required verification for later changes
 
 Run TypeScript, the web-reporting and report-location tests, and a production build. Check desktop/mobile keyboard behavior, text-only and image-only reporting, invalid/oversized input, failed requests with retry, actual server receipt and safe public link, widget draft retention and embedded mode. `scripts/check-rendered-seo.py` checks rendered HTML/navigation separately. Use mocks or an isolated backend for synthetic submissions; a rendering check must never POST reports. Production monitoring should distinguish receipt failures, analysis/review delay, publication and notification outcomes.
+
+## Notification links
+
+`/r/<token>` is not a page. `next.config.js` redirects it to the backend
+(`/api/v3/r/<token>` on the live API), which records that a notified company
+followed a link in its email and then redirects to the public report page.
+The token is verified by the backend; this site never reads it. Design:
+`cleanapp_back_end_v2/docs/architecture/notification-outcomes.md`.
