@@ -4,6 +4,7 @@ import Link from "next/link";
 import { newWebReportPayload, prepareReportImage, readReportReceipt, reportApiBase, submissionError, trackReportEvent, validateReportDraft, type WebReportPayload, type WebReportReceipt } from "@/lib/web-reporting";
 import styles from "./ReportComposer.module.css";
 import ReportProgress from "./ReportProgress";
+import ReceiptStatus from "./ReceiptStatus";
 
 function receiptIsProcessing(receipt: WebReportReceipt) {
   if (receipt.publication_status) return receipt.publication_status === "pending_analysis";
@@ -47,6 +48,7 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother, surface = "p
   const title = receipt.publication_status === "public" ? "Your report is ready to view." : review ? "Your report is under review." : "We’re on it.";
   return <div className={styles.receipt}>
     <ReportProgress processing={processing} receiptId={receipt.receipt_id} title={title} />
+    <ReceiptStatus receipt={receipt} processing={processing} review={review} surface={surface} />
     <div className={styles.receiptActions}>
       {surface !== "widget" && receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
       <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>

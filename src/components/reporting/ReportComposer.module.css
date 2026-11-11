@@ -42,3 +42,9 @@
 @keyframes panelIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media(max-width: 480px) { .launcher { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); padding: 0 16px; } .panel { right: 16px; bottom: max(80px, calc(env(safe-area-inset-bottom) + 68px)); padding: 20px; } }
 @media(prefers-reduced-motion: reduce) { .panel, .overlay, .receipt, .spinner, .progressLeafMoving, .progressPhrase { animation: none; } .launcher, .send, .box { transition: none; transform: none; } }
+.statusNote { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: #4b5563; }
+.statusList { margin: 16px 0 0; padding: 0; list-style: none; font-size: 15px; line-height: 1.5; color: #374151; }
+.statusList li { display: flex; gap: 10px; padding: 3px 0; }
+.statusMark { flex: none; width: 1.2em; color: #15763a; font-weight: 600; }
+.statusPending { color: #6b7280; }
+.statusRef { margin: 12px 0 0; font-size: 13px; color: #6b7280; overflow-wrap: anywhere; }

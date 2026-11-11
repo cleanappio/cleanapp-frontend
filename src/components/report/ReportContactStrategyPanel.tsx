@@ -30,6 +30,9 @@ type Props = {
 
 export default function ReportContactStrategyPanel({ strategy, loading, error, compact = false }: Props) {
   const organizations = reportOrganizations(strategy);
+  // An empty list is not a finding: a notification can already have been sent
+  // (see Notifications above), so do not claim that nobody was identified.
+  if (!loading && !error && organizations.length === 0) return null;
   return (
     <section className={`mb-6 border-b border-gray-200 ${compact ? "pb-4" : "pb-6"}`}>
       <h2 className="text-lg font-semibold text-gray-900">Relevant organizations</h2>
