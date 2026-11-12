@@ -1,10 +1,10 @@
 /**
  * Spires on the globe: report counts as height.
  *
- * Dots show where reports are; they do not show how many. A spire is a tiered
- * tower (wide base, narrow mast, like a skyscraper silhouette) whose height
- * grows with the number of reports at that spot, so hotspots stand out from
- * the horizon.
+ * Dots show where reports are; they do not show how many. A spire is a slim
+ * needle that flares gently at its foot (the silhouette of a tall tower, not
+ * a stack of blocks) whose height grows with the number of reports at that
+ * spot, so hotspots stand out from the horizon.
  *
  * - Physical tab: report points are grouped into grid cells; one spire per
  *   cell, at the average position of its reports, colored green to red by count.
@@ -20,14 +20,29 @@
 
 export type SpireInput = { lon: number; lat: number; count: number; color?: string };
 
-/** Tower silhouette: [fraction of base radius, fraction of full height]. */
-const TIERS: readonly (readonly [number, number])[] = [
-  [1, 0.14],
-  [0.62, 0.42],
-  [0.34, 0.74],
-  [0.13, 1],
-];
-const SIDES = 10;
+/**
+ * Silhouette as [fraction of base radius, fraction of full height] slices.
+ *
+ * Mapbox extrusions are straight-sided, so a taper is built from thin slices.
+ * Sixteen slices following a smooth curve read as one continuous needle; the
+ * first version used four fat slices and looked like a wedding cake. The curve
+ * is a slim shaft (16% of the foot's width) with a short concave flare at the
+ * base and a pointed tip.
+ */
+const SLICES = 16;
+const SHAFT = 0.16;
+function radiusAt(t: number): number {
+  const flare = Math.pow(1 - t, 5);
+  const tip = t > 0.86 ? (1 - t) / 0.14 : 1;
+  return (SHAFT + (1 - SHAFT) * flare) * (0.35 + 0.65 * tip);
+}
+export const TIERS: readonly (readonly [number, number])[] = Array.from({ length: SLICES }, (_, i) => {
+  // Slices are thinner near the foot, where the width changes fastest.
+  const top = Math.pow((i + 1) / SLICES, 1.6);
+  const bottom = Math.pow(i / SLICES, 1.6);
+  return [radiusAt(bottom), top] as const;
+});
+const SIDES = 12;
 const KM_PER_DEGREE = 111.32;
 
 export const SPIRE_SOURCE = "report-spires";

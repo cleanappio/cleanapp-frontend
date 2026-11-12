@@ -31,6 +31,7 @@ import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import { applySpires, binPoints, type SpireInput } from "@/lib/map-spires";
+import { initialGlobeView } from "@/lib/visitor-view";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import EmbeddedPublicReportDialog, {
   EmbeddedPublicReportSelection,
@@ -266,6 +267,8 @@ export default function GlobeView() {
   const mapRef = useRef<MapRef | null>(null);
   const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Opens roughly over the visitor, tilted so spires are visible (src/lib/visitor-view.ts).
+  const [initialView] = useState(initialGlobeView);
   const [latestReports, setLatestReports] = useState<ReportResponse[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
@@ -2326,7 +2329,7 @@ export default function GlobeView() {
           return { lon, lat, color, count: report.total };
         });
     }
-    applySpires(map as never, inputs, selectedTab === "physical" ? 32 : 120);
+    applySpires(map as never, inputs, selectedTab === "physical" ? 28 : 95);
   }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
@@ -3360,11 +3363,7 @@ export default function GlobeView() {
           projection="globe"
           maxZoom={30}
           minZoom={2}
-          initialViewState={{
-            longitude: 0.0,
-            latitude: 0.0,
-            zoom: 2.5,
-          }}
+          initialViewState={initialView}
           onLoad={() => {
             console.log("Map loaded");
             setMapLoaded(true);
