@@ -54,7 +54,7 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother, surface = "p
       {/* One click to the report once it exists. The widget offers the receipt
           link only while there is no report to open yet; the page always does. */}
       {(surface !== "widget" || !receipt.canonical_path) && <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>}
-      {onAnother && <button type="button" className={styles.link} onClick={onAnother}>Report something else</button>}
+      {onAnother && <button type="button" className={`${styles.link} ${styles.nudge}`} onClick={onAnother}>Report something else</button>}
     </div>
   </div>;
 }
