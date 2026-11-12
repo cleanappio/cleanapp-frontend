@@ -30,6 +30,7 @@ import { useReportTabs } from "@/hooks/useReportTabs";
 import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
+import { applySpires, binPoints, type SpireInput } from "@/lib/map-spires";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import EmbeddedPublicReportDialog, {
   EmbeddedPublicReportSelection,
@@ -2298,6 +2299,35 @@ export default function GlobeView() {
       map.setConfigProperty("basemap", "showTransitLabels", true);
     }
   }, [isDigital, mapLoaded, mapStyleLoaded]);
+
+  // Spires: report counts as height (src/lib/map-spires.ts). Physical reports
+  // are grouped into 1-degree cells; digital shows the 250 largest brands, since
+  // a spire for each of tens of thousands of brands would hide the hotspots.
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
+    let inputs: SpireInput[] = [];
+    if (selectedTab === "physical") {
+      inputs = binPoints(
+        latestReports
+          .filter((report) => report.classification === "physical")
+          .map((report) => ({
+            lon: (report as { longitude: number }).longitude,
+            lat: (report as { latitude: number }).latitude,
+          })),
+      ).filter((cell) => cell.count >= 2);
+    } else {
+      inputs = (latestReports.filter((report) => report.classification === "digital") as DigitalReportResponse[])
+        .filter((report) => report.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 250)
+        .map((report) => {
+          const { lat, lon, color } = stringToLatLonColor(report.brand_name);
+          return { lon, lat, color, count: report.total };
+        });
+    }
+    applySpires(map as never, inputs, selectedTab === "physical" ? 32 : 120);
+  }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
   useEffect(() => {
