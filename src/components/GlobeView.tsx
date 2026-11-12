@@ -30,6 +30,8 @@ import { useReportTabs } from "@/hooks/useReportTabs";
 import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
+import { applyDigitalDeclutter, applySpires, binPoints, topHotspots, type SpireInput } from "@/lib/map-spires";
+import { initialGlobeView } from "@/lib/visitor-view";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import EmbeddedPublicReportDialog, {
   EmbeddedPublicReportSelection,
@@ -265,6 +267,8 @@ export default function GlobeView() {
   const mapRef = useRef<MapRef | null>(null);
   const styleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Opens roughly over the visitor, tilted so spires are visible (src/lib/visitor-view.ts).
+  const [initialView] = useState(initialGlobeView);
   const [latestReports, setLatestReports] = useState<ReportResponse[]>([]);
   const [latestReportsWithAnalysis, setLatestReportsWithAnalysis] = useState<
     ReportWithAnalysis[]
@@ -1969,6 +1973,8 @@ export default function GlobeView() {
               severity: isPhysical ? report.severity_level : undefined,
               classification,
               size,
+              // Numeric total: lets the map thin brand dots by zoom (map-spires.ts).
+              total: isDigital ? (report as DigitalReportResponse).total : undefined,
             },
           };
         });
@@ -2007,10 +2013,12 @@ export default function GlobeView() {
                   "interpolate",
                   ["linear"],
                   ["get", "severity"],
+                  // 30% smaller than before (was 6.6 to 13.2) so hotspot
+                  // columns read clearly above the dots.
                   0.0,
-                  6.6,
+                  4.6,
                   0.9,
-                  13.2,
+                  9.2,
                 ],
               ],
               "circle-color": [
@@ -2029,7 +2037,7 @@ export default function GlobeView() {
                   getColorByValue(0.9), // red for high severity
                 ],
               ],
-              "circle-stroke-width": 2,
+              "circle-stroke-width": 1.5,
               "circle-stroke-color": "#ffffff",
             },
           });
@@ -2299,6 +2307,42 @@ export default function GlobeView() {
     }
   }, [isDigital, mapLoaded, mapStyleLoaded]);
 
+  // Spires: report counts as height (src/lib/map-spires.ts). Only the
+  // busiest places and brands get one; the rest stay dots.
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
+    let inputs: SpireInput[] = [];
+    if (selectedTab === "physical") {
+      inputs = topHotspots(
+        binPoints(
+          latestReports
+            .filter((report) => report.classification === "physical")
+            .map((report) => ({
+              lon: (report as { longitude: number }).longitude,
+              lat: (report as { latitude: number }).latitude,
+            })),
+        ),
+        60,
+      );
+    } else {
+      inputs = topHotspots(
+        (latestReports.filter((report) => report.classification === "digital") as DigitalReportResponse[]).map(
+          (report) => {
+            const { lat, lon, color } = stringToLatLonColor(report.brand_name);
+            return { lon, lat, color, count: report.total, name: report.brand_display_name || report.brand_name };
+          },
+        ),
+        40,
+      );
+    }
+    // The pin layer is created by another effect; this call is repeated on
+    // every data change, so it catches the layer once it exists.
+    applyDigitalDeclutter(map as never);
+    // Base radius in km. A cone needs a wider foot than a column to read at the same weight.
+    applySpires(map as never, inputs, selectedTab === "physical" ? 46 : 85);
+  }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
+
   // Digital layers logic
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
@@ -2325,6 +2369,8 @@ export default function GlobeView() {
           geometry: { type: "Point", coordinates: [lon, lat] },
           properties: {
             name: `${brandDisplayName} (${total})`,
+            // Numeric total: lets the map thin dots by zoom (map-spires.ts).
+            total: total,
             color: color,
             size: size,
             isParent: false,
@@ -3330,11 +3376,7 @@ export default function GlobeView() {
           projection="globe"
           maxZoom={30}
           minZoom={2}
-          initialViewState={{
-            longitude: 0.0,
-            latitude: 0.0,
-            zoom: 2.5,
-          }}
+          initialViewState={initialView}
           onLoad={() => {
             console.log("Map loaded");
             setMapLoaded(true);
