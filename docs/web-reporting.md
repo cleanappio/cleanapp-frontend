@@ -32,7 +32,7 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 
 `GET /receipts/:receipt_id` refreshes the same receipt. The receipt page is `/report-a-problem?receipt=<ID>`. The UI polls up to eight times with bounded delays while awaiting publication; a temporary polling outage retains the accepted receipt. It shows **View report** only when the backend supplies a safe canonical link. Receiving a report, publishing it, sending a notification and resolving the problem are separate events.
 
-While a receipt is processing, `ReportProgress` gently moves the existing CleanApp leaf up and to the right. One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
+While a receipt is processing, `ReportProgress` flies the existing CleanApp leaf in a quick bumblebee loop (see "Motion on the receipt"). One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
 
 On the page surface, `ReceiptStatus` lists recorded facts under the title: received, analyzed and published (or held for review), and, once a public ID exists, the public notification summary (first recipient and latest send time) or "No notification recorded yet." It also prints the receipt and report IDs and tells a waiting reporter they can leave and return through the receipt link. It shows nothing inferred from elapsed time and nothing in the widget.
 
@@ -63,6 +63,14 @@ No location is requested by this composer. Missing location remains unknown in r
 ## Required verification for later changes
 
 Run TypeScript, the web-reporting and report-location tests, and a production build. Check desktop/mobile keyboard behavior, text-only and image-only reporting, invalid/oversized input, failed requests with retry, actual server receipt and safe public link, widget draft retention and embedded mode. `scripts/check-rendered-seo.py` checks rendered HTML/navigation separately. Use mocks or an isolated backend for synthetic submissions; a rendering check must never POST reports. Production monitoring should distinguish receipt failures, analysis/review delay, publication and notification outcomes.
+
+## Motion on the receipt
+
+While a report is being analyzed the leaf flies a quick, erratic "bumblebee"
+loop (`leafFlight`, 2.6 s, one full spin per loop) and stops when analysis
+ends. **Report something else** carries a slow shimmer (`.nudge`) to point at
+the next step. Both are off under `prefers-reduced-motion`. Requested by Boris
+2026-11-12; this replaces the earlier slow 6 s drift.
 
 ## Outcome timeline on the receipt
 
