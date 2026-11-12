@@ -1,8 +1,8 @@
 /**
  * Spires on the globe: report counts as height.
  *
- * Dots show where reports are; they do not show how many. A spire is a plain
- * slim column whose height grows with the number of reports at that spot, so
+ * Dots show where reports are; they do not show how many. A spire is a slim
+ * column with a pointed tip whose height grows with the number of reports at that spot, so
  * hotspots stand out from the horizon.
  *
  * Only real hotspots get one (see `topHotspots`); everything else stays a dot.
@@ -21,8 +21,8 @@
  * view.
  *
  * Shape history (2026-11-12): four stacked blocks looked like a wedding cake;
- * a 16-slice flared needle showed rings up close. A single straight column has
- * nothing to go wrong.
+ * a 16-slice flared needle showed rings up close. Now: a straight shaft with a
+ * short pointed tip.
  *
  * Everything except the `apply*` functions is pure, with no map or DOM access.
  */
@@ -30,6 +30,20 @@
 export type SpireInput = { lon: number; lat: number; count: number; color?: string; name?: string };
 
 const SIDES = 14;
+/**
+ * Silhouette as [fraction of radius, fraction of height] slices: a straight
+ * shaft for the first 86% and a short cone to a point. Extrusions are
+ * straight-sided, so the cone is five thin slices; they sit at the narrow tip
+ * where steps are too small to see.
+ */
+const PROFILE: readonly (readonly [number, number])[] = [
+  [1, 0.86],
+  [0.8, 0.9],
+  [0.6, 0.93],
+  [0.42, 0.96],
+  [0.26, 0.98],
+  [0.12, 1],
+];
 const KM_PER_DEGREE = 111.32;
 
 export const SPIRE_SOURCE = "report-spires";
@@ -46,8 +60,8 @@ const FADE_END_ZOOM = 5.8;
 
 /** One hue, pale to deep, by how tall the spire is relative to the tallest. */
 export function heatColor(fraction: number): string {
-  const pale = [176, 222, 255];
-  const deep = [38, 110, 255];
+  const pale = [120, 190, 255];
+  const deep = [20, 84, 255];
   const t = Math.max(0, Math.min(1, fraction));
   const mix = (i: number) => Math.round(pale[i] + (deep[i] - pale[i]) * t);
   return `rgb(${mix(0)}, ${mix(1)}, ${mix(2)})`;
@@ -118,8 +132,8 @@ function ring(lon: number, lat: number, radiusKm: number): number[][] {
 }
 
 /**
- * One GeoJSON polygon (a straight column) per input. Properties: `h` (meters
- * at BASE_ZOOM), `color`, `count`.
+ * GeoJSON polygons for each input: a shaft plus the tip slices of PROFILE.
+ * Properties: `h` (meters at BASE_ZOOM), `color`, `count`.
  */
 export function buildSpires(inputs: readonly SpireInput[], radiusKm: number): GeoJSON.FeatureCollection {
   const max = inputs.reduce((largest, input) => Math.max(largest, input.count), 0);
@@ -128,11 +142,13 @@ export function buildSpires(inputs: readonly SpireInput[], radiusKm: number): Ge
     if (!(input.count > 0) || !Number.isFinite(input.lon) || !Number.isFinite(input.lat) || Math.abs(input.lat) > 85) continue;
     const height = spireHeight(input.count, max);
     const color = input.color || heatColor((height - MIN_HEIGHT_M) / (MAX_HEIGHT_M - MIN_HEIGHT_M));
-    features.push({
-      type: "Feature",
-      geometry: { type: "Polygon", coordinates: [ring(input.lon, input.lat, radiusKm)] },
-      properties: { h: Math.round(height), color, count: input.count },
-    });
+    for (const [radiusFraction, heightFraction] of PROFILE) {
+      features.push({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring(input.lon, input.lat, radiusKm * radiusFraction)] },
+        properties: { h: Math.round(height * heightFraction), color, count: input.count },
+      });
+    }
   }
   return { type: "FeatureCollection", features };
 }
@@ -194,7 +210,7 @@ export function applySpires(map: SpireMap, inputs: readonly SpireInput[], radius
             FADE_END_ZOOM, ["/", ["get", "h"], Math.pow(2, FADE_END_ZOOM - BASE_ZOOM)],
           ],
           "fill-extrusion-base": 0,
-          "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], FADE_START_ZOOM, 0.82, FADE_END_ZOOM, 0],
+          "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], FADE_START_ZOOM, 0.92, FADE_END_ZOOM, 0],
           "fill-extrusion-vertical-gradient": true,
           // Keep colors readable on the night side of the globe.
           "fill-extrusion-emissive-strength": 0.85,

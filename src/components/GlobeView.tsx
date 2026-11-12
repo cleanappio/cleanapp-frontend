@@ -2013,10 +2013,12 @@ export default function GlobeView() {
                   "interpolate",
                   ["linear"],
                   ["get", "severity"],
+                  // 30% smaller than before (was 6.6 to 13.2) so hotspot
+                  // columns read clearly above the dots.
                   0.0,
-                  6.6,
+                  4.6,
                   0.9,
-                  13.2,
+                  9.2,
                 ],
               ],
               "circle-color": [
@@ -2035,7 +2037,7 @@ export default function GlobeView() {
                   getColorByValue(0.9), // red for high severity
                 ],
               ],
-              "circle-stroke-width": 2,
+              "circle-stroke-width": 1.5,
               "circle-stroke-color": "#ffffff",
             },
           });
@@ -2337,7 +2339,7 @@ export default function GlobeView() {
     // The pin layer is created by another effect; this call is repeated on
     // every data change, so it catches the layer once it exists.
     applyDigitalDeclutter(map as never);
-    applySpires(map as never, inputs, selectedTab === "physical" ? 20 : 60);
+    applySpires(map as never, inputs, selectedTab === "physical" ? 34 : 60);
   }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
