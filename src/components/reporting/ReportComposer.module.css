@@ -20,7 +20,10 @@
 .receipt { padding: 12px 0 4px; animation: appear 180ms ease-out; }
 .progressMark { position: relative; width: 104px; height: 64px; margin-bottom: 12px; }
 .progressLeaf { display: block; width: 56px; height: 32px; overflow: hidden; transform: translate(4px, 16px) rotate(-8deg); }
-.progressLeafMoving { animation: leafFlight 2.6s cubic-bezier(.45, .05, .55, .95) infinite; will-change: transform; }
+/* Set by ReportProgress once the leaf flies: it then rides an offset-path
+   (src/lib/leaf-flight.ts) from the mark's top-left corner, banking along the
+   curve. At distance 0 it sits where the static transform above puts it. */
+.progressLeafFlying { position: absolute; top: 0; left: 0; z-index: 2; transform: none; offset-rotate: auto; offset-distance: 0%; pointer-events: none; will-change: offset-distance; }
 .progressLogo { display: block; width: 56px; max-width: none; height: auto; }
 .progressTitle { min-height: 2.7em; margin: 0; font-size: 24px; line-height: 1.35; font-weight: 600; letter-spacing: -.025em; text-wrap: balance; }
 .progressPhrase { display: block; animation: phraseFade 320ms ease-out both; }
@@ -35,24 +38,6 @@
 .panel .composer { padding-top: 24px; }
 .close { position: absolute; top: 12px; right: 12px; color: #53665a; width: 36px; height: 36px; }
 .spinner { animation: spin 900ms linear infinite; }
-/* Bumblebee flight while a report is being analyzed: quick darts and dips
-   around the 104x64 mark, never resting, with one full spin per loop. The
-   loop ends where it starts (352deg is the same pose as -8deg), so it is
-   seamless. Stays inside the mark: x 0-48px, y 0-32px. */
-@keyframes leafFlight {
-  0% { transform: translate(4px, 16px) rotate(-8deg); }
-  9% { transform: translate(20px, 3px) rotate(14deg); }
-  17% { transform: translate(13px, 22px) rotate(-16deg); }
-  26% { transform: translate(36px, 9px) rotate(22deg); }
-  34% { transform: translate(46px, 26px) rotate(-10deg); }
-  43% { transform: translate(31px, 0) rotate(18deg); }
-  52% { transform: translate(40px, 17px) rotate(110deg); }
-  61% { transform: translate(22px, 30px) rotate(230deg); }
-  70% { transform: translate(27px, 8px) rotate(338deg); }
-  79% { transform: translate(8px, 27px) rotate(366deg); }
-  89% { transform: translate(15px, 6px) rotate(340deg); }
-  100% { transform: translate(4px, 16px) rotate(352deg); }
-}
 /* A soft band of light crosses "Report something else" every few seconds so
    the next step is noticeable without shouting. The underline keeps the
    plain link color. */
@@ -63,7 +48,7 @@
 @keyframes appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes panelIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media(max-width: 480px) { .launcher { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); padding: 0 16px; } .panel { right: 16px; bottom: max(80px, calc(env(safe-area-inset-bottom) + 68px)); padding: 20px; } }
-@media(prefers-reduced-motion: reduce) { .panel, .overlay, .receipt, .spinner, .progressLeafMoving, .progressPhrase, .nudge { animation: none; } .launcher, .send, .box { transition: none; transform: none; } }
+@media(prefers-reduced-motion: reduce) { .panel, .overlay, .receipt, .spinner, .progressPhrase, .nudge { animation: none; } .launcher, .send, .box { transition: none; transform: none; } }
 .statusNote { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: #4b5563; }
 .statusList { margin: 16px 0 0; padding: 0; list-style: none; font-size: 15px; line-height: 1.5; color: #374151; }
 .statusList li { display: flex; gap: 10px; padding: 3px 0; }

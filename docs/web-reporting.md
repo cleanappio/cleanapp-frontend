@@ -32,7 +32,7 @@ A usable response requires a safe `receipt_id` plus a recognized `status`: `rece
 
 `GET /receipts/:receipt_id` refreshes the same receipt. The receipt page is `/report-a-problem?receipt=<ID>`. The UI polls up to eight times with bounded delays while awaiting publication; a temporary polling outage retains the accepted receipt. It shows **View report** only when the backend supplies a safe canonical link. Receiving a report, publishing it, sending a notification and resolving the problem are separate events.
 
-While a receipt is processing, `ReportProgress` flies the existing CleanApp leaf in a quick bumblebee loop (see "Motion on the receipt"). One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
+While a receipt is processing, `ReportProgress` flies the existing CleanApp leaf along a looping path (see "Motion on the receipt"). One phrase changes every six seconds to describe AI analysis, similar reports, related patterns, contacts, escalation preparation, and the receipt/activity log. These phrases describe the work; they are not backend step telemetry or evidence that a notification was sent. The text area stays the same height, and the animation respects reduced motion. Screen readers receive one stable processing announcement rather than each rotating phrase.
 
 On the page surface, `ReceiptStatus` lists recorded facts under the title: received, analyzed and published (or held for review), and, once a public ID exists, the public notification summary (first recipient and latest send time) or "No notification recorded yet." It also prints the receipt and report IDs and tells a waiting reporter they can leave and return through the receipt link. It shows nothing inferred from elapsed time and nothing in the widget.
 
@@ -66,11 +66,21 @@ Run TypeScript, the web-reporting and report-location tests, and a production bu
 
 ## Motion on the receipt
 
-While a report is being analyzed the leaf flies a quick, erratic "bumblebee"
-loop (`leafFlight`, 2.6 s, one full spin per loop) and stops when analysis
-ends. **Report something else** carries a slow shimmer (`.nudge`) to point at
-the next step. Both are off under `prefers-reduced-motion`. Requested by Boris
-2026-11-12; this replaces the earlier slow 6 s drift.
+The leaf flies along a smooth path (CSS `offset-path`), banking with the curve
+like a small aerobatic plane. Paths are generated in `src/lib/leaf-flight.ts`;
+`ReportProgress` (`useLeafFlight`) runs them.
+
+- **Cruise**: while the report is being analyzed, a 7 s circuit across the top
+  of the card with two loops, repeated.
+- **Landing**: when analysis ends (published, under review, or the polling
+  window closes) the leaf is never cut off. It finishes its circuit, flies once
+  around **Report something else** (the element marked `data-report-nudge`),
+  and settles back in its corner. Without that link it just settles.
+- **Report something else** also carries a slow shimmer (`.nudge`).
+
+A receipt opened later (never processing on screen) stays still. Nothing moves
+under `prefers-reduced-motion`. History: slow 6 s drift, then a short "bumblebee"
+bounce (too jumpy), then this, all at Boris's request on 2026-11-12.
 
 ## Outcome timeline on the receipt
 
