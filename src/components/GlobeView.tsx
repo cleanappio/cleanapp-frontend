@@ -2339,7 +2339,8 @@ export default function GlobeView() {
     // The pin layer is created by another effect; this call is repeated on
     // every data change, so it catches the layer once it exists.
     applyDigitalDeclutter(map as never);
-    applySpires(map as never, inputs, selectedTab === "physical" ? 34 : 60);
+    // Base radius in km. A cone needs a wider foot than a column to read at the same weight.
+    applySpires(map as never, inputs, selectedTab === "physical" ? 46 : 85);
   }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
