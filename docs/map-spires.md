@@ -1,7 +1,7 @@
 # Map spires and the decluttered globe
 
-Dots on the globe show where reports are. Spires show how many: a slim
-column with a pointed tip whose height grows with the report count, so hotspots stand out.
+Dots on the globe show where reports are. Spires show how many: a slender
+cone, tapering evenly from the ground to a point, whose height grows with the report count, so hotspots stand out.
 
 Code: `src/lib/map-spires.ts` (pure geometry plus `applySpires` and
 `applyDigitalDeclutter`), wired in `src/components/GlobeView.tsx` in the
@@ -37,8 +37,9 @@ effect marked "Spires". Opening view: `src/lib/visitor-view.ts`.
    spot plus every brand dot and label, "hella cluttered".
 3. Straight columns, hotspots only, one color scale per tab, dots thinned by
    zoom: "better".
-4. Current: pointed tips; physical columns thicker and a stronger blue;
+4. Pointed caps on straight shafts ("obelisks"); physical columns thicker and a stronger blue;
    physical report dots 30% smaller so columns read above them.
+5. Current: one even taper from base to tip.
 
 Tuning knobs: hotspot counts and column radius (in `GlobeView`),
 `DIGITAL_DOT_TIERS`, `MAX_HEIGHT_M`, the exponent in `spireHeight`, the fade

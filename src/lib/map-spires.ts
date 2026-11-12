@@ -1,8 +1,8 @@
 /**
  * Spires on the globe: report counts as height.
  *
- * Dots show where reports are; they do not show how many. A spire is a slim
- * column with a pointed tip whose height grows with the number of reports at that spot, so
+ * Dots show where reports are; they do not show how many. A spire is a slender
+ * cone, tapering evenly from the ground to a point, whose height grows with the number of reports at that spot, so
  * hotspots stand out from the horizon.
  *
  * Only real hotspots get one (see `topHotspots`); everything else stays a dot.
@@ -21,8 +21,8 @@
  * view.
  *
  * Shape history (2026-11-12): four stacked blocks looked like a wedding cake;
- * a 16-slice flared needle showed rings up close. Now: a straight shaft with a
- * short pointed tip.
+ * a 16-slice flared needle showed rings up close; a straight shaft with a
+ * pointed cap read as an obelisk. Now: one even taper from base to tip.
  *
  * Everything except the `apply*` functions is pure, with no map or DOM access.
  */
@@ -31,19 +31,17 @@ export type SpireInput = { lon: number; lat: number; count: number; color?: stri
 
 const SIDES = 14;
 /**
- * Silhouette as [fraction of radius, fraction of height] slices: a straight
- * shaft for the first 86% and a short cone to a point. Extrusions are
- * straight-sided, so the cone is five thin slices; they sit at the narrow tip
- * where steps are too small to see.
+ * Silhouette as [fraction of radius, fraction of height] slices: an even
+ * taper from the full width at the ground to a point at the top (a slender
+ * cone, not an obelisk with a cap). Extrusions are straight-sided, so the
+ * taper is 24 thin slices, each 1/24 narrower than the one below; at the
+ * zooms where spires are shown the steps are well under a pixel.
  */
-const PROFILE: readonly (readonly [number, number])[] = [
-  [1, 0.86],
-  [0.8, 0.9],
-  [0.6, 0.93],
-  [0.42, 0.96],
-  [0.26, 0.98],
-  [0.12, 1],
-];
+const SLICES = 24;
+const PROFILE: readonly (readonly [number, number])[] = Array.from(
+  { length: SLICES },
+  (_, i) => [1 - i / SLICES, (i + 1) / SLICES] as const,
+);
 const KM_PER_DEGREE = 111.32;
 
 export const SPIRE_SOURCE = "report-spires";
@@ -132,7 +130,7 @@ function ring(lon: number, lat: number, radiusKm: number): number[][] {
 }
 
 /**
- * GeoJSON polygons for each input: a shaft plus the tip slices of PROFILE.
+ * GeoJSON polygons for each input: the slices of PROFILE.
  * Properties: `h` (meters at BASE_ZOOM), `color`, `count`.
  */
 export function buildSpires(inputs: readonly SpireInput[], radiusKm: number): GeoJSON.FeatureCollection {
