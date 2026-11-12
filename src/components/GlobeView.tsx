@@ -30,7 +30,7 @@ import { useReportTabs } from "@/hooks/useReportTabs";
 import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
-import { applySpires, binPoints, type SpireInput } from "@/lib/map-spires";
+import { applyDigitalDeclutter, applySpires, binPoints, topHotspots, type SpireInput } from "@/lib/map-spires";
 import { initialGlobeView } from "@/lib/visitor-view";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import EmbeddedPublicReportDialog, {
@@ -1973,6 +1973,8 @@ export default function GlobeView() {
               severity: isPhysical ? report.severity_level : undefined,
               classification,
               size,
+              // Numeric total: lets the map thin brand dots by zoom (map-spires.ts).
+              total: isDigital ? (report as DigitalReportResponse).total : undefined,
             },
           };
         });
@@ -2303,33 +2305,39 @@ export default function GlobeView() {
     }
   }, [isDigital, mapLoaded, mapStyleLoaded]);
 
-  // Spires: report counts as height (src/lib/map-spires.ts). Physical reports
-  // are grouped into 1-degree cells; digital shows the 250 largest brands, since
-  // a spire for each of tens of thousands of brands would hide the hotspots.
+  // Spires: report counts as height (src/lib/map-spires.ts). Only the
+  // busiest places and brands get one; the rest stay dots.
   useEffect(() => {
     const map = mapRef.current && mapRef.current.getMap();
     if (!map || !mapLoaded || !mapStyleLoaded) return;
     let inputs: SpireInput[] = [];
     if (selectedTab === "physical") {
-      inputs = binPoints(
-        latestReports
-          .filter((report) => report.classification === "physical")
-          .map((report) => ({
-            lon: (report as { longitude: number }).longitude,
-            lat: (report as { latitude: number }).latitude,
-          })),
-      ).filter((cell) => cell.count >= 2);
+      inputs = topHotspots(
+        binPoints(
+          latestReports
+            .filter((report) => report.classification === "physical")
+            .map((report) => ({
+              lon: (report as { longitude: number }).longitude,
+              lat: (report as { latitude: number }).latitude,
+            })),
+        ),
+        60,
+      );
     } else {
-      inputs = (latestReports.filter((report) => report.classification === "digital") as DigitalReportResponse[])
-        .filter((report) => report.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 250)
-        .map((report) => {
-          const { lat, lon, color } = stringToLatLonColor(report.brand_name);
-          return { lon, lat, color, count: report.total };
-        });
+      inputs = topHotspots(
+        (latestReports.filter((report) => report.classification === "digital") as DigitalReportResponse[]).map(
+          (report) => {
+            const { lat, lon, color } = stringToLatLonColor(report.brand_name);
+            return { lon, lat, color, count: report.total, name: report.brand_display_name || report.brand_name };
+          },
+        ),
+        40,
+      );
     }
-    applySpires(map as never, inputs, selectedTab === "physical" ? 28 : 95);
+    // The pin layer is created by another effect; this call is repeated on
+    // every data change, so it catches the layer once it exists.
+    applyDigitalDeclutter(map as never);
+    applySpires(map as never, inputs, selectedTab === "physical" ? 20 : 60);
   }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
@@ -2358,6 +2366,8 @@ export default function GlobeView() {
           geometry: { type: "Point", coordinates: [lon, lat] },
           properties: {
             name: `${brandDisplayName} (${total})`,
+            // Numeric total: lets the map thin dots by zoom (map-spires.ts).
+            total: total,
             color: color,
             size: size,
             isParent: false,
