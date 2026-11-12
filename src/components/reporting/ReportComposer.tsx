@@ -50,8 +50,10 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother, surface = "p
     <ReportProgress processing={processing} receiptId={receipt.receipt_id} title={title} />
     <ReceiptStatus receipt={receipt} processing={processing} review={review} surface={surface} />
     <div className={styles.receiptActions}>
-      {surface !== "widget" && receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
-      <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>
+      {receipt.canonical_path && <Link className={styles.link} href={receipt.canonical_path}>View report</Link>}
+      {/* One click to the report once it exists. The widget offers the receipt
+          link only while there is no report to open yet; the page always does. */}
+      {(surface !== "widget" || !receipt.canonical_path) && <Link className={styles.link} href={`/report-a-problem?receipt=${encodeURIComponent(receipt.receipt_id)}`}>Keep your receipt</Link>}
       {onAnother && <button type="button" className={styles.link} onClick={onAnother}>Report something else</button>}
     </div>
   </div>;

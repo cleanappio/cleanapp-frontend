@@ -18,7 +18,7 @@ export default function ReceiptStatus({ receipt, processing, review, surface }: 
   // A notification usually follows publication by a minute or two, so look a few times.
   useEffect(() => {
     setSent(null);
-    if (!publicId || surface === "widget") return;
+    if (!publicId) return;
     const controller = new AbortController();
     let checks = 0;
     let timer: ReturnType<typeof setTimeout>;
@@ -36,8 +36,10 @@ export default function ReceiptStatus({ receipt, processing, review, surface }: 
     return () => { controller.abort(); clearTimeout(timer); };
   }, [publicId, surface]);
 
-  // The widget stays minimal by design (docs/web-reporting.md); the receipt page carries the detail.
-  if (surface === "widget") return null;
+  // Both surfaces show the same three facts (received, published, sent to
+  // whom). The widget leaves out the reference line and the "come back later"
+  // note to stay compact; the receipt page keeps them.
+  const compact = surface === "widget";
 
   const recipient = sent?.preview_recipients?.[0];
   const sentAt = notificationDate(sent?.latest_sent_at || null, "en");
@@ -72,7 +74,7 @@ export default function ReceiptStatus({ receipt, processing, review, surface }: 
         );
       }) : null}
     </ol>
-    {!published && !review ? <p className={styles.statusNote}>You can leave this page. Keep your receipt link and come back to see where your report went.</p> : null}
-    <p className={styles.statusRef}>Receipt {receipt.receipt_id}{receipt.public_id && published ? ` · Report ${receipt.public_id}` : ""}</p>
+    {!compact && !published && !review ? <p className={styles.statusNote}>You can leave this page. Keep your receipt link and come back to see where your report went.</p> : null}
+    {compact ? null : <p className={styles.statusRef}>Receipt {receipt.receipt_id}{receipt.public_id && published ? ` · Report ${receipt.public_id}` : ""}</p>}
   </>;
 }
