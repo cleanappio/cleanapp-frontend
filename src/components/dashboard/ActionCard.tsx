@@ -19,7 +19,7 @@ interface ActionButtonProps {
 function ActionButton({ icon: Icon, label, description, example, onClick, isActive, children }: ActionButtonProps) {
   if (isActive) {
     return (
-      <div className="relative flex flex-col items-center p-6 bg-white/20 rounded-xl transition-all duration-300 shadow-lg border-2 border-white/50 w-full min-h-[180px]">
+      <div className="relative flex flex-col h-full p-6 bg-white rounded-2xl border border-green-600 ring-1 ring-green-600 shadow-lg shadow-green-100 w-full min-h-[204px]">
         {children}
       </div>
     );
@@ -28,14 +28,17 @@ function ActionButton({ icon: Icon, label, description, example, onClick, isActi
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center p-6 bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-white/30 hover:border-white/50 w-full"
+      className="group flex flex-col h-full text-left p-6 bg-white rounded-2xl border border-gray-200 transition-all duration-200 hover:border-green-600 hover:shadow-lg hover:shadow-green-100 w-full min-h-[204px]"
     >
-      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors border border-white/20">
-        <Icon className="w-7 h-7 text-white" />
+      <div className="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-600 transition-colors">
+        <Icon className="w-5 h-5 text-green-700 group-hover:text-white transition-colors" />
       </div>
-      <span className="text-white font-semibold text-lg mb-1">{label}</span>
-      <span className="text-white/70 text-sm text-center mb-2">{description}</span>
-      <span className="text-white/50 text-xs italic">{example}</span>
+      <span className="text-gray-900 font-bold text-lg">{label}</span>
+      <span className="mt-1 text-gray-600 text-sm">{description}</span>
+      <span className="mt-auto pt-4 flex items-center justify-between text-gray-400 text-xs">
+        {example}
+        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+      </span>
     </button>
   );
 }
@@ -106,12 +109,12 @@ export default function ActionCard() {
   };
 
   return (
-    <div className="bg-gradient-to-r from-green-600 via-green-600 to-emerald-600 rounded-2xl p-8 mb-8 shadow-xl relative">
-      <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-8">
+    <section className="mb-12">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Choose how you want to use CleanApp
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         <ActionButton
           icon={MapPin}
           label="Monitor a location"
@@ -130,13 +133,19 @@ export default function ActionCard() {
             isActive={isBrandSearchOpen}
           >
             <div className="w-full h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-11 h-11 bg-green-600 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-gray-900 font-bold text-lg">Track a brand</span>
+              </div>
               <div className="relative w-full mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Enter brand name..."
-                  className="w-full bg-white border-2 border-white rounded-lg py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all shadow-inner"
+                  className="w-full bg-white border border-gray-300 rounded-lg py-2.5 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => {
@@ -159,17 +168,17 @@ export default function ActionCard() {
 
                 {/* Search Results Dropdown-style */}
                 {(searchTerm.length >= 2) && (
-                  <div className="absolute top-full left-0 right-0 z-50 bg-gray-900 rounded-xl border border-white/20 shadow-2xl overflow-hidden mt-1 max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 z-50 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden mt-2 max-h-60 overflow-y-auto">
                     {matchingBrand && (
                       <button
-                        className="p-4 bg-gradient-to-r from-green-900/40 to-gray-800 text-left w-full hover:from-green-800/40 hover:to-gray-700 transition-all group flex items-center justify-between border-b border-white/10"
+                        className="p-4 bg-green-50 text-left w-full hover:bg-green-100 transition-colors group flex items-center justify-between border-b border-gray-100"
                         onClick={() => handleBrandClick(matchingBrand.brand_name, matchingBrand.brand_display_name)}
                       >
                         <div>
-                          <p className="text-white font-semibold">{matchingBrand.brand_display_name} Dashboard</p>
-                          <p className="text-green-400 text-xs">{matchingBrand.total.toLocaleString()} reports</p>
+                          <p className="text-gray-900 font-semibold">{matchingBrand.brand_display_name} Dashboard</p>
+                          <p className="text-green-700 text-xs">{matchingBrand.total.toLocaleString()} reports</p>
                         </div>
-                        <ArrowRight className="text-gray-400 group-hover:text-green-400 w-5 h-5 transition-colors" />
+                        <ArrowRight className="text-gray-400 group-hover:text-green-600 w-5 h-5 transition-colors" />
                       </button>
                     )}
 
@@ -177,7 +186,7 @@ export default function ActionCard() {
                       searchResults.map((result) => (
                         <button
                           key={result.discovery_token}
-                          className="p-3 text-left text-gray-200 hover:bg-white/10 w-full text-sm border-b border-white/5 last:border-none"
+                          className="p-3 text-left text-gray-700 hover:bg-gray-50 w-full text-sm border-b border-gray-100 last:border-none"
                           onClick={() =>
                             handleBrandClick(
                               result.brand_name || searchTerm,
@@ -185,19 +194,19 @@ export default function ActionCard() {
                             )
                           }
                         >
-                          <p className="line-clamp-1 opacity-80">
+                          <p className="line-clamp-1">
                             {result.title || result.brand_display_name || result.brand_name || "Report"}
                           </p>
                         </button>
                       ))
                     ) : !matchingBrand && !searchLoading && (
-                      <div className="p-4 text-white/50 text-sm text-center italic font-light">
+                      <div className="p-4 text-gray-500 text-sm text-center">
                         No brands found for &quot;{searchTerm}&quot;
                       </div>
                     )}
 
                     {searchLoading && (
-                      <div className="p-4 text-white/50 text-sm text-center">
+                      <div className="p-4 text-gray-500 text-sm text-center">
                         Searching...
                       </div>
                     )}
@@ -216,6 +225,6 @@ export default function ActionCard() {
           onClick={() => router.push('/')}
         />
       </div>
-    </div>
+    </section>
   );
 }
