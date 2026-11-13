@@ -5,7 +5,8 @@ import { isPublicSeoObject, publicSeoText } from "@/lib/public-seo-fetch";
 
 /** Allowlisted public view data. Never serialize a reader's complete upstream payload. */
 export type PublicReportView = {
-  report: { public_id: string; image?: string | null };
+  /** `image` is the first photo's URL; `extra_images` are URLs of photos 2 to 4. */
+  report: { public_id: string; image?: string | null; extra_images?: string[] };
   analysis: ReportAnalysis[];
   evidence?: ReportEvidence;
   recurrence?: ReportRecurrence;

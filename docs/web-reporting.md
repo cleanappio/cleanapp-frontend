@@ -4,7 +4,7 @@ This describes the implementation in this change. Keep public claims aligned wit
 
 ## Experience and ownership
 
-- `HomeSeoSection` and `/report-a-problem` render the same `ReportComposer`: text, an optional image via **+**, and **Send**. Text-only, image-only and combined submissions work. No account, location prompt or category form is required.
+- `HomeSeoSection` and `/report-a-problem` render the same `ReportComposer`: text, up to four photos via **+** (also by drop or paste, several at once), and **Send**. Text-only, photo-only and combined submissions work. No account, location prompt or category form is required.
 - `_app.tsx` mounts `ReportWidget` across the site. Its accessible dialog traps focus, supports Escape and keeps its in-memory draft when closed. Embedded mode suppresses the global widget.
 - `ReportComposer` owns validation, preparation, sending, retry and receipt presentation. `src/lib/web-reporting.ts` owns payloads, limits, image preparation, receipt parsing and optional analytics. Do not build a second intake flow for a new landing page.
 - `?kind=physical` and `?kind=digital` links reach the same natural-language composer; classification happens downstream. They do not require the reporter to select a category.
@@ -22,7 +22,8 @@ Requests go directly to `${NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io
   "source_id": "web_<random UUID>",
   "session_id": "<random session UUID>",
   "annotation": "The report text",
-  "image": "<optional raw JPEG base64, without a data: prefix>"
+  "image": "<optional first photo: raw JPEG base64, without a data: prefix>",
+  "extra_images": ["<optional photos 2 to 4, same encoding; only with image>"]
 }
 ```
 
@@ -51,6 +52,7 @@ Create a payload once and reuse it unchanged on retry, including `source_id`, te
 
 - Text: at most 8192 UTF-8 bytes after trimming; text or an image is required.
 - Browser source image: nonempty, at most 20 MiB and 50 megapixels, decodable by the browser. SVG is excluded. Pixels are re-encoded as JPEG, with a maximum dimension of 2048 and maximum output of 1 MiB. This discards source file metadata; it does not remove sensitive information visible in the image.
+- Several photos (2026-11-13): at most four per report. They share one byte budget so the request stays under the server's 2 MiB limit: `photoByteBudget(n)` gives each photo `min(1 MiB, 1,400,000 / n)` bytes, so one photo is unchanged and four get about 350 KB each. Adding or removing a photo re-prepares the whole set (`prepareReportPhotos`). Thumbnails show each photo with its own remove button; **+** is disabled at four. The public report page shows the first photo large and the others in a row beneath it; all are loaded by URL from the raw image endpoint (`&index=1..3`), which rechecks visibility on every request. Backend design: `cleanapp_back_end_v2/docs/operations/report-photos.md`. Video is not supported yet.
 - Backend web validation independently accepts only complete JPEG/PNG images up to 1 MiB, 4096 per dimension and 16 megapixels. Do not trust client MIME labels or checks alone.
 - The listener has a request-body limit, configured shared endpoint limits and an additional IP-based web submission bucket shared across aliases. Changing the client session does not create a fresh bucket. Trusted proxy configuration must reflect the actual deployment. A client-supplied channel or Origin is not proof of a human identity.
 - Copy states reports may be public and links to Privacy. There is no confidentiality or anonymity guarantee. Do not add report text, images, coordinates, receipt/source/session IDs or personal information to analytics. Current optional analytics contain event name, surface and bounded status only; they install no new analytics provider.
