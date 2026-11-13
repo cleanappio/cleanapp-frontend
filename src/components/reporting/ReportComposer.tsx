@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUp, Loader2, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { newWebReportPayload, prepareReportImage, readReportReceipt, reportApiBase, submissionError, trackReportEvent, validateReportDraft, type WebReportPayload, type WebReportReceipt } from "@/lib/web-reporting";
+import { MAX_REPORT_PHOTOS, newWebReportPayload, prepareReportPhotos, readReportReceipt, reportApiBase, submissionError, trackReportEvent, validateReportDraft, type WebReportPayload, type WebReportReceipt } from "@/lib/web-reporting";
 import styles from "./ReportComposer.module.css";
 import ReportProgress from "./ReportProgress";
 import ReceiptStatus from "./ReceiptStatus";
@@ -61,7 +61,9 @@ export function ReportReceipt({ receipt: initialReceipt, onAnother, surface = "p
 
 export function useReportComposerState() {
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState<{ file: File; image: string; preview: string } | null>(null);
+  // Up to MAX_REPORT_PHOTOS photos, in the order added. `images` holds the
+  // prepared (re-encoded) photos for exactly this list of files.
+  const [attachments, setAttachments] = useState<{ files: { file: File; preview: string }[]; images: string[] }>({ files: [], images: [] });
   const [preparing, setPreparing] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -72,41 +74,71 @@ export function useReportComposerState() {
   const mounted = useRef(true);
   const imageVersion = useRef(0);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => () => { if (attachment) URL.revokeObjectURL(attachment.preview); }, [attachment]);
-  return { text, setText, attachment, setAttachment, preparing, setPreparing, sending, setSending, error, setError, receipt, setReceipt, fileInput, draft, locked, mounted, imageVersion };
+  const previews = useRef(new Set<string>());
+  useEffect(() => {
+    // Release previews that are no longer shown; release all on unmount.
+    const current = new Set(attachments.files.map(item => item.preview));
+    previews.current.forEach(url => { if (!current.has(url)) URL.revokeObjectURL(url); });
+    previews.current = current;
+  }, [attachments]);
+  useEffect(() => () => { previews.current.forEach(url => URL.revokeObjectURL(url)); }, []);
+  return { text, setText, attachments, setAttachments, preparing, setPreparing, sending, setSending, error, setError, receipt, setReceipt, fileInput, draft, locked, mounted, imageVersion };
 }
 
 export default function ReportComposer({ surface = "page", state }: { surface?: "widget" | "page"; state?: ReturnType<typeof useReportComposerState> }) {
   const id = useId();
   const localState = useReportComposerState();
-  const { text, setText, attachment, setAttachment, preparing, setPreparing, sending, setSending, error, setError, receipt, setReceipt, fileInput, draft, locked, mounted, imageVersion } = state || localState;
+  const { text, setText, attachments, setAttachments, preparing, setPreparing, sending, setSending, error, setError, receipt, setReceipt, fileInput, draft, locked, mounted, imageVersion } = state || localState;
 
-  async function addImage(file?: File) {
-    if (!file || locked.current) return;
+  const photoCount = attachments.files.length;
+
+  // Every change re-prepares the whole set: the byte budget per photo depends
+  // on how many photos there are. A newer change supersedes an older one.
+  async function setPhotos(next: { file: File; preview: string }[], notice = "") {
     const version = ++imageVersion.current;
-    setPreparing(true); setError("");
+    setPreparing(true); setError(notice);
     try {
-      const image = await prepareReportImage(file);
+      const images = await prepareReportPhotos(next.map(item => item.file));
       if (mounted.current && version === imageVersion.current) {
-        setAttachment({ file, image, preview: URL.createObjectURL(file) });
+        setAttachments({ files: next, images });
         draft.current = null;
+      } else {
+        next.forEach(item => { if (!attachments.files.includes(item)) URL.revokeObjectURL(item.preview); });
       }
     } catch (err) {
+      // The set on screen stays as it was; drop previews made for this attempt.
+      next.forEach(item => { if (!attachments.files.includes(item)) URL.revokeObjectURL(item.preview); });
       if (mounted.current && version === imageVersion.current) setError(err instanceof Error ? err.message : "We couldn’t open that image.");
     } finally {
       if (mounted.current && version === imageVersion.current) setPreparing(false);
     }
   }
 
+  function addImages(list?: FileList | File[] | null) {
+    const incoming = Array.from(list || []).filter(file => file.type.startsWith("image/") || file.type === "");
+    if (!incoming.length || locked.current || preparing) return;
+    const room = MAX_REPORT_PHOTOS - photoCount;
+    const accepted = incoming.slice(0, Math.max(0, room));
+    const notice = incoming.length > accepted.length ? `A report can have up to ${MAX_REPORT_PHOTOS} photos.` : "";
+    if (!accepted.length) { setError(notice); return; }
+    void setPhotos([...attachments.files, ...accepted.map(file => ({ file, preview: URL.createObjectURL(file) }))], notice);
+  }
+
+  function removeImage(index: number) {
+    const next = attachments.files.filter((_, i) => i !== index);
+    if (!next.length) { imageVersion.current++; setAttachments({ files: [], images: [] }); draft.current = null; setError(""); return; }
+    void setPhotos(next);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (locked.current || preparing) return;
-    const issue = validateReportDraft(text, !!attachment);
+    const issue = validateReportDraft(text, photoCount > 0);
     if (issue) { setError(issue); return; }
     locked.current = true; setSending(true); setError("");
     try {
       // Retry the identical payload after network errors to avoid duplicate reports.
-      draft.current ||= newWebReportPayload(text, attachment?.image);
+      draft.current ||= newWebReportPayload(text, attachments.images);
       trackReportEvent("report_submit_started", surface);
       const response = await fetch(`${reportApiBase()}/submit`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -117,7 +149,7 @@ export default function ReportComposer({ surface = "page", state }: { surface?: 
       const accepted = readReportReceipt(data);
       if (!accepted) throw new Error("We couldn’t confirm receipt. Please try again; your draft is still here.");
       if (mounted.current) {
-        setReceipt(accepted); setText(""); setAttachment(null); draft.current = null;
+        setReceipt(accepted); setText(""); setAttachments({ files: [], images: [] }); draft.current = null;
         trackReportEvent("report_submit_accepted", surface, accepted.status);
       }
     } catch (err) {
@@ -133,26 +165,27 @@ export default function ReportComposer({ surface = "page", state }: { surface?: 
 
   if (receipt) return <ReportReceipt receipt={receipt} surface={surface} onAnother={() => setReceipt(null)} />;
   return <form className={styles.composer} onSubmit={submit} aria-label="Report a problem" aria-busy={sending || preparing}>
-    <div className={styles.box} onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (!sending) void addImage(e.dataTransfer.files[0]); }}>
+    <div className={styles.box} onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (!sending) addImages(e.dataTransfer.files); }}>
       <label htmlFor={`${id}-message`} className="sr-only">What’s wrong?</label>
       <textarea id={`${id}-message`} className={styles.textarea} placeholder="What’s wrong? Tell us or add a photo." value={text} disabled={sending}
         onChange={e => { setText(e.target.value); draft.current = null; setError(""); }}
-        onPaste={e => { const file = Array.from(e.clipboardData.files).find(f => f.type.startsWith("image/")); if (file) { e.preventDefault(); void addImage(file); } }}
+        onPaste={e => { const files = Array.from(e.clipboardData.files).filter(f => f.type.startsWith("image/")); if (files.length) { e.preventDefault(); addImages(files); } }}
         onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
         aria-describedby={error ? `${id}-error` : `${id}-note`} />
-      {attachment && <div className={styles.attachment}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={attachment.preview} alt="Attachment preview" className={styles.preview} />
-        <span className={styles.filename}>{attachment.file.name}</span>
-        <button type="button" className={styles.iconButton} aria-label="Remove attachment" disabled={sending || preparing} onClick={() => { imageVersion.current++; setAttachment(null); draft.current = null; }}><X size={18} aria-hidden="true" /></button>
-      </div>}
+      {photoCount > 0 && <ul className={styles.attachments} aria-label={`${photoCount} of ${MAX_REPORT_PHOTOS} photos added`}>
+        {attachments.files.map((item, index) => <li key={item.preview} className={styles.thumb}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.preview} alt={`Photo ${index + 1}: ${item.file.name}`} className={styles.thumbImage} />
+          <button type="button" className={styles.thumbRemove} aria-label={`Remove photo ${index + 1}`} disabled={sending || preparing} onClick={() => removeImage(index)}><X size={14} aria-hidden="true" /></button>
+        </li>)}
+      </ul>}
       <div className={styles.controls}>
-        <input ref={fileInput} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-label="Photo or screenshot" disabled={sending || preparing}
-          onChange={e => { void addImage(e.target.files?.[0]); e.currentTarget.value = ""; }} />
-        <button type="button" className={`${styles.iconButton} ${styles.add}`} aria-label={attachment ? "Replace photo or screenshot" : "Add photo or screenshot"} title="Add photo or screenshot" disabled={sending || preparing} onClick={() => fileInput.current?.click()}>
+        <input ref={fileInput} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Photos or screenshots" disabled={sending || preparing}
+          onChange={e => { addImages(e.target.files); e.currentTarget.value = ""; }} />
+        <button type="button" className={`${styles.iconButton} ${styles.add}`} aria-label={photoCount ? `Add another photo (${photoCount} of ${MAX_REPORT_PHOTOS})` : "Add photos or screenshots"} title={photoCount >= MAX_REPORT_PHOTOS ? `Up to ${MAX_REPORT_PHOTOS} photos` : "Add photos or screenshots"} disabled={sending || preparing || photoCount >= MAX_REPORT_PHOTOS} onClick={() => fileInput.current?.click()}>
           {preparing ? <Loader2 className={styles.spinner} size={22} aria-hidden="true" /> : <Plus size={24} aria-hidden="true" />}
         </button>
-        <button type="submit" className={`${styles.iconButton} ${styles.send}`} aria-label={sending ? "Sending report" : "Send report"} title="Send report" disabled={sending || preparing || (!text.trim() && !attachment)}>
+        <button type="submit" className={`${styles.iconButton} ${styles.send}`} aria-label={sending ? "Sending report" : "Send report"} title="Send report" disabled={sending || preparing || (!text.trim() && photoCount === 0)}>
           {sending ? <Loader2 className={styles.spinner} size={21} aria-hidden="true" /> : <ArrowUp size={23} aria-hidden="true" />}
         </button>
       </div>

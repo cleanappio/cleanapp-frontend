@@ -39,6 +39,13 @@ export function makeReportSeoProps(classification: ReportClassification): GetSer
       const hasImage = report.evidence?.has_original_media === true && isPublicSeoObject(data) && isPublicSeoObject(data.report) && typeof data.report.image === "string" && data.report.image.length > 0;
       const image = hasImage ? `${LIVE_API}/api/v3/reports/rawimage/by-public-id?public_id=${encodeURIComponent(publicId)}` : null;
       if (image) report.report.image = image;
+      // Photos 2 to 4 (reports can carry up to four). Same authorization as
+      // the first photo; the endpoint rechecks visibility for every request.
+      const extraCount = image && isPublicSeoObject(data) && isPublicSeoObject(data.report) && Number.isInteger(data.report.extra_image_count)
+        ? Math.max(0, Math.min(3, data.report.extra_image_count as number)) : 0;
+      if (image && extraCount > 0) {
+        report.report.extra_images = Array.from({ length: extraCount }, (_, i) => `${image}&index=${i + 1}`);
+      }
       return { props: { seo: { title, description, image, found: true }, initialReport: report } };
     } catch {
       publicSeoUnavailable(res);

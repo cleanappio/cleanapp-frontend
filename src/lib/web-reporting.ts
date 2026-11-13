@@ -1,6 +1,20 @@
 /** Public browser intake. Keep the payload unchanged when retrying a draft. */
 export const MAX_REPORT_TEXT_BYTES = 8192;
 export const MAX_REPORT_IMAGE_BYTES = 1024 * 1024;
+/** A report carries at most this many photos. */
+export const MAX_REPORT_PHOTOS = 4;
+/**
+ * Bytes all photos of one report may use together, before base64. The whole
+ * request must fit the 2 MiB limit the server enforces: 1,400,000 bytes become
+ * about 1.87 MB of base64, leaving room for the text. (The backend allows
+ * 1.5 MiB in total.)
+ */
+export const MAX_REPORT_PHOTOS_TOTAL_BYTES = 1_400_000;
+
+/** Byte budget for each photo when a report has `count` photos. */
+export function photoByteBudget(count: number): number {
+  return Math.min(MAX_REPORT_IMAGE_BYTES, Math.floor(MAX_REPORT_PHOTOS_TOTAL_BYTES / Math.max(1, count)));
+}
 
 const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_SOURCE_IMAGE_PIXELS = 50_000_000;
@@ -15,7 +29,10 @@ export type WebReportPayload = {
   source_id: string;
   session_id: string;
   annotation: string;
+  /** First photo: raw JPEG base64. */
   image?: string;
+  /** Photos 2 to 4, in the order added. Only present together with `image`. */
+  extra_images?: string[];
 };
 
 export type WebReportStatus =
@@ -96,7 +113,10 @@ export function validateReportDraft(text: string, hasImage: boolean): string | n
 }
 
 /** Create once per draft/attempt; retries reuse source_id and payload bytes. */
-export function newWebReportPayload(annotation: string, image?: string): WebReportPayload {
+export function newWebReportPayload(annotation: string, photos?: string | readonly string[]): WebReportPayload {
+  const images = (typeof photos === "string" ? [photos] : [...(photos || [])]).filter(Boolean);
+  if (images.length > MAX_REPORT_PHOTOS) throw new Error(`Add at most ${MAX_REPORT_PHOTOS} photos.`);
+  const [image, ...extraImages] = images;
   const error = validateReportDraft(annotation, Boolean(image));
   if (error) throw new Error(error);
   return {
@@ -106,6 +126,7 @@ export function newWebReportPayload(annotation: string, image?: string): WebRepo
     session_id: sessionId(),
     annotation: annotation.trim(),
     ...(image ? { image } : {}),
+    ...(extraImages.length ? { extra_images: extraImages } : {}),
   };
 }
 
@@ -175,7 +196,8 @@ function imageDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Re-encode pixels, discarding source metadata; the original file is never sent. */
-export async function prepareReportImage(file: File): Promise<string> {
+export async function prepareReportImage(file: File, maxBytes: number = MAX_REPORT_IMAGE_BYTES): Promise<string> {
+  const byteLimit = Math.max(1, Math.min(MAX_REPORT_IMAGE_BYTES, Math.floor(maxBytes)));
   if (!file.size) throw new Error("That image is empty. Choose another photo or screenshot.");
   if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error("Choose an image smaller than 20 MB.");
   const knownExtension = /\.(jpe?g|png|webp|avif|gif|heic|heif|bmp)$/i.test(file.name);
@@ -210,13 +232,13 @@ export async function prepareReportImage(file: File): Promise<string> {
       context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height);
       for (const quality of [0.88, 0.76, 0.64, 0.52, 0.4]) {
         const blob = await canvasJpeg(canvas, quality);
-        if (blob.size > 0 && blob.size <= MAX_REPORT_IMAGE_BYTES) return await imageDataUrl(blob);
+        if (blob.size > 0 && blob.size <= byteLimit) return await imageDataUrl(blob);
       }
       scale *= 0.7;
     }
     throw new Error("That image is still too large. Try a smaller photo or screenshot.");
   } catch (error) {
-    if (error instanceof Error && /^(We couldn't |Choose an |That image |Image preparation )/.test(error.message)) throw error;
+    if (error instanceof Error && /^(We couldn't |Choose an |That image |Image preparation |Add at most )/.test(error.message)) throw error;
     throw new Error("We couldn't prepare that image. Try a different photo or screenshot.");
   } finally {
     decoded.release();
@@ -225,6 +247,19 @@ export async function prepareReportImage(file: File): Promise<string> {
       canvas.height = 0;
     }
   }
+}
+
+/**
+ * Prepare every photo of a report, in order, sharing the report's byte budget
+ * (see photoByteBudget). Call it again with the full list whenever a photo is
+ * added or removed: the budget per photo depends on how many there are.
+ */
+export async function prepareReportPhotos(files: readonly File[]): Promise<string[]> {
+  if (files.length > MAX_REPORT_PHOTOS) throw new Error(`Add at most ${MAX_REPORT_PHOTOS} photos.`);
+  const budget = photoByteBudget(files.length);
+  const prepared: string[] = [];
+  for (const file of files) prepared.push(await prepareReportImage(file, budget));
+  return prepared;
 }
 
 function safeToken(value: unknown, maximum = 160): value is string {

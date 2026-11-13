@@ -203,3 +203,30 @@ test('submission errors are concise and actionable without server messages', () 
   assert.match(submissionError(422), /Check your report/);
   assert.match(submissionError(500), /try again/);
 });
+
+test('up to four photos: first is image, the rest extra_images, sharing one byte budget', () => {
+  const lib = load();
+  assert.equal(lib.MAX_REPORT_PHOTOS, 4);
+  // One photo keeps the full 1 MiB; more photos split the request budget.
+  assert.equal(lib.photoByteBudget(1), 1024 * 1024);
+  assert.equal(lib.photoByteBudget(2), 700000);
+  assert.equal(lib.photoByteBudget(4), 350000);
+  for (const count of [1, 2, 3, 4]) {
+    // Base64 of the photos plus the largest text must fit the server's 2 MiB limit.
+    const base64Bytes = Math.ceil(lib.photoByteBudget(count) / 3) * 4 * count;
+    assert.ok(base64Bytes + lib.MAX_REPORT_TEXT_BYTES + 1024 < 2 * 1024 * 1024, `${count} photos fit`);
+  }
+
+  const one = lib.newWebReportPayload('one', ['a']);
+  assert.equal(one.image, 'a');
+  assert.equal('extra_images' in one, false);
+  // A single string still works (older callers).
+  assert.equal(lib.newWebReportPayload('one', 'a').image, 'a');
+
+  const four = lib.newWebReportPayload('', ['a', 'b', 'c', 'd']);
+  assert.equal(four.image, 'a');
+  assert.equal(JSON.stringify(four.extra_images), JSON.stringify(['b', 'c', 'd']));
+  assert.throws(() => lib.newWebReportPayload('x', ['a', 'b', 'c', 'd', 'e']), /at most 4/);
+  // No photos at all is a text-only report.
+  assert.equal('image' in lib.newWebReportPayload('text only', []), false);
+});

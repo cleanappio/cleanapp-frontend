@@ -176,6 +176,11 @@ export default function PublicReportDetailPage({
   }, [locale, report]);
 
   const imageUrl = getDisplayableImage(report?.report?.image || null);
+  // URLs of photos 2 to 4 (server-rendered view only; see report-seo.ts).
+  const extraImageUrls: string[] =
+    report && "extra_images" in report.report && Array.isArray(report.report.extra_images)
+      ? report.report.extra_images
+      : [];
   const brandDisplay = matchingAnalysis
     ? getBrandNameDisplay(matchingAnalysis).brandDisplayName
     : "";
@@ -331,6 +336,14 @@ export default function PublicReportDetailPage({
           locale={locale}
         />
         {imageUrl && <div className="mb-5"><ImageDisplay imageUrl={imageUrl} /></div>}
+        {/* Photos 2 to 4 of the same report, smaller, each opening full size. */}
+        {imageUrl && extraImageUrls.length > 0 && (
+          <div className="mb-5 grid grid-cols-3 gap-3">
+            {extraImageUrls.map((url) => (
+              <ImageDisplay key={url} imageUrl={url} className="!h-32 sm:!h-40" />
+            ))}
+          </div>
+        )}
         <ReportEvidence
           evidence={report.evidence}
           recurrence={report.recurrence}
