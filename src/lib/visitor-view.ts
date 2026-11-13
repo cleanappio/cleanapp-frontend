@@ -2,7 +2,7 @@
  * Where the globe opens.
  *
  * The map used to open on 0,0 (the Gulf of Guinea). It now opens roughly over
- * the visitor, tilted so the spires (src/lib/map-spires.ts) are visible.
+ * the visitor, untilted, with the globe centered on the screen.
  *
  * "Roughly" is deliberate: the position comes from the browser's time zone,
  * which needs no permission prompt and no network call, and says nothing more
@@ -10,8 +10,13 @@
  * GlobeView still flies to their actual position afterwards.
  */
 
-/** Default tilt, in degrees. Spires point straight up and vanish from directly overhead. */
-export const DEFAULT_PITCH = 38;
+/**
+ * Default tilt, in degrees. Zero: the globe sits centered on the screen. A
+ * 38 degree tilt was tried on 2026-11-12 to show the spires face-on, but it
+ * pushed the globe off-center and was reverted the next day; spires are made
+ * taller instead (MAX_HEIGHT_M in map-spires.ts).
+ */
+export const DEFAULT_PITCH = 0;
 
 /** Approximate [longitude, latitude] for common time zones. */
 const ZONES: Record<string, readonly [number, number]> = {

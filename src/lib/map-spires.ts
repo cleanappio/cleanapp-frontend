@@ -49,8 +49,10 @@ export const SPIRE_LAYER = "report-spires";
 export const SPIRE_LABEL_SOURCE = "report-spire-labels";
 export const SPIRE_LABEL_LAYER = "report-spire-labels";
 /** Tallest spire, in meters, at whole-globe zoom (about a fifth of Earth's radius). */
-export const MAX_HEIGHT_M = 1_300_000;
-const MIN_HEIGHT_M = 45_000;
+// Raised from 1,300 km on 2026-11-13: the globe opens untilted again, and from
+// straight above only a tall spire leans out far enough to read.
+export const MAX_HEIGHT_M = 2_400_000;
+const MIN_HEIGHT_M = 90_000;
 /** Zoom at which stored heights apply; above it they halve per zoom level. */
 const BASE_ZOOM = 1.5;
 const FADE_START_ZOOM = 4.8;
@@ -176,6 +178,8 @@ type SpireMap = {
   addLayer(layer: unknown, before?: string): unknown;
   setLayoutProperty(layer: string, name: string, value: unknown): unknown;
   setFilter(layer: string, filter: unknown): unknown;
+  setPaintProperty(layer: string, name: string, value: unknown): unknown;
+  moveLayer(layer: string, before?: string): unknown;
 };
 
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -236,6 +240,8 @@ export function applySpires(map: SpireMap, inputs: readonly SpireInput[], radius
     const visibility = inputs.length ? "visible" : "none";
     map.setLayoutProperty(SPIRE_LAYER, "visibility", visibility);
     map.setLayoutProperty(SPIRE_LABEL_LAYER, "visibility", visibility);
+    // Dot layers are created after this one and would cover the labels.
+    map.moveLayer(SPIRE_LABEL_LAYER);
   } catch (error) {
     console.warn("map spires unavailable", error);
   }
@@ -243,36 +249,66 @@ export function applySpires(map: SpireMap, inputs: readonly SpireInput[], radius
 
 /**
  * Minimum report total for a brand's dot to show, by zoom. Roughly 53,000
- * brands exist; about 140 have 500+ reports, 390 have 200+, 1,900 have 50+.
- * Even the 1,900 carpet the globe, so the far view shows only the 500+ brands
- * and the long tail arrives as the visitor zooms in.
+ * brands exist: about 6,700 have 10+ reports, 10,700 have 5+, 15,600 have 3+,
+ * 21,700 have 2+.
+ *
+ * The far view shows the 3+ brands (about 15,600) as small dots (see
+ * DIGITAL_DOT_SCALE), so the globe looks full without becoming a solid carpet.
+ * A first version showed only 500+ (about 140 dots) and looked sparse; 10+
+ * still left gaps.
  */
 export const DIGITAL_DOT_TIERS: readonly (readonly [number, number])[] = [
-  [0, 500],
-  [3.5, 200],
-  [4.5, 50],
-  [5.5, 3],
-  [6.5, 0],
+  [0, 3],
+  [4.5, 2],
+  [5.5, 0],
 ];
 
+/** Brand dot size as a fraction of its full size, by zoom: small from afar, full size up close. */
+export const DIGITAL_DOT_SCALE: readonly (readonly [number, number])[] = [
+  [2, 0.4],
+  [4, 0.6],
+  [6, 0.85],
+  [7.5, 1],
+];
+
+/** Physical report dot radius by severity; unchanged by zoom. */
+const PHYSICAL_DOT_RADIUS = ["interpolate", ["linear"], ["get", "severity"], 0, 4.6, 0.9, 9.2];
+
+function scaledByZoom(value: (scale: number) => unknown): unknown[] {
+  return ["interpolate", ["linear"], ["zoom"], ...DIGITAL_DOT_SCALE.flatMap(([zoom, scale]) => [zoom, value(scale)])];
+}
+
 /**
- * Thin the digital dots by zoom (see DIGITAL_DOT_TIERS). Needs a numeric
- * `total` property on the digital features of the `digital-territories` and
- * `reports` sources. Brand-name labels
- * on every dot are held back until zoom 5; spire labels cover the far view.
+ * Density of the digital globe: which brand dots show (DIGITAL_DOT_TIERS) and
+ * how big they are (DIGITAL_DOT_SCALE). Needs a numeric `total` property on
+ * the digital features of the `digital-territories` and `reports` sources.
+ * Brand-name labels on every dot are held back until zoom 5; spire labels
+ * cover the far view.
  */
 export function applyDigitalDeclutter(map: SpireMap): void {
   try {
     const minimumTotal = ["step", ["zoom"], DIGITAL_DOT_TIERS[0][1], ...DIGITAL_DOT_TIERS.slice(1).flat()];
     const byZoom = [">=", ["coalesce", ["get", "total"], 0], minimumTotal];
-    for (const layer of ["digital-nodes", "digital-pulse"]) {
-      if (map.getLayer(layer)) map.setFilter(layer, byZoom);
+    const size = ["get", "size"];
+    if (map.getLayer("digital-nodes")) {
+      map.setFilter("digital-nodes", byZoom);
+      map.setPaintProperty("digital-nodes", "circle-radius", scaledByZoom((scale) => ["*", size, scale]));
+      map.setPaintProperty("digital-nodes", "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 2, 0.8, 6, 2]);
+    }
+    if (map.getLayer("digital-pulse")) {
+      map.setFilter("digital-pulse", byZoom);
+      map.setPaintProperty("digital-pulse", "circle-radius", scaledByZoom((scale) => ["*", size, 1.8 * scale]));
     }
     if (map.getLayer("digital-labels")) map.setFilter("digital-labels", ["all", [">=", ["zoom"], 5], byZoom]);
     // `report-pins` draws a dot per brand on the digital tab as well, and per
-    // report on the physical tab; only the brand dots are thinned.
+    // report on the physical tab; only the brand dots are thinned and scaled.
     if (map.getLayer("report-pins")) {
-      map.setFilter("report-pins", ["any", ["!=", ["get", "classification"], "digital"], byZoom]);
+      const digital = ["==", ["get", "classification"], "digital"];
+      map.setFilter("report-pins", ["any", ["!", digital], byZoom]);
+      map.setPaintProperty("report-pins", "circle-radius",
+        scaledByZoom((scale) => ["case", digital, ["*", size, scale], PHYSICAL_DOT_RADIUS]));
+      map.setPaintProperty("report-pins", "circle-stroke-width",
+        ["interpolate", ["linear"], ["zoom"], 2, ["case", digital, 0.8, 1.5], 6, 1.5]);
     }
   } catch (error) {
     console.warn("digital declutter unavailable", error);
