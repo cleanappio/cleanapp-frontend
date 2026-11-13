@@ -3808,6 +3808,7 @@ export default function GlobeView() {
               { label: t("pricing"), link: "/pricing" },
               { label: t("aboutCleanApp"), link: "/about" },
               { label: t("reportAProblem"), link: "/report-a-problem" },
+              { label: t("aiAgents"), link: "/agents" },
               {
                 label: t("brandDashboard"),
                 link: "/redbull",

@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -11,6 +12,7 @@ import ReportWidget from "@/components/reporting/ReportWidget";
 import AcquisitionCounts from "@/components/AcquisitionCounts";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <Layout>
         <Component {...pageProps} />
       </Layout>
-      <ReportWidget />
+      {router.pathname !== "/agents" && <ReportWidget />}
       <AcquisitionCounts />
       <Toaster position="top-right" />
     </ErrorBoundary>

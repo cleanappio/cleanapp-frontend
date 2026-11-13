@@ -8,6 +8,7 @@ export const SITEMAP_ENTRIES = [
   { path: "/" },
   ...LANDING_PAGES.map((page) => ({ path: `/${page.slug}` })),
   { path: "/about" },
+  { path: "/agents" },
   { path: "/company" },
   { path: "/press" },
   { path: "/blog" },

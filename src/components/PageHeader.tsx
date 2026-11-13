@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n";
 import { useRouter } from "next/router";
 import LanguageSwitcher from "./LanguageSwitcher";
 
-const PageHeader: React.FC = () => {
+const PageHeader: React.FC<{ showAccountLinks?: boolean }> = ({ showAccountLinks = true }) => {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
   const { t } = useTranslations();
@@ -35,8 +35,11 @@ const PageHeader: React.FC = () => {
           </div>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <Link href="/agents" className="text-sm font-medium text-green-800 hover:underline underline-offset-4">
+              {t("aiAgents")}
+            </Link>
             <LanguageSwitcher />
-            {!isLoading && (
+            {showAccountLinks && !isLoading && (
               <>
                 {isAuthenticated ? (
                   <div className="flex min-w-0 items-center gap-2 sm:gap-4">
