@@ -484,6 +484,7 @@ export const translations: {
     installAndroid: "Install Android",
     aboutCleanApp: "About",
     reportAProblem: "Report a Problem",
+    aiAgents: "AI agents",
     installIOS: "Install iOS",
     cleanAppGPT: "CleanAppGPT",
     physical: "PHYSICAL",

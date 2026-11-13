@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 REQUIRED_ROUTES = {
-    "/", "/report-a-problem", "/incident-reporting", "/hazard-reporting",
+    "/", "/agents", "/report-a-problem", "/incident-reporting", "/hazard-reporting",
     "/bug-reporting", "/litter-reporting", "/report-a-pothole",
     "/report-illegal-dumping", "/report-a-website-problem",
     "/report-an-accessibility-barrier", "/solutions/cities",

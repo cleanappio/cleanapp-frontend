@@ -19,6 +19,7 @@ const COMPANY_LINKS = [
 ];
 const EXPLORE_LINKS = [
   { label: "Public report map", href: "/" },
+  { label: "For AI agents", href: "/agents" },
   { label: "Download the app", href: "/download" },
   { label: "CleanApp for iOS", href: IOS_APP_URL },
   { label: "CleanApp for Android", href: ANDROID_APP_URL },

@@ -24,6 +24,7 @@ export default function HomeSeoSection() {
               Tell us what happened. Add a photo or screenshot if it helps.
             </p>
             <Link href="/about" className="mt-5 inline-block text-sm font-medium text-green-800 underline-offset-4 hover:underline">How CleanApp works →</Link>
+            <p className="mt-4 text-sm text-gray-600">Using an assistant or building an agent? <Link href="/agents" className="font-medium text-green-800 underline underline-offset-4">Start with the AI agent guide →</Link></p>
           </div>
           <div className="lg:pt-5">
             <ReportComposer />
