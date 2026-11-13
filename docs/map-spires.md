@@ -49,3 +49,17 @@ effect marked "Spires". Opening view: `src/lib/visitor-view.ts`.
 Tuning knobs: hotspot counts and column radius (in `GlobeView`),
 `DIGITAL_DOT_TIERS`, `DIGITAL_DOT_SCALE`, `MAX_HEIGHT_M`, the exponent in `spireHeight`, the fade
 zooms, `DEFAULT_PITCH`.
+
+## Idle spin
+
+Both globes turn slowly about the Earth's axis, west to east, one full turn in
+about six minutes (`src/lib/globe-spin.ts`, started from the "Idle spin"
+effect in `GlobeView`). Added 2026-11-13 at Boris's request.
+
+It yields to everything: any touch, drag, scroll or key press stops it, and it
+resumes five seconds after the map was last moved. It never starts while the
+app is flying the map somewhere, holds still while a report or brand is
+selected, the menu is open or the visitor is drawing, stops above zoom 3.5,
+and does not run under `prefers-reduced-motion`.
+
+Tuning: `SPIN_DEGREES_PER_SECOND`, `RESUME_AFTER_MS`, `MAX_SPIN_ZOOM`.

@@ -32,6 +32,7 @@ import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
 import { applyDigitalDeclutter, applySpires, binPoints, topHotspots, type SpireInput } from "@/lib/map-spires";
 import { initialGlobeView } from "@/lib/visitor-view";
+import { startGlobeSpin } from "@/lib/globe-spin";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
 import EmbeddedPublicReportDialog, {
   EmbeddedPublicReportSelection,
@@ -2306,6 +2307,18 @@ export default function GlobeView() {
       map.setConfigProperty("basemap", "showTransitLabels", true);
     }
   }, [isDigital, mapLoaded, mapStyleLoaded]);
+
+  // Idle spin (src/lib/globe-spin.ts): the globe turns slowly on its axis on
+  // both tabs until the visitor touches it, and holds still while something
+  // is selected or being drawn.
+  const spinPausedRef = useRef(false);
+  spinPausedRef.current =
+    !!selectedReport || !!selectedBrandName || enableDrawing || isMenuOpen || isLoadingReportFromUrl;
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map || !mapLoaded) return;
+    return startGlobeSpin(map as never, () => spinPausedRef.current);
+  }, [mapLoaded]);
 
   // Spires: report counts as height (src/lib/map-spires.ts). Only the
   // busiest places and brands get one; the rest stay dots.
