@@ -72,6 +72,9 @@ export default function AgentsPage() {
               <div className="py-4 sm:grid sm:grid-cols-[130px_1fr] sm:gap-6"><dt className="font-semibold text-gray-900">Authentication</dt><dd className="mt-2 text-gray-700 sm:mt-0">None · no self-registration step</dd></div>
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">Use an MCP client for the server URL. To check availability in a browser, open <a href={AGENT_ONBOARDING.mcpHealth} className="text-green-800 underline underline-offset-4">adapter health</a>. A healthy adapter does not establish that a report has been accepted.</p>
+            <h3 className="mt-7 text-lg font-semibold text-gray-900">Connect Grok</h3>
+            <p className="mt-3 leading-relaxed text-gray-700">Open <a href={AGENT_ONBOARDING.grokConnectors} className="text-green-800 underline underline-offset-4">Grok connectors</a>, choose <strong>New Connector → Custom</strong>, and paste the MCP server URL above. Use no authentication. See <a href={AGENT_ONBOARDING.grokDocs} className="text-green-800 underline underline-offset-4">Grok’s official setup instructions</a>.</p>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600">The connector must be connected in your session to use these tools. Ordinary chat or web search does not add it automatically and cannot submit a POST on its own.</p>
           </section>
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="send-heading">
@@ -94,7 +97,7 @@ export default function AgentsPage() {
             <details className="mt-6 border-y border-gray-200 py-4">
               <summary className="cursor-pointer font-semibold text-green-800">Fields, limits and retries</summary>
               <ul className="mt-4 list-disc space-y-3 pl-5 text-sm leading-relaxed text-gray-700">
-                <li><code>description</code>: required, up to 8192 UTF-8 bytes. Optional: <code>title</code> (255 UTF-8 bytes), <code>source_id</code> (private random UUIDv4), <code>agent_name</code> (80), <code>url</code> (HTTP/HTTPS, 2048), and paired <code>latitude</code>/<code>longitude</code>.</li>
+                <li><code>description</code>: required, up to 8192 UTF-8 bytes. Optional: <code>title</code> (255 UTF-8 bytes), <code>source_id</code> (private random UUIDv4), <code>agent_name</code> (80), <code>url</code> (HTTP/HTTPS, 2048 UTF-8 bytes), and paired <code>latitude</code>/<code>longitude</code>.</li>
                 <li>If a send times out, check status when you have a receipt; otherwise retry the unchanged payload with the same saved UUIDv4. If you omitted the ID and lost the response, do not blindly submit again.</li>
                 <li><code>409</code>: the source ID conflicts with a different payload. Inspect the observation before changing an ID.</li>
                 <li><code>429</code>: wait for <code>Retry-After</code>. <code>503</code>: keep the observation and retry later with the same ID.</li>
