@@ -62,6 +62,61 @@ const common = {
   '@/lib/i18n': { getCurrentLocale: () => 'en', useTranslations: () => ({ t: (key) => key }) },
 };
 
+test('public projection keeps supported agent provenance and rejects private or malformed context', () => {
+  const { projectPublicEvidence } = modules()('../src/lib/public-report-projection.ts');
+  const projected = projectPublicEvidence({
+    ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'agent_api',
+    submission_transport: 'mcp', submission_client: 'grok', submission_client_claimed: true,
+    reporter_context: 'firsthand', reported_product_or_site: 'x.com / Cloudflare',
+    referenced_urls: ['https://x.com/account/access', 'https://x.com/account/access',
+      'https://localhost/private', 'http://192.168.1.2/private', 'https://example.com/?token=PRIVATE_TOKEN'],
+    source_references: [{ url: 'https://x.com/example/status/2121547352817406330', platform: 'x', kind: 'linked_post', private_actor: 'PRIVATE_ACTOR' },
+      { url: 'https://example.com/#track=PRIVATE_TOKEN', kind: 'declared_source' }, { url: 'https://example.com/', kind: 'unverified_extra' }],
+    source_reference_count: 1, source_published_at_basis: 'derived_x_status_id', observed_at_basis: 'not_recorded',
+    tracking_token: 'PRIVATE_TOKEN', raw_payload: { private_actor: 'PRIVATE_ACTOR' },
+  });
+  assert.equal(projected.submission_client, 'grok');
+  assert.equal(projected.submission_transport, 'mcp');
+  assert.equal(projected.reported_product_or_site, 'x.com / Cloudflare');
+  assert.equal(projected.source_published_at_basis, 'derived_x_status_id');
+  assert.equal(projected.observed_at, null, 'receipt time is not observation time');
+  assert.deepEqual(Array.from(projected.referenced_urls), ['https://x.com/account/access']);
+  assert.equal(projected.source_references.length, 1);
+  assert.equal(projected.source_references[0].kind, 'linked_post');
+  assert.doesNotMatch(JSON.stringify(projected), /PRIVATE_|private_actor|raw_payload/);
+  const malformed = projectPublicEvidence({ submission_transport: 'arbitrary', submission_client: 'Tesla',
+    source_reference_count: -1, reported_product_or_site: 'x'.repeat(201) });
+  assert.equal(malformed.submission_transport, null);
+  assert.equal(malformed.submission_client, null);
+  assert.equal(malformed.reported_product_or_site, null);
+  assert.equal(malformed.source_reference_count, null);
+});
+
+test('server-rendered evidence distinguishes received time, declared client and derived source date', () => {
+  const load = modules();
+  const { projectPublicEvidence } = load('../src/lib/public-report-projection.ts');
+  const projected = projectPublicEvidence({ ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'agent_api',
+    source_platform: 'x', source_url: 'https://x.com/example/status/2121547352817406330',
+    submission_transport: 'mcp', submission_client: 'grok', submission_client_claimed: true,
+    reported_product_or_site: 'x.com / Cloudflare', reporter_context: 'firsthand',
+    observed_at: null, ingested_at: '2026-11-14T20:06:21Z', source_published_at_basis: 'derived_x_status_id',
+    referenced_urls: ['https://x.com/account/access'], source_reference_count: 1,
+    source_references: [{ url: 'https://x.com/example/status/2121547352817406330', platform: 'x', kind: 'linked_post' }],
+  });
+  const Component = load('../src/components/evidence/ReportEvidence.tsx').default;
+  const html = renderToStaticMarkup(React.createElement(Component, { evidence: projected }));
+  assert.match(html, /Agent-assisted via CleanApp MCP · Grok \(declared\)/);
+  assert.match(html, /Grok \(declared, not identity-verified\)/);
+  assert.match(html, /Post URL timestamp/);
+  assert.match(html, /publication not independently checked/);
+  assert.match(html, /Observation time not supplied/);
+  assert.match(html, /Received by CleanApp/);
+  assert.match(html, /1 submitted report · 1 linked source reference/);
+  assert.match(html, /Links in the submitted report/);
+  assert.match(html, /No resolution recorded/);
+  assert.doesNotMatch(html, />Source published<|>Published |Imported from web|Source count unknown/);
+});
+
 test('public report server HTML contains the exact original, labeled analysis and public source without private payload', () => {
   const load = modules({
     ...common,

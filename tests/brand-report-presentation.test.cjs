@@ -204,9 +204,65 @@ test('agent reports show their API channel while retaining the original source l
   const html = render(report);
   assert.match(html.split('<details')[0], /via CleanApp Agentic API/);
   assert.match(html, /How received<\/dt><dd>via CleanApp Agentic API/);
-  assert.match(html, /Read original source/);
+  assert.match(html, /Read supplied source reference/);
   assert.ok(html.includes('href="https://bsky.app/profile/example/post/original"'));
   const imported = render({ ...item, evidence: { ...evidence, intake_channel: null } }).split('<details')[0];
   assert.match(imported, /From Bluesky/);
   assert.doesNotMatch(imported, /via CleanApp Agentic API/);
+});
+
+test('brand feed qualifies linked-post timestamps and keeps claimed client, product and source counts separate', () => {
+  const post = 'https://x.com/example/status/2121547352817406330';
+  const context = {
+    ...evidence, intake_channel: 'agent_api', source_platform: 'x', source_url: post,
+    source_published_at_basis: 'derived_x_status_id', submission_transport: 'mcp',
+    submission_client: 'grok', submission_client_claimed: true, reporter_context: 'relayed',
+    reported_product_or_site: 'X / Cloudflare', source_reference_count: 2,
+    source_references: [{ kind: 'linked_post', url: post }],
+    referenced_urls: [post, 'https://x.com/account/access'],
+  };
+  const derived = helpers.brandReportDate(context);
+  assert.equal(derived.label, 'Post URL timestamp (derived)');
+  assert.equal(derived.value, context.source_published_at);
+  assert.equal(helpers.brandReportDate({ ...context, observed_at: '2026-02-05T12:00:00Z' }).label, 'Observed');
+  const html = render({ ...item, evidence: context });
+  assert.match(html.split('<details')[0], /Post URL timestamp \(derived\)/);
+  assert.doesNotMatch(html.split('<details')[0], /Published/);
+  assert.match(html, /Derived from the linked X post ID; publication not independently checked/);
+  assert.match(html, /Grok \(declared, not identity-verified\)/);
+  assert.match(html, /Relayed source material \(declared\)/);
+  assert.match(html, /Affected product or site<\/dt><dd[^>]*>X \/ Cloudflare/);
+  assert.match(html, /Read linked X post/);
+  assert.doesNotMatch(html, /Read original source/);
+  assert.match(html, /1 submitted report · 2 linked source references/);
+  assert.match(html, /4 related source reports/);
+  assert.match(html, /Links in the submitted report/);
+  assert.match(html, /href="https:\/\/x.com\/account\/access"/);
+});
+
+test('brand feed never borrows receipt dates or infers a client from affected product', () => {
+  const context = { ...evidence, intake_channel: 'agent_api', source_platform: 'web', source_url: null,
+    source_published_at: null, observed_at: null, submission_client: null,
+    reported_product_or_site: 'Grok', source_reference_count: 0 };
+  const html = render({ ...item, evidence: context });
+  assert.equal(helpers.brandReportDate(context), null);
+  assert.match(html.split('<details')[0], /via CleanApp Agentic API/);
+  assert.doesNotMatch(html.split('<details')[0], /<time|Published|Observed|Imported from web/);
+  assert.match(html, /Observation time not supplied/);
+  assert.match(html, /No separate publication date supplied/);
+  assert.match(html, /Submitting client<\/dt><dd>Not recorded by the submitting adapter/);
+  assert.match(html, /Affected product or site<\/dt><dd[^>]*>Grok/);
+  assert.match(html, /1 submitted report · 0 linked source references/);
+});
+
+test('brand feed checks raw client-rendered source references with the shared privacy boundary', () => {
+  const unsafe = 'https://example.com/view?tracking_token=PRIVATE_TEST_ONLY';
+  const html = render({ ...item, evidence: { ...evidence, intake_channel: 'agent_api', source_url: unsafe,
+    source_references: [{ kind: 'declared_source', url: unsafe }, { kind: 'declared_source', url: 'http://127.0.0.1/private' }],
+    referenced_urls: [unsafe, 'https://grok.com/c/PRIVATE_CHAT_TEST_ONLY', 'javascript:alert(1)'],
+  } });
+  assert.doesNotMatch(html, /PRIVATE_TEST_ONLY|PRIVATE_CHAT_TEST_ONLY|127\.0\.0\.1|javascript:|Supplied source references|Links in the submitted report|Read original source/);
+  const web = render({ ...item, evidence: { ...evidence, intake_channel: 'agent_api', submission_transport: 'web', submission_client: 'grok', submission_client_claimed: true } });
+  assert.match(web, /How received<\/dt><dd>Submitted through the CleanApp report form/);
+  assert.match(web, /Grok \(declared, not identity-verified\)/);
 });
