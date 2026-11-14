@@ -72,12 +72,15 @@ test('compact row foregrounds the exact original and one source link, keeping de
   assert.match(html, /not been checked for independence/);
 });
 
-test('date stays sourced: observed first, published next, Added fallback only for native submissions', () => {
+test('date stays sourced: observed first, published next, receipt fallback only for direct submissions', () => {
   assert.equal(helpers.brandReportDate({ ...evidence, observed_at: '2026-09-20T12:00:00Z' }).label, 'Observed');
   assert.equal(helpers.brandReportDate({ ...evidence, observed_at: 'invalid date' }).label, 'Published');
   const native = helpers.brandReportDate({ ...evidence, intake_method: 'cleanapp_submission', source_published_at: null });
   assert.equal(native.label, 'Added');
   assert.equal(native.value, '2026-10-08T12:00:00Z');
+  const agent = helpers.brandReportDate({ ...evidence, intake_method: 'agent_submission', source_published_at: null });
+  assert.equal(agent.label, 'Received');
+  assert.equal(agent.value, '2026-10-08T12:00:00Z');
   assert.equal(helpers.brandReportDate({ ...evidence, source_published_at: null }), null);
   const closed = render({ ...item, evidence: { ...evidence, source_published_at: null } }).split('<details')[0];
   assert.doesNotMatch(closed, /<time|2026-10-08|Added|Published|Observed/);

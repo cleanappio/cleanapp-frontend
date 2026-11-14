@@ -11,7 +11,7 @@ export function brandReportDate(evidence?: ReportEvidence, locale = "en"): { lab
   const candidates = [
     { label: "Observed", value: evidence?.observed_at },
     { label: evidence?.source_published_at_basis === "derived_x_status_id" ? "Post URL timestamp (derived)" : "Published", value: evidence?.source_published_at },
-    ...(evidence?.intake_method === "cleanapp_submission" ? [{ label: "Added", value: evidence.ingested_at }] : []),
+    ...((evidence?.intake_method === "cleanapp_submission" || evidence?.intake_method === "agent_submission") ? [{ label: evidence.intake_method === "agent_submission" ? "Received" : "Added", value: evidence.ingested_at }] : []),
   ];
   for (const { label, value } of candidates) {
     if (!value) continue;

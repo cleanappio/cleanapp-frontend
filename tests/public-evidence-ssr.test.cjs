@@ -65,7 +65,7 @@ const common = {
 test('public projection keeps supported agent provenance and rejects private or malformed context', () => {
   const { projectPublicEvidence } = modules()('../src/lib/public-report-projection.ts');
   const projected = projectPublicEvidence({
-    ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'agent_api',
+    ...evidence, intake_method: 'agent_submission', intake_channel: 'agent_api',
     submission_transport: 'mcp', submission_client: 'grok', submission_client_claimed: true,
     reporter_context: 'firsthand', reported_product_or_site: 'x.com / Cloudflare',
     referenced_urls: ['https://x.com/account/access', 'https://x.com/account/access',
@@ -75,6 +75,8 @@ test('public projection keeps supported agent provenance and rejects private or 
     source_reference_count: 1, source_published_at_basis: 'derived_x_status_id', observed_at_basis: 'not_recorded',
     tracking_token: 'PRIVATE_TOKEN', raw_payload: { private_actor: 'PRIVATE_ACTOR' },
   });
+  assert.equal(projected.intake_method, 'agent_submission');
+  assert.equal(projected.intake_label, 'Agent-assisted submission');
   assert.equal(projected.submission_client, 'grok');
   assert.equal(projected.submission_transport, 'mcp');
   assert.equal(projected.reported_product_or_site, 'x.com / Cloudflare');
@@ -95,7 +97,7 @@ test('public projection keeps supported agent provenance and rejects private or 
 test('server-rendered evidence distinguishes received time, declared client and derived source date', () => {
   const load = modules();
   const { projectPublicEvidence } = load('../src/lib/public-report-projection.ts');
-  const projected = projectPublicEvidence({ ...evidence, intake_method: 'cleanapp_submission', intake_channel: 'agent_api',
+  const projected = projectPublicEvidence({ ...evidence, intake_method: 'agent_submission', intake_channel: 'agent_api',
     source_platform: 'x', source_url: 'https://x.com/example/status/2121547352817406330',
     submission_transport: 'mcp', submission_client: 'grok', submission_client_claimed: true,
     reported_product_or_site: 'x.com / Cloudflare', reporter_context: 'firsthand',
