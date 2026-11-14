@@ -21,6 +21,11 @@ function previewCard(value: unknown, brandName: string, display: string): Public
     report_kind: value.report_kind, intake_method: value.intake_method, intake_channel: value.intake_channel,
     source_url: value.source_url, source_platform: value.source_platform, source_published_at: value.source_published_at,
     excerpt: value.excerpt, observed_at: value.observed_at, ingested_at: value.ingested_at,
+    submission_transport: value.submission_transport, submission_client: value.submission_client,
+    submission_client_claimed: value.submission_client_claimed, reporter_context: value.reporter_context,
+    reported_product_or_site: value.reported_product_or_site, referenced_urls: value.referenced_urls,
+    source_references: value.source_references, source_reference_count: value.source_reference_count,
+    observed_at_basis: value.observed_at_basis, source_published_at_basis: value.source_published_at_basis,
   });
   return {
     canonical_path: value.canonical_path as string, discovery_token: "",

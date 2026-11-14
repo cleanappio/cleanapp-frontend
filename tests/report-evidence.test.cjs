@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const Module = require('node:module');
 const file = require('node:path').resolve(__dirname, '../src/lib/report-evidence.ts');
-const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 const target = new Module(file);
 target._compile(compiled, file);
 const { safeOriginalSourceUrl, evidenceDate, contentKind, matchesContentKind, brandLabel, cleanAppSubmissionLabel } = target.exports;
@@ -38,7 +38,7 @@ test('known brand names take canonical casing without rewriting arbitrary names'
 
 function loadComponent(relativePath) {
   const componentFile = require('node:path').resolve(__dirname, relativePath);
-  const js = ts.transpileModule(fs.readFileSync(componentFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const js = ts.transpileModule(fs.readFileSync(componentFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const componentModule = new Module(componentFile, module);
   componentModule.paths = module.paths;
   componentModule.require = (name) => name === '@/lib/report-evidence' ? target.exports : require(name);
@@ -68,7 +68,7 @@ test('render keeps original text distinct from AI summary and escapes source tex
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /Connected service/);
   assert.match(html, /Not independently reproduced/);
-  assert.match(html, /Observed<\/dt><dd>Unknown/);
+  assert.match(html, /Observed<\/dt><dd>Observation time not supplied/);
   assert.match(html, /2025/);
   assert.match(html, /2026/);
 });
@@ -76,11 +76,45 @@ test('render keeps original text distinct from AI summary and escapes source tex
 test('render never invents direct submission, firsthand, validation or original links for legacy reports', () => {
   const html = renderToStaticMarkup(React.createElement(ReportEvidence, {}));
   assert.match(html, /Other report/);
-  assert.match(html, /How received<\/dt><dd>Unknown/);
+  assert.match(html, /How received<\/dt><dd>Submission channel not recorded/);
   assert.match(html, /Independent validation unknown/);
-  assert.match(html, /Source count unknown/);
+  assert.match(html, /Linked source total not available/);
   assert.doesNotMatch(html, /Personal experience|via CleanApp|href=/);
   assert.doesNotMatch(html.split('<details')[0], /How received|Source date unknown/);
+});
+
+test('agent provenance shows supplied context and separates missing observation time from receipt time', () => {
+  const html = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence: {
+    ...evidence, intake_channel: 'agent_api', source_platform: 'web', source_url: null,
+    source_published_at: null, observed_at: null, submission_client: null,
+    reported_product_or_site: 'x.com / Cloudflare', referenced_urls: ['https://x.com/account/access'],
+    source_references: [], source_reference_count: 0,
+  }, recurrence: { supporting_report_count: 1, counts_exact: false } }));
+  assert.match(html, /via CleanApp Agentic API/);
+  assert.match(html, /x.com \/ Cloudflare/);
+  assert.match(html, /href="https:\/\/x.com\/account\/access"/);
+  assert.match(html, /Links in the submitted report/);
+  assert.match(html, /0 linked source references/);
+  assert.match(html, /No separate publication date supplied/);
+  assert.match(html, /Observation time not supplied/);
+  assert.match(html, /No upstream issue status supplied/);
+  assert.match(html, /No resolution recorded/);
+  assert.doesNotMatch(html, /Imported from web|Source count unknown|Grok|ChatGPT|Observed<\/dt><dd>Oct/);
+});
+
+test('declared clients and linked-post dates are labeled as claims and derivations, not verified identities', () => {
+  const post = 'https://x.com/example/status/2121547352817406330';
+  const html = renderToStaticMarkup(React.createElement(ReportEvidence, { evidence: {
+    ...evidence, intake_channel: 'agent_api', submission_transport: 'mcp', submission_client: 'grok', submission_client_claimed: true,
+    source_platform: 'x', source_url: post, source_published_at_basis: 'derived_x_status_id',
+    source_references: [{ url: post, platform: 'x', kind: 'linked_post' }], source_reference_count: 1,
+  } }));
+  assert.match(html, /Grok \(declared\)/);
+  assert.match(html, /not identity-verified/);
+  assert.match(html, /Derived from the linked X post ID; publication not independently checked/);
+  assert.match(html, /Linked post URL date/);
+  assert.match(html, /Read linked X post/);
+  assert.doesNotMatch(html, /Read original X|<span>Published|Observation time.*2025/);
 });
 
 test('dedup recurrence is labeled source reports and keeps independence unassessed', () => {

@@ -63,6 +63,26 @@ test('preview rejects wrong scope, private records and noncanonical identity lin
   assert.equal(preview.items[1].evidence.source_url, null);
 });
 
+test('map preview retains the approved provenance projection without private references or invented times', async () => {
+  const post = 'https://x.com/example/status/2121547352817406330';
+  const provenance = { submission_transport: 'web', submission_client: 'grok', submission_client_claimed: true,
+    reporter_context: 'relayed', reported_product_or_site: 'X / Cloudflare',
+    source_reference_count: 1, observed_at: null, observed_at_basis: 'not_recorded',
+    source_published_at: '2026-11-14T09:00:00Z', source_published_at_basis: 'derived_x_status_id',
+    source_references: [{ url: post, platform: 'x', kind: 'linked_post', private_author: 'PRIVATE_SENTINEL' }, { url: 'https://example.com/?token=PRIVATE_SENTINEL', kind: 'declared_source' }],
+    referenced_urls: ['https://x.com/account/access', 'http://127.0.0.1/private', 'https://grok.com/c/PRIVATE_SENTINEL'],
+    extensions: { private_payload: 'PRIVATE_SENTINEL' } };
+  const h = harness(async () => response(200, body([{ ...row, ...provenance, intake_channel: 'agent_api', report_kind: 'coverage' }])));
+  const preview = await api(h)('google', 'en');
+  const projected = preview.items[0].evidence;
+  for (const key of ['submission_transport','submission_client','submission_client_claimed','reporter_context','reported_product_or_site','source_reference_count','observed_at','observed_at_basis','source_published_at','source_published_at_basis'])assert.equal(projected[key], provenance[key], key);
+  assert.deepEqual(JSON.parse(JSON.stringify(projected.source_references)), [{ url: post, platform: 'x', kind: 'linked_post' }]);
+  assert.deepEqual(Array.from(projected.referenced_urls), ['https://x.com/account/access']);
+  assert.equal(JSON.stringify(preview).includes('PRIVATE_SENTINEL'), false);
+  assert.equal(projected.extensions, undefined);
+  assert.equal(preview.items[0].recurrence, undefined);
+});
+
 test('preview deadline covers stalled headers and full JSON bodies; cancellation aborts without retry', async () => {
   for (const stalledBody of [false, true]) {
     let signal;

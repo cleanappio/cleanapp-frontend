@@ -1,6 +1,6 @@
 import type { ReportAnalysis } from "@/components/GlobeView";
 import type { ReportEvidence, ReportRecurrence } from "@/types/public-discovery";
-import { safeOriginalSourceUrl } from "@/lib/report-evidence";
+import { safePublicReferenceUrl } from "@/lib/report-evidence";
 import { isPublicSeoObject, publicSeoText } from "@/lib/public-seo-fetch";
 
 /** Allowlisted public view data. Never serialize a reader's complete upstream payload. */
@@ -45,11 +45,17 @@ export function projectPublicEvidence(value: unknown): ReportEvidence | undefine
     ? value.entity_relationship as ReportEvidence["entity_relationship"] : "unknown";
   const platform = typeof value.source_platform === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(value.source_platform) ? value.source_platform : null;
   const status = (candidate: unknown) => typeof candidate === "string" && ["open", "closed", "resolved", "unresolved", "unknown"].includes(candidate) ? candidate : "unknown";
+  const publicLink = (candidate: unknown) => typeof candidate === "string" && candidate.length <= 2048 ? safePublicReferenceUrl(candidate) : null;
+  const sourceReferences = Array.isArray(value.source_references) ? value.source_references.slice(0, 32).filter(isPublicSeoObject).flatMap(item => {
+    const url = publicLink(item.url);
+    if (!url || !["declared_source", "linked_post"].includes(String(item.kind))) return [];
+    return [{ url, kind: item.kind as "declared_source" | "linked_post", ...(typeof item.platform === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(item.platform) ? { platform: item.platform } : {}) }];
+  }) : [];
   return {
     report_kind: kind, intake_method: method, intake_channel: channel,
     intake_label: method === "cleanapp_submission" ? "CleanApp submission" : method === "imported" ? "Imported public report" : "Report",
     source_platform: platform,
-    source_url: safeOriginalSourceUrl(typeof value.source_url === "string" && value.source_url.length <= 2048 ? value.source_url : null),
+    source_url: publicLink(value.source_url),
     source_published_at: date(value.source_published_at), observed_at: date(value.observed_at), ingested_at: date(value.ingested_at),
     excerpt: originalText(value.excerpt, 8192), reported_impact: originalText(value.reported_impact, 2000),
     classification_reason: originalText(value.classification_reason, 2000), entity_relationship: relation,
@@ -57,6 +63,16 @@ export function projectPublicEvidence(value: unknown): ReportEvidence | undefine
     upstream_status: status(value.upstream_status), resolution_status: status(value.resolution_status),
     why_surfaced: [], evidence_version: integer(value.evidence_version) ?? 0,
     has_original_media: value.has_original_media === true,
+    submission_transport: ["mcp", "web", "wire", "public_agent"].includes(String(value.submission_transport)) ? String(value.submission_transport) : null,
+    submission_client: ["grok", "chatgpt", "claude", "codex", "other"].includes(String(value.submission_client)) ? String(value.submission_client) : null,
+    submission_client_claimed: value.submission_client_claimed === true,
+    reporter_context: value.reporter_context === "firsthand" || value.reporter_context === "relayed" ? value.reporter_context : "unknown",
+    reported_product_or_site: originalText(value.reported_product_or_site, 200),
+    referenced_urls: Array.isArray(value.referenced_urls) ? [...new Set(value.referenced_urls.slice(0, 32).map(publicLink).filter((url): url is string => Boolean(url)))] : [],
+    source_references: sourceReferences,
+    source_reference_count: integer(value.source_reference_count),
+    observed_at_basis: value.observed_at_basis === "provided" ? "provided" : "not_recorded",
+    source_published_at_basis: ["source_metadata", "provided", "derived_x_status_id"].includes(String(value.source_published_at_basis)) ? value.source_published_at_basis as "source_metadata" | "provided" | "derived_x_status_id" : "not_recorded",
   };
 }
 

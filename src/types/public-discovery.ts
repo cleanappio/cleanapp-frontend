@@ -20,6 +20,16 @@ export type ReportEvidence = {
   why_surfaced: string[];
   evidence_version: number;
   has_original_media?: boolean;
+  submission_transport?: string | null;
+  submission_client?: string | null;
+  submission_client_claimed?: boolean;
+  reporter_context?: "firsthand" | "relayed" | "unknown" | null;
+  reported_product_or_site?: string | null;
+  referenced_urls?: string[];
+  source_references?: { url: string; platform?: string; kind: "declared_source" | "linked_post" }[];
+  source_reference_count?: number | null;
+  observed_at_basis?: "provided" | "not_recorded";
+  source_published_at_basis?: "source_metadata" | "provided" | "derived_x_status_id" | "not_recorded";
 };
 
 export type ReportRecurrence = {
