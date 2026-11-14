@@ -38,7 +38,7 @@ function integer(value: unknown): number | null {
 export function projectPublicEvidence(value: unknown): ReportEvidence | undefined {
   if (!isPublicSeoObject(value)) return undefined;
   const kind = value.report_kind === "firsthand" || value.report_kind === "coverage" ? value.report_kind : "unknown";
-  const method = value.intake_method === "cleanapp_submission" || value.intake_method === "imported" ? value.intake_method : "unknown";
+  const method = value.intake_method === "cleanapp_submission" || value.intake_method === "agent_submission" || value.intake_method === "imported" ? value.intake_method : "unknown";
   const channel = ["mobile", "web", "share", "legacy_v2", "agent_api"].includes(String(value.intake_channel))
     ? value.intake_channel as ReportEvidence["intake_channel"] : null;
   const relation = ["affected", "dependency", "mentioned"].includes(String(value.entity_relationship))
@@ -53,7 +53,7 @@ export function projectPublicEvidence(value: unknown): ReportEvidence | undefine
   }) : [];
   return {
     report_kind: kind, intake_method: method, intake_channel: channel,
-    intake_label: method === "cleanapp_submission" ? "CleanApp submission" : method === "imported" ? "Imported public report" : "Report",
+    intake_label: method === "cleanapp_submission" ? "CleanApp submission" : method === "agent_submission" ? "Agent-assisted submission" : method === "imported" ? "Imported public report" : "Report",
     source_platform: platform,
     source_url: publicLink(value.source_url),
     source_published_at: date(value.source_published_at), observed_at: date(value.observed_at), ingested_at: date(value.ingested_at),
@@ -63,7 +63,7 @@ export function projectPublicEvidence(value: unknown): ReportEvidence | undefine
     upstream_status: status(value.upstream_status), resolution_status: status(value.resolution_status),
     why_surfaced: [], evidence_version: integer(value.evidence_version) ?? 0,
     has_original_media: value.has_original_media === true,
-    submission_transport: ["mcp", "web", "wire", "public_agent"].includes(String(value.submission_transport)) ? String(value.submission_transport) : null,
+    submission_transport: ["mcp", "web", "wire", "public_agent", "agent_api"].includes(String(value.submission_transport)) ? String(value.submission_transport) : null,
     submission_client: ["grok", "chatgpt", "claude", "codex", "other"].includes(String(value.submission_client)) ? String(value.submission_client) : null,
     submission_client_claimed: value.submission_client_claimed === true,
     reporter_context: value.reporter_context === "firsthand" || value.reporter_context === "relayed" ? value.reporter_context : "unknown",
