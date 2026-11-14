@@ -6,8 +6,8 @@ import Seo from "@/components/Seo";
 import { AGENT_ONBOARDING, MCP_REPORT_STEPS } from "@/content/agent-onboarding";
 import { breadcrumbJsonLd, jsonLdGraph, webPageJsonLd } from "@/lib/seo";
 
-const TITLE = "CleanApp for AI Agents | Report Physical & Digital Problems";
-const DESCRIPTION = "Report physical and digital observations from an AI agent using MCP or a simple HTTPS POST. No registration or API key; get an analysis decision and track publication and notices.";
+const TITLE = "CleanApp for AI Agents | Turn Observations Into Action";
+const DESCRIPTION = "Give problems your agent discovers a record, an analysis decision and a path to action. Connect related evidence and track approved publication and notices through MCP or HTTPS.";
 const DIGITAL_EXAMPLE = JSON.stringify({
   domain: "digital",
   problem_type: "software_bug",
@@ -49,15 +49,36 @@ export default function AgentsPage() {
         <PageHeader showAccountLinks={false} />
         <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-green-800">CleanApp for AI agents</p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">Report a problem from your agent.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">A broken website, an app error, a pothole or a blocked entrance. Send the observation to CleanApp. Get an analysis decision and track what happens next.</p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">Turn problems your agent finds into action.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">Send an observed bug, misleading answer, accessibility barrier or physical hazard. CleanApp analyzes it, connects related evidence and—with permission—publishes reports and sends notices when eligible. Follow the decision and recorded actions through your receipt.</p>
           <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
-            <a href="#choose" className="inline-flex min-h-12 items-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800">Choose your connection →</a>
-            <Link href="/agents.txt" className="font-semibold text-green-800 underline underline-offset-4">Read the machine instructions</Link>
+            <a href="#connect" className="inline-flex min-h-12 items-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800">Connect with MCP →</a>
+            <a href="#https" className="font-semibold text-green-800 underline underline-offset-4">Use HTTPS</a>
+            <Link href="/agents.txt" className="font-semibold text-green-800 underline underline-offset-4">Agent instructions</Link>
           </div>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">No account, API key or agent registration required. <a href="#choose" className="text-green-800 underline underline-offset-4">Find the connection your agent supports.</a></p>
 
-          <section id="choose" className="mt-14 scroll-mt-6 border-t border-gray-200 pt-9" aria-labelledby="choose-heading">
-            <h2 id="choose-heading" className="text-2xl font-bold tracking-tight text-gray-900">Check what your agent can do.</h2>
+          <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="why-heading">
+            <h2 id="why-heading" className="text-2xl font-bold tracking-tight text-gray-900">One connection from observation to outcome.</h2>
+            <dl className="mt-6 space-y-6 leading-relaxed text-gray-700">
+              <div><dt className="font-semibold text-gray-900">Report across products and places.</dt><dd className="mt-1">Use the same connection for a failed checkout, an inaccurate assistant answer, a blocked entrance or a pothole. Send what was observed; you do not need to identify the recipient first.</dd></div>
+              <div><dt className="font-semibold text-gray-900">Make every observation count.</dt><dd className="mt-1">Keep each report’s evidence and supplied attribution. Related observations can become cluster candidates, each retaining its own record and adding evidence to the issue.</dd></div>
+              <div><dt className="font-semibold text-gray-900">Bring back a decision and an action record.</dt><dd className="mt-1">Your receipt shows the analysis decision, publication status and recorded notice delivery separately. It also identifies missing information or a reason action is held, so your agent can explain the result and next step.</dd></div>
+            </dl>
+          </section>
+
+          <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="example-heading">
+            <h2 id="example-heading" className="text-2xl font-bold tracking-tight text-gray-900">Example: your agent finds a broken checkout.</h2>
+            <ol className="mt-6 list-decimal space-y-4 pl-6 text-gray-700 marker:font-semibold marker:text-green-800">
+              <li className="pl-2"><strong className="text-gray-900">Observe.</strong> The Pay button does nothing and shows no error. Capture the affected page and the behavior actually observed.</li>
+              <li className="pl-2"><strong className="text-gray-900">Report.</strong> Send that observation with the approved handling permissions. CleanApp analyzes it and checks for related public reports while preserving its own evidence and attribution.</li>
+              <li className="pl-2"><strong className="text-gray-900">Follow through.</strong> Check the same receipt for the decision, a public report link when published, and recorded notice delivery or a specific reason action stopped.</li>
+            </ol>
+            <p className="mt-5 text-sm leading-relaxed text-gray-600">This illustrates the workflow. Your receipt supplies the actual result. Final means this processing cycle is complete; resolution of the underlying problem is a separate outcome.</p>
+          </section>
+
+          <section id="choose" className="mt-12 scroll-mt-6 border-t border-gray-200 pt-9" aria-labelledby="choose-heading">
+            <h2 id="choose-heading" className="text-2xl font-bold tracking-tight text-gray-900">Choose the connection your agent supports.</h2>
             <ul className="mt-5 space-y-4 leading-relaxed text-gray-700">
               <li><strong className="text-gray-900">MCP client connected?</strong> <a href="#connect" className="text-green-800 underline underline-offset-4">Use the MCP tools</a> to prepare a report, show the preview and submit after user approval.</li>
               <li><strong className="text-gray-900">Can send an HTTPS POST?</strong> <a href="#https" className="text-green-800 underline underline-offset-4">Send a simple JSON observation</a>. No registration or API key is needed.</li>
@@ -74,9 +95,11 @@ export default function AgentsPage() {
               <div className="py-4 sm:grid sm:grid-cols-[130px_1fr] sm:gap-6"><dt className="font-semibold text-gray-900">Authentication</dt><dd className="mt-2 text-gray-700 sm:mt-0">None · no self-registration step</dd></div>
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">Use an MCP client for the server URL. To check availability in a browser, open <a href={AGENT_ONBOARDING.mcpHealth} className="text-green-800 underline underline-offset-4">adapter health</a>. A healthy adapter does not establish that a report has been accepted.</p>
-            <h3 className="mt-7 text-lg font-semibold text-gray-900">Connect Grok</h3>
+            <details className="mt-6 border-y border-gray-200 py-4">
+              <summary className="cursor-pointer font-semibold text-green-800">Connect Grok</summary>
             <p className="mt-3 leading-relaxed text-gray-700">Open <a href={AGENT_ONBOARDING.grokConnectors} className="text-green-800 underline underline-offset-4">Grok connectors</a>, choose <strong>New Connector → Custom</strong>, and paste the MCP server URL above. Use no authentication. See <a href={AGENT_ONBOARDING.grokDocs} className="text-green-800 underline underline-offset-4">Grok’s official setup instructions</a>.</p>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">The connector must be connected in your session to use these tools. Ordinary chat or web search does not add it automatically and cannot submit a POST on its own.</p>
+            </details>
           </section>
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="send-heading">
@@ -92,12 +115,13 @@ export default function AgentsPage() {
             <p className="mt-4 leading-relaxed text-gray-700">Send a JSON object to <a href={AGENT_ONBOARDING.publicReportEndpoint} className="break-all text-green-800 underline underline-offset-4">{AGENT_ONBOARDING.publicReportEndpoint}</a>. Only <code>description</code> is required. Include <code>handling</code> as shown to authorize publication and notices after analysis, or omit it to keep the report private. Add the affected URL or coordinates when known; unknown context can stay unknown.</p>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">Replace this example with an actual observation you are authorized to share. Do not send a synthetic report just to test connectivity.</p>
             <pre className="mt-5 overflow-x-auto rounded-md bg-gray-50 p-4 text-xs leading-relaxed text-gray-800 sm:text-sm"><code>{REST_EXAMPLE}</code></pre>
+            <p className="mt-5 leading-relaxed text-gray-700">Save the returned receipt and private tracking token. Check that receipt for the analysis decision and recorded actions; keep the same observation ID and payload when retrying.</p>
+            <details className="mt-6 border-y border-gray-200 py-4">
+              <summary className="cursor-pointer font-semibold text-green-800">Receipt lookup, fields and retry rules</summary>
             <p className="mt-5 leading-relaxed text-gray-700">Generate and save a private random UUIDv4 <code>source_id</code> before the first POST. Keep the same ID and payload when retrying; never use a static example ID or a public URL as the ID. The response returns a <code>source_id</code>, <code>receipt_id</code>, private <code>tracking_token</code>, and <code>status_url</code>. It also reports whether the request replayed an existing receipt.</p>
             <p className="mt-4 leading-relaxed text-gray-700">To check status, resolve the returned relative <code>status_url</code> against your configured API origin and send the tracking token as a bearer header. For production, the origin is <code>https://live.cleanapp.io</code>. Keep both values private. Do not put tokens in URLs, logs or analytics.</p>
             <pre className="mt-5 overflow-x-auto rounded-md bg-gray-50 p-4 text-xs leading-relaxed text-gray-800 sm:text-sm"><code>{RECEIPT_EXAMPLE}</code></pre>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">Set <code>STATUS_PATH</code> to the relative <code>status_url</code> and <code>TRACKING_TOKEN</code> from your receipt. Submission itself needs no authorization header. The tracking token only grants access to that receipt and expires 30 days after its original creation.</p>
-            <details className="mt-6 border-y border-gray-200 py-4">
-              <summary className="cursor-pointer font-semibold text-green-800">Fields, limits and retries</summary>
               <ul className="mt-4 list-disc space-y-3 pl-5 text-sm leading-relaxed text-gray-700">
                 <li><code>description</code>: required, up to 8192 UTF-8 bytes. Optional: <code>title</code> (255 UTF-8 bytes), <code>source_id</code> (private random UUIDv4), <code>agent_name</code> (80), <code>url</code> (HTTP/HTTPS, 2048 UTF-8 bytes), paired <code>latitude</code>/<code>longitude</code>, and <code>handling</code> (<code>publication: private|automatic</code>, <code>notices: none|automatic</code>).</li>
                 <li>If a send times out, check status when you have a receipt; otherwise retry the unchanged payload with the same saved UUIDv4. If you omitted the ID and lost the response, do not blindly submit again.</li>

@@ -1,12 +1,14 @@
 # CleanApp
 
-> CleanApp helps people report physical and digital problems with text and optional images. AI-assisted analysis structures observations, connects related reports and helps identify relevant brands, places and recipients. The public product includes maps and report views; organization plans provide additional ways to work with relevant reports.
+> CleanApp helps people and AI agents turn observed physical and digital problems into attributed reports, analysis decisions and trackable action. Related observations can become cluster candidates while keeping their own evidence and attribution. With approved handling, accepted reports that pass privacy checks can be published and eligible notices sent; receipts show the recorded results separately.
 
 This file is a navigation aid. Use the linked pages for current product information and terms. The reporting receipt shows available submission and processing status.
 
 ## AI agents
+Use one CleanApp connection across products and places: report a website failure, app error, accessibility barrier or physical problem without building a separate integration or finding a recipient first. Preserve the observation, add related evidence, and follow the decision and action through a private receipt. A sent notice does not establish that the issue was fixed.
+
 - [Agent onboarding](https://www.cleanapp.io/agents): canonical starting point for AI agents reporting physical and digital observations
-- [Machine instructions](https://www.cleanapp.io/agents.txt): current endpoint, transport, authentication, submission and private-receipt rules
+- [Machine instructions](https://www.cleanapp.io/agents.txt): why and when to use CleanApp, then the shortest supported connection and full operating rules
 - MCP endpoint: https://live.cleanapp.io/openai/mcp (Streamable HTTP; no authentication). Prepare a report, obtain the user's approval, then submit the same draft with the approved handling permissions. Analysis returns a decision; related observations are cluster candidates, retaining their own evidence and attribution.
 - Public HTTPS endpoint: POST https://live.cleanapp.io/api/v1/public/agent-reports (no registration or API key). Send a description and a private random UUIDv4 source_id saved before the first POST; keep the private receipt/tracking token. Follow the agent guide and current OpenAPI contract. GET-only tools cannot submit. A receipt does not establish publication, responsible-party notification, rewards or resolution.
 

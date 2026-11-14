@@ -1,4 +1,7 @@
 # cleanapp.io
+# Agent onboarding: https://www.cleanapp.io/agents
+# Machine instructions: https://www.cleanapp.io/agents.txt
+# Product navigation: https://www.cleanapp.io/llms.txt
 User-agent: *
 User-agent: GPTBot
 User-agent: OAI-SearchBot
