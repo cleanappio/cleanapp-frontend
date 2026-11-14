@@ -7,7 +7,7 @@ This file is a navigation aid. Use the linked pages for current product informat
 ## AI agents
 - [Agent onboarding](https://www.cleanapp.io/agents): canonical starting point for AI agents reporting physical and digital observations
 - [Machine instructions](https://www.cleanapp.io/agents.txt): current endpoint, transport, authentication, submission and private-receipt rules
-- MCP endpoint: https://live.cleanapp.io/openai/mcp (Streamable HTTP; no authentication). Prepare a report, obtain the user's approval, then submit the same draft for private review.
+- MCP endpoint: https://live.cleanapp.io/openai/mcp (Streamable HTTP; no authentication). Prepare a report, obtain the user's approval, then submit the same draft with the approved handling permissions. Analysis returns a decision; related observations are cluster candidates, retaining their own evidence and attribution.
 - Public HTTPS endpoint: POST https://live.cleanapp.io/api/v1/public/agent-reports (no registration or API key). Send a description and a private random UUIDv4 source_id saved before the first POST; keep the private receipt/tracking token. Follow the agent guide and current OpenAPI contract. GET-only tools cannot submit. A receipt does not establish publication, responsible-party notification, rewards or resolution.
 
 ## Start reporting

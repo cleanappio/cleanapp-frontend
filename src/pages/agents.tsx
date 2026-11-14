@@ -7,7 +7,7 @@ import { AGENT_ONBOARDING, MCP_REPORT_STEPS } from "@/content/agent-onboarding";
 import { breadcrumbJsonLd, jsonLdGraph, webPageJsonLd } from "@/lib/seo";
 
 const TITLE = "CleanApp for AI Agents | Report Physical & Digital Problems";
-const DESCRIPTION = "Report physical and digital observations from an AI agent using MCP or a simple HTTPS POST. No registration or API key; keep a private review receipt.";
+const DESCRIPTION = "Report physical and digital observations from an AI agent using MCP or a simple HTTPS POST. No registration or API key; get an analysis decision and track publication and notices.";
 const DIGITAL_EXAMPLE = JSON.stringify({
   domain: "digital",
   problem_type: "software_bug",
@@ -15,6 +15,7 @@ const DIGITAL_EXAMPLE = JSON.stringify({
   description: "The reporter selected Pay on the checkout page, but the button did not respond or show an error.",
   product_or_site: "The affected website or app, as supplied by the reporter",
   language: "en",
+  handling: { publication: "automatic", notices: "automatic" },
 }, null, 2);
 
 const REST_EXAMPLE = String.raw`# Generate once; save this ID and the exact payload before sending.
@@ -28,7 +29,8 @@ curl -i '${AGENT_ONBOARDING.publicReportEndpoint}' \
     \"description\": \"The checkout Pay button did not respond or show an error after the reporter selected it.\",
     \"url\": \"https://example.com/checkout\",
     \"source_id\": \"$SOURCE_ID\",
-    \"agent_name\": \"Your agent name\"
+    \"agent_name\": \"Your agent name\",
+    \"handling\": {\"publication\": \"automatic\", \"notices\": \"automatic\"}
   }"`;
 const RECEIPT_EXAMPLE = String.raw`curl "https://live.cleanapp.io$STATUS_PATH" \
   -H "Authorization: Bearer $TRACKING_TOKEN"`;
@@ -48,7 +50,7 @@ export default function AgentsPage() {
         <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-green-800">CleanApp for AI agents</p>
           <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">Report a problem from your agent.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">A broken website, an app error, a pothole or a blocked entrance. Send the observation to CleanApp and keep a private receipt.</p>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">A broken website, an app error, a pothole or a blocked entrance. Send the observation to CleanApp. Get an analysis decision and track what happens next.</p>
           <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
             <a href="#choose" className="inline-flex min-h-12 items-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800">Choose your connection →</a>
             <Link href="/agents.txt" className="font-semibold text-green-800 underline underline-offset-4">Read the machine instructions</Link>
@@ -78,7 +80,7 @@ export default function AgentsPage() {
           </section>
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="send-heading">
-            <h2 id="send-heading" className="text-2xl font-bold tracking-tight text-gray-900">Prepare → approve → submit → check</h2>
+            <h2 id="send-heading" className="text-2xl font-bold tracking-tight text-gray-900">Prepare → approve → analyze → act</h2>
             <ol className="mt-6 list-decimal space-y-6 pl-6 text-gray-700 marker:font-semibold marker:text-green-800">
               {MCP_REPORT_STEPS.map((step) => <li key={step.title} className="pl-2"><h3 className="font-semibold text-gray-900">{step.title}</h3><p className="mt-1 leading-relaxed">{step.description}</p></li>)}
             </ol>
@@ -87,7 +89,7 @@ export default function AgentsPage() {
 
           <section id="https" className="mt-12 scroll-mt-6 border-t border-gray-200 pt-9" aria-labelledby="https-heading">
             <h2 id="https-heading" className="text-2xl font-bold tracking-tight text-gray-900">Or send one HTTPS POST.</h2>
-            <p className="mt-4 leading-relaxed text-gray-700">Send a JSON object to <a href={AGENT_ONBOARDING.publicReportEndpoint} className="break-all text-green-800 underline underline-offset-4">{AGENT_ONBOARDING.publicReportEndpoint}</a>. Only <code>description</code> is required. Add the affected URL or coordinates when known; unknown context can stay unknown.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">Send a JSON object to <a href={AGENT_ONBOARDING.publicReportEndpoint} className="break-all text-green-800 underline underline-offset-4">{AGENT_ONBOARDING.publicReportEndpoint}</a>. Only <code>description</code> is required. Include <code>handling</code> as shown to authorize publication and notices after analysis, or omit it to keep the report private. Add the affected URL or coordinates when known; unknown context can stay unknown.</p>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">Replace this example with an actual observation you are authorized to share. Do not send a synthetic report just to test connectivity.</p>
             <pre className="mt-5 overflow-x-auto rounded-md bg-gray-50 p-4 text-xs leading-relaxed text-gray-800 sm:text-sm"><code>{REST_EXAMPLE}</code></pre>
             <p className="mt-5 leading-relaxed text-gray-700">Generate and save a private random UUIDv4 <code>source_id</code> before the first POST. Keep the same ID and payload when retrying; never use a static example ID or a public URL as the ID. The response returns a <code>source_id</code>, <code>receipt_id</code>, private <code>tracking_token</code>, and <code>status_url</code>. It also reports whether the request replayed an existing receipt.</p>
@@ -97,7 +99,7 @@ export default function AgentsPage() {
             <details className="mt-6 border-y border-gray-200 py-4">
               <summary className="cursor-pointer font-semibold text-green-800">Fields, limits and retries</summary>
               <ul className="mt-4 list-disc space-y-3 pl-5 text-sm leading-relaxed text-gray-700">
-                <li><code>description</code>: required, up to 8192 UTF-8 bytes. Optional: <code>title</code> (255 UTF-8 bytes), <code>source_id</code> (private random UUIDv4), <code>agent_name</code> (80), <code>url</code> (HTTP/HTTPS, 2048 UTF-8 bytes), and paired <code>latitude</code>/<code>longitude</code>.</li>
+                <li><code>description</code>: required, up to 8192 UTF-8 bytes. Optional: <code>title</code> (255 UTF-8 bytes), <code>source_id</code> (private random UUIDv4), <code>agent_name</code> (80), <code>url</code> (HTTP/HTTPS, 2048 UTF-8 bytes), paired <code>latitude</code>/<code>longitude</code>, and <code>handling</code> (<code>publication: private|automatic</code>, <code>notices: none|automatic</code>).</li>
                 <li>If a send times out, check status when you have a receipt; otherwise retry the unchanged payload with the same saved UUIDv4. If you omitted the ID and lost the response, do not blindly submit again.</li>
                 <li><code>409</code>: the source ID conflicts with a different payload. Inspect the observation before changing an ID.</li>
                 <li><code>429</code>: wait for <code>Retry-After</code>. <code>503</code>: retain any returned receipt and check its status first. If processing remains pending, retry with the same ID and unchanged payload.</li>
@@ -121,8 +123,9 @@ export default function AgentsPage() {
           </section>
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="receipt-heading">
-            <h2 id="receipt-heading" className="text-2xl font-bold tracking-tight text-gray-900">A receipt means private intake for review.</h2>
-            <p className="mt-4 leading-relaxed text-gray-700">It does not establish public publication, delivery to a responsible party, rewards or resolution. Keep the tracking token private and use the status tool to see the outcome available for that submission.</p>
+            <h2 id="receipt-heading" className="text-2xl font-bold tracking-tight text-gray-900">Analysis gives your report a decision.</h2>
+            <p className="mt-4 leading-relaxed text-gray-700">Use your private receipt to follow the decision: accepted, cluster candidate, needs information, rejected or held—with a specific reason. With your permission, accepted reports that pass privacy checks can be published and eligible notices sent. The receipt shows publication and recorded delivery separately.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">A cluster candidate adds evidence to a related issue. Your observation keeps its own record and attribution. A final outcome explains CleanApp’s decision and current action result; sending a notice does not mean the issue was fixed. Older private reports stay private.</p>
             <p className="mt-4 leading-relaxed text-gray-700">If a send times out, check status before retrying the same draft. Honor rate limits and <code>Retry-After</code>; a new draft is a new observation, not a retry.</p>
             <p className="mt-4 text-sm leading-relaxed text-gray-600">MCP drafts expire after 24 hours; tracking tokens expire after 90 days. Token expiry does not delete a submitted report.</p>
           </section>
