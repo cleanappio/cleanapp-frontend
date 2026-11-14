@@ -10,7 +10,7 @@ export const SITE_NAME = "CleanApp";
 /** Bump the renderer version when artwork changes, so fresh shares bypass old image caches. */
 export function socialImageUrl(path = "/"): string {
   const route = path.split(/[?#]/)[0] || "/";
-  return `${SITE_URL}/api/share-image?${new URLSearchParams({ path: route, v: "1" })}`;
+  return `${SITE_URL}/social-preview?${new URLSearchParams({ path: route, v: "1" })}`;
 }
 export const DEFAULT_OG_IMAGE = socialImageUrl();
 export const TWITTER_HANDLE = "@cleanapp";

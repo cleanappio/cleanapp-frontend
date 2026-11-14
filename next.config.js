@@ -31,6 +31,9 @@ const nextConfig = {
   // Proxy API requests to avoid CORS issues during local development
   async rewrites() {
     return [
+      // Public image path stays on the frontend. Production routes /api/ to
+      // backend services before a request can reach Next.js.
+      { source: "/social-preview", destination: "/api/share-image" },
       {
         source: "/api/live/:path*",
         destination: `${process.env.NEXT_PUBLIC_LIVE_API_URL || "https://live.cleanapp.io"}/api/:path*`,

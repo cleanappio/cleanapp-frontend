@@ -2,7 +2,7 @@
 
 The visual thesis is a legible editorial card: a clear subject, a clear page purpose and restrained CleanApp identity. The hierarchy is brand, page category, headline, context and destination. These are static thumbnails; motion does not apply.
 
-`Seo` selects a canonical-route image automatically. It never includes query strings, receipt tokens or report text in the image URL. Open Graph and Twitter use the same 1200 × 630 PNG. The renderer version in `socialImageUrl` must change with artwork revisions to distinguish new assets from older image caches.
+`Seo` selects a canonical-route image automatically. It excludes the page’s query string, receipt tokens and report text from image URLs. Open Graph and Twitter use the same 1200 × 630 PNG. The renderer version in `socialImageUrl` must change with artwork revisions to distinguish new assets from older image caches. The public `/social-preview` path rewrites inside Next.js to its image handler; it intentionally avoids production’s backend-facing `/api/` gateway. Keep the general robots API block intact.
 
 The server renderer uses local Sharp and the bundled OFL-licensed Inter font. No image service, model call, account or paid API is involved. Fixed art has a bounded memory cache. Dynamic brand and individual-report cards recheck current public identity/visibility on every request and return `no-store`; revoked/private records yield no image. Their public JSON reads have a complete-body deadline and byte cap. Rendering shares the existing bounded image queue.
 
