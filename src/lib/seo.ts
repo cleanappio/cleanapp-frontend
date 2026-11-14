@@ -7,7 +7,12 @@
 
 export const SITE_URL = "https://www.cleanapp.io";
 export const SITE_NAME = "CleanApp";
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/cleanapp-social-card.png`;
+/** Bump the renderer version when artwork changes, so fresh shares bypass old image caches. */
+export function socialImageUrl(path = "/"): string {
+  const route = path.split(/[?#]/)[0] || "/";
+  return `${SITE_URL}/api/share-image?${new URLSearchParams({ path: route, v: "1" })}`;
+}
+export const DEFAULT_OG_IMAGE = socialImageUrl();
 export const TWITTER_HANDLE = "@cleanapp";
 
 export const ANDROID_APP_URL =

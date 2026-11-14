@@ -61,4 +61,5 @@ jobs:
             sleep 1
           done
           python3 scripts/check-rendered-seo.py --base http://127.0.0.1:3017
+          python3 scripts/check-social-previews.py --base http://127.0.0.1:3017
           python3 scripts/check-agent-onboarding.py --base http://127.0.0.1:3017

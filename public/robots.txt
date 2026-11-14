@@ -13,6 +13,7 @@ User-agent: Google-Extended
 User-agent: Applebot-Extended
 User-agent: Bingbot
 Disallow: /api/
+Allow: /api/share-image
 Disallow: /login
 Disallow: /signup
 Disallow: /reset-password

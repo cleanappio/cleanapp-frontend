@@ -10,8 +10,8 @@ exports.harness = function harness(fetch) {
   const cache = new Map();
   const state = { fetch };
   const globals = {
-    process: { env: { NEXT_PUBLIC_LIVE_API_URL: 'https://live.example' } },
-    URL, URLSearchParams, AbortController,
+    process: { env: { NEXT_PUBLIC_LIVE_API_URL: 'https://live.example' }, cwd: () => path.resolve(__dirname, '..') },
+    URL, URLSearchParams, AbortController, Buffer, Response,
     Date: class extends Date { static now() { return now; } },
     fetch: (...args) => state.fetch(...args),
     setTimeout(callback, delay) { const id = ++timerId; timers.set(id, { callback, at: now + delay }); return id; },
@@ -21,7 +21,7 @@ exports.harness = function harness(fetch) {
     const filename = path.resolve(__dirname, '..', relative);
     if (cache.has(filename)) return cache.get(filename);
     const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText;
     const exports = {};
     cache.set(filename, exports);

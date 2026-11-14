@@ -10,7 +10,6 @@ export default function PhysicalReportDetailPage({ seo, initialReport }: ReportS
       <Seo
         title={seo.title}
         description={seo.description}
-        image={seo.image ?? undefined}
         noindex={!seo.found && !seo.unavailable}
       />
       <PublicReportDetailPage expectedClassification="physical" initialReport={initialReport} unavailable={seo.unavailable} />
