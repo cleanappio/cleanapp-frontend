@@ -11,6 +11,7 @@ test('image URLs key the canonical page and renderer version without receipt or 
   const { socialImageUrl } = harness().load('src/lib/seo.ts');
   const url = new URL(socialImageUrl('/digital/grok?receipt=PRIVATE_TOKEN#private'));
   assert.equal(url.origin, 'https://www.cleanapp.io');
+  assert.equal(url.pathname, '/social-preview');
   assert.equal(url.searchParams.get('path'), '/digital/grok');
   assert.equal(url.searchParams.get('v'), '1');
   assert.equal(url.href.includes('PRIVATE'), false);

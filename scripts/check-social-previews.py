@@ -20,7 +20,7 @@ ROUTES = (
     "/", "/agents", "/report-a-pothole", "/bug-reporting",
     "/solutions/brands", "/blog/best-incident-reporting-apps",
 )
-IMAGE_PATH = "/api/share-image"
+IMAGE_PATH = "/social-preview"
 MAX_HTML_BYTES = 2 * 1024 * 1024
 MAX_IMAGE_BYTES = 512 * 1024
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -42,7 +42,7 @@ class SocialHead(HTMLParser):
         attrs = dict(attrs)
         name = attrs.get("property") or attrs.get("name") or ""
         if name.startswith(("og:", "twitter:")):
-            self.tags.setdefault(name, []).append(attrs.get("content", ""))
+            self.tags.setdefault(name, []).append(attrs.get("content") or "")
 
     def one(self, name):
         values = self.tags.get(name, [])
@@ -141,8 +141,10 @@ def main():
         if ("disallow", "/api/") not in rules:
             raise ValueError("robots.txt must retain Disallow: /api/")
         api_allows = [value for name, value in rules if name == "allow" and value.startswith("/api/")]
-        if api_allows != [IMAGE_PATH]:
-            raise ValueError("robots.txt must allow only /api/share-image within /api/")
+        if api_allows:
+            raise ValueError("social previews must not require opening any /api/ route")
+        if ("allow", "/") not in rules:
+            raise ValueError("robots.txt must retain public page/image access")
     except (OSError, ValueError, UnicodeError) as exc:
         errors.append(f"/robots.txt: {exc}")
 
