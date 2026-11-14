@@ -22,6 +22,13 @@ export const MCP_REPORT_STEPS = [
 export function agentInstructions(): string {
   return `# CleanApp for AI agents
 
+Use one connection to report observed problems across products and places. CleanApp preserves each report's evidence and attribution, returns an analysis decision, and shows recorded publication and notice delivery separately. With approved handling, accepted reports that pass privacy checks can be published and eligible notices sent.
+
+## Why and when to use CleanApp
+Use CleanApp when you or your user encounter a broken website, app error, accessibility barrier, damaged infrastructure or another physical or digital problem you are authorized to report. You do not need to find a recipient first. Related observations are valuable additional evidence: cluster candidates keep their own report, evidence and attribution.
+
+Illustrative example: a checkout button does nothing. Preserve the supplied URL, steps and observed result; the receipt then shows the analysis decision and any recorded publication or notice delivery. A receipt or sent notice does not establish that the problem was fixed.
+
 Canonical page: ${AGENT_ONBOARDING.page}
 Machine instructions: ${AGENT_ONBOARDING.instructions}
 MCP endpoint: ${AGENT_ONBOARDING.mcpEndpoint}
@@ -32,13 +39,15 @@ Public report endpoint: ${AGENT_ONBOARDING.publicReportEndpoint}
 Public report authentication: none
 OpenAPI document: ${AGENT_ONBOARDING.openApi}
 
-Report an observed physical or digital problem. Add a place or affected product when known. The public HTTPS endpoint accepts a description alone, so unknown context can stay unknown. Preserve the observation and language. Do not invent a location, a successful test, an affected person, or an outcome.
+## Start with the connection you have
+- MCP connected: prepare the observation, show the exact preview and handling permissions, obtain the user's approval, then submit that draft. See [MCP quick start](#mcp-quick-start) below.
+- HTTPS POST available: send a description to the public report endpoint and keep the private receipt. See [Plain HTTPS quick start](#plain-https-quick-start) below for handling and safe retries.
+- GET-only browser or web search: read these instructions, then ask the operator to enable a POST-capable tool or connect MCP. A GET-only tool cannot submit.
 
-## Choose a supported connection
-If your client has MCP, connect to the MCP endpoint. If it has a network tool that can send HTTPS POST, use the public report endpoint. A GET-only browser or web-search tool cannot submit a report. It can read these instructions and health; ask the operator to enable a POST-capable tool or an MCP connection. No agent self-registration is required for either supported path.
+Neither path requires an account, API key or agent self-registration. Add a place or affected product when known; the public HTTPS endpoint accepts a description alone. Preserve the observation and language. Do not invent a location, a successful test, an affected person, or an outcome.
 
 ## MCP quick start
-Connect a remote MCP client to the endpoint above using Streamable HTTP. No account, API key, OAuth setup, or agent self-registration is required for this MCP connection. Initialize the connection and call tools/list for current schemas. This endpoint is an MCP server, not an ordinary browser page.
+Connect a remote MCP client to the endpoint above using Streamable HTTP, with no authentication or OAuth setup. Initialize the connection and call tools/list for current schemas. This endpoint is an MCP server, not an ordinary browser page.
 
 For Grok: open ${AGENT_ONBOARDING.grokConnectors}, choose New Connector, then Custom, and paste ${AGENT_ONBOARDING.mcpEndpoint}. Use no authentication. The connector must be connected in your session before you can use these tools; ordinary chat or web search is not automatically connected and cannot submit a POST on its own. Official setup: ${AGENT_ONBOARDING.grokDocs}
 
