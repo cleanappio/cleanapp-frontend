@@ -10,7 +10,6 @@ export default function DigitalReportDetailPage({ seo, initialReport }: ReportSe
       <Seo
         title={seo.title}
         description={seo.description}
-        image={seo.image ?? undefined}
         noindex={!seo.found && !seo.unavailable}
       />
       <PublicReportDetailPage expectedClassification="digital" initialReport={initialReport} unavailable={seo.unavailable} />

@@ -2,11 +2,11 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import {
   DEFAULT_DESCRIPTION,
-  DEFAULT_OG_IMAGE,
   DEFAULT_TITLE,
   SITE_NAME,
   TWITTER_HANDLE,
   absoluteUrl,
+  socialImageUrl,
 } from "@/lib/seo";
 
 type SeoProps = {
@@ -28,7 +28,7 @@ export default function Seo({
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,
   path,
-  image = DEFAULT_OG_IMAGE,
+  image,
   noindex = false,
   jsonLd,
 }: SeoProps) {
@@ -36,6 +36,7 @@ export default function Seo({
   // Strip query/hash so "/?tab=physical" canonicalizes to "/".
   const routePath = (path ?? router.asPath ?? "/").split(/[?#]/)[0] || "/";
   const canonical = absoluteUrl(routePath);
+  const previewImage = image ? absoluteUrl(image) : socialImageUrl(routePath);
   const jsonLdDocs = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (
@@ -61,7 +62,8 @@ export default function Seo({
       <meta key="og:title" property="og:title" content={title} />
       <meta key="og:description" property="og:description" content={description} />
       <meta key="og:url" property="og:url" content={canonical} />
-      <meta key="og:image" property="og:image" content={image} />
+      <meta key="og:image" property="og:image" content={previewImage} />
+      {!image && <meta key="og:image:type" property="og:image:type" content="image/png" />}
       <meta key="og:image:width" property="og:image:width" content="1200" />
       <meta key="og:image:height" property="og:image:height" content="630" />
       <meta key="og:image:alt" property="og:image:alt" content={title} />
@@ -70,7 +72,8 @@ export default function Seo({
       <meta key="twitter:site" name="twitter:site" content={TWITTER_HANDLE} />
       <meta key="twitter:title" name="twitter:title" content={title} />
       <meta key="twitter:description" name="twitter:description" content={description} />
-      <meta key="twitter:image" name="twitter:image" content={image} />
+      <meta key="twitter:image" name="twitter:image" content={previewImage} />
+      <meta key="twitter:image:alt" name="twitter:image:alt" content={title} />
 
       {jsonLdDocs.map((doc, index) => (
         <script
