@@ -8,7 +8,8 @@
  * Only real hotspots get one (see `topHotspots`); everything else stays a dot.
  * A spire for every spot buried the hotspots it was meant to reveal.
  *
- * - Physical tab: report points are grouped into grid cells; the busiest cells
+ * - Physical tab: the renderer groups report points into one-degree cells
+ *   (`/api/v4/reports/hotspots`); the busiest cells
  *   get a column at the average position of their reports, in one blue that
  *   deepens with height. (Dots already use green-to-red for severity; a second
  *   traffic-light scale for count was unreadable.)
@@ -74,35 +75,6 @@ export function topHotspots(inputs: readonly SpireInput[], limit: number): Spire
     .slice()
     .sort((a, b) => b.count - a.count)
     .slice(0, Math.max(0, limit));
-}
-
-/**
- * Group points into `cellDegrees` grid cells. Each cell becomes one input at
- * the mean position of its points, so a spire stands on the actual cluster
- * rather than on a grid corner.
- */
-export function binPoints(points: readonly { lon: number; lat: number }[], cellDegrees = 1): SpireInput[] {
-  const cells = new Map<string, { lon: number; lat: number; count: number }>();
-  for (const point of points) {
-    if (!Number.isFinite(point.lon) || !Number.isFinite(point.lat)) continue;
-    if (Math.abs(point.lat) > 85 || Math.abs(point.lon) > 180) continue;
-    // Reports saved without a location sit at exactly 0,0; they are not a hotspot.
-    if (point.lat === 0 && point.lon === 0) continue;
-    const key = `${Math.floor(point.lon / cellDegrees)}:${Math.floor(point.lat / cellDegrees)}`;
-    const cell = cells.get(key);
-    if (cell) {
-      cell.lon += point.lon;
-      cell.lat += point.lat;
-      cell.count += 1;
-    } else {
-      cells.set(key, { lon: point.lon, lat: point.lat, count: 1 });
-    }
-  }
-  return Array.from(cells.values(), (cell) => ({
-    lon: cell.lon / cell.count,
-    lat: cell.lat / cell.count,
-    count: cell.count,
-  }));
 }
 
 /**

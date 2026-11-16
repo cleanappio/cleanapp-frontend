@@ -1,34 +1,32 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getCurrentLocale } from "@/lib/i18n";
-import { PhysicalReportResponse } from "@/types/reports/api/physical";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
-import { ReportResponse } from "@/types/reports/api";
+
+/** A place with many physical reports: one-degree cell, at the average position of its reports. */
+export type PhysicalHotspot = { lon: number; lat: number; count: number };
 
 export interface UseLiteReportsByTabReturn {
-  physicalReports: PhysicalReportResponse[];
+  /** Busiest places only. The dots themselves load as map tiles (src/lib/report-tiles.ts). */
+  physicalHotspots: PhysicalHotspot[];
   digitalReports: DigitalReportResponse[];
   loading: { physical: boolean; digital: boolean };
   errors: { physical: string | null; digital: string | null };
   refetch: () => Promise<void>;
   invalidateDigital: () => void;
-  appendPhysicalLite: (reports: PhysicalReportResponse[]) => void;
   appendDigitalLite: (reports: DigitalReportResponse[]) => void;
 }
 
-function getRendererApiUrl() {
+export function getRendererApiUrl() {
   return process.env.NEXT_PUBLIC_EMBEDDED_MODE === "true" &&
     typeof window !== "undefined"
     ? window.location.origin
     : process.env.NEXT_PUBLIC_RENDERER_API_URL || "http://localhost:8080";
 }
 
-function appendWithDedupe(current: ReportResponse[], toAdd: ReportResponse[]) {
+function appendWithDedupe(current: DigitalReportResponse[], toAdd: DigitalReportResponse[]) {
   const seen = new Set<string>();
   return [...toAdd, ...current].filter((item) => {
-    const classification = item?.classification as "physical" | "digital";
-    const key = classification === "physical"
-      ? `${(item as PhysicalReportResponse).latitude},${(item as PhysicalReportResponse).longitude},${(item as PhysicalReportResponse).severity_level}`
-      : (item as DigitalReportResponse).brand_name;
+    const key = item.brand_name;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -36,13 +34,11 @@ function appendWithDedupe(current: ReportResponse[], toAdd: ReportResponse[]) {
 }
 
 /**
- * Fetches lite reports for both classifications and maintains separate arrays.
- * Digital uses full_data=true, Physical uses full_data=false.
+ * Loads what the map needs besides tiles: the brand summaries for the digital
+ * tab and the busiest places for the physical tab's hotspot markers.
  */
 export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
-  const [physicalReports, setPhysicalReports] = useState<
-    PhysicalReportResponse[]
-  >([]);
+  const [physicalHotspots, setPhysicalHotspots] = useState<PhysicalHotspot[]>([]);
   const [digitalReports, setDigitalReports] = useState<DigitalReportResponse[]>(
     []
   );
@@ -154,19 +150,15 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
     setErrors({ physical: null, digital: null });
 
     try {
-      // Physical reports
-      fetch(`${apiUrl}/api/v4/reports/points?classification=physical`)
-        .then((res) => res.json())
+      // Physical hotspots: a short list, however many reports exist.
+      fetch(`${apiUrl}/api/v4/reports/hotspots?limit=60`)
+        .then((res) => {
+          if (!res.ok) throw new Error(`Hotspots request failed: ${res.status}`);
+          return res.json();
+        })
         .then((data) => {
-          // const phys = filterAnalysesByLanguage(data.reports || [], locale);
-          // append field classification: "physical" to each report
-          const physicalReports = data.map(
-            (report: PhysicalReportResponse) => ({
-              ...report,
-              classification: "physical",
-            })
-          );
-          setPhysicalReports(physicalReports);
+          if (!Array.isArray(data)) throw new Error("Invalid hotspots response");
+          setPhysicalHotspots(data);
         })
         .catch((error) => {
           setErrors((prev) => ({ ...prev, physical: error.message }));
@@ -193,26 +185,17 @@ export function useLiteReportsByTabV2(): UseLiteReportsByTabReturn {
     fetchAll();
   }, [fetchAll]);
 
-  const appendPhysicalLite = useCallback((reports: PhysicalReportResponse[]) => {
-    setPhysicalReports(
-      (prev) => appendWithDedupe(prev, reports) as PhysicalReportResponse[]
-    );
-  }, []);
-
   const appendDigitalLite = useCallback((reports: DigitalReportResponse[]) => {
-    setDigitalReports(
-      (prev) => appendWithDedupe(prev, reports) as DigitalReportResponse[]
-    );
+    setDigitalReports((prev) => appendWithDedupe(prev, reports));
   }, []);
 
   return {
-    physicalReports,
+    physicalHotspots,
     digitalReports,
     loading,
     errors,
     refetch: fetchAll,
     invalidateDigital,
-    appendPhysicalLite,
     appendDigitalLite,
   };
 }

@@ -213,29 +213,22 @@ test('expanded limit and retained rows reset on classification or locale changes
   assert.equal(h.feeds.at(-1).initialItems.length, 0);
 });
 
-test('lite-map append callbacks stay stable across live updates while preserving deduplication', () => {
+test('lite-map append callback stays stable across live updates while preserving deduplication', () => {
   const h = hooks();
   const { useLiteReportsByTabV2 } = load('../src/hooks/v2/useLiteReports.ts', {
     react: h.react, '@/lib/i18n': { getCurrentLocale: () => 'en' },
   });
   const render = () => { h.begin(); return useLiteReportsByTabV2(); };
   const first = render();
-  first.appendPhysicalLite([{ classification: 'physical', latitude: 47, longitude: 8, severity_level: 0.4 }]);
-  first.appendPhysicalLite([
-    { classification: 'physical', latitude: 47, longitude: 8, severity_level: 0.4 },
-    { classification: 'physical', latitude: 47, longitude: 8, severity_level: 0.7 },
-  ]);
   first.appendDigitalLite([{ classification: 'digital', brand_name: 'grok', total: 1 }]);
   first.appendDigitalLite([
     { classification: 'digital', brand_name: 'grok', total: 2 },
     { classification: 'digital', brand_name: 'anthropic', total: 1 },
   ]);
   const updated = render();
-  assert.equal(updated.appendPhysicalLite, first.appendPhysicalLite);
   assert.equal(updated.appendDigitalLite, first.appendDigitalLite);
   assert.equal(updated.refetch, first.refetch);
-  assert.equal(updated.physicalReports.length, 2);
-  assert.deepEqual(Array.from(updated.physicalReports, item => item.severity_level), [0.4, 0.7]);
+  assert.equal(updated.physicalHotspots.length, 0, 'physical points are never held in memory');
   assert.equal(updated.digitalReports.length, 2);
   assert.equal(updated.digitalReports[0].total, 2, 'new representative replaces the old brand node');
 });
@@ -266,9 +259,10 @@ function digitalSummaryHook(visibility = 'visible') {
     setTimeout(callback, delay) { const id = ++nextTimer; timers.set(id, { callback, at: now + delay }); return id; },
     clearTimeout(id) { timers.delete(id); },
     fetch(url, options = {}) {
-      if (url.includes('/reports/points')) {
+      assert.ok(!url.includes('/reports/points'), 'the map must not download every report point');
+      if (url.endsWith('/api/v4/reports/hotspots?limit=60')) {
         physicalRequests += 1;
-        return Promise.resolve({ json: async () => [] });
+        return Promise.resolve({ ok: true, json: async () => [] });
       }
       assert.ok(url.endsWith('/api/v4/brands/summary?classification=digital&lang=en'));
       return new Promise((resolve, reject) => requests.push({ resolve, reject, signal: options.signal, at: now }));
@@ -328,7 +322,7 @@ test('digital summary invalidation bursts coalesce with a minute gap and retain 
   assert.deepEqual(h.snapshot(), updated);
   assert.match(h.render().errors.digital, /503/);
   assert.equal(h.render().loading.digital, false);
-  assert.equal(h.physicalRequests, 1, 'digital events do not reload physical points');
+  assert.equal(h.physicalRequests, 1, 'digital events do not reload physical hotspots');
   h.unmount();
 });
 

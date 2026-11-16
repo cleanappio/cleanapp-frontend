@@ -30,7 +30,7 @@ import { useReportTabs } from "@/hooks/useReportTabs";
 import { ReportTabs } from "@/components/ui/ReportTabs";
 import { ReportResponse } from "@/types/reports/api";
 import { DigitalReportResponse } from "@/types/reports/api/digital";
-import { applyDigitalDeclutter, applySpires, binPoints, topHotspots, type SpireInput } from "@/lib/map-spires";
+import { applyDigitalDeclutter, applySpires, topHotspots, type SpireInput } from "@/lib/map-spires";
 import { initialGlobeView } from "@/lib/visitor-view";
 import { startGlobeSpin } from "@/lib/globe-spin";
 import CleanAppProModalV2 from "./CleanAppProModalV2";
@@ -53,7 +53,14 @@ import { getCanonicalReportPath } from "@/lib/report-links";
 import { reportMapCoordinates } from "@/lib/report-location";
 import { usePublicLatestReports } from "@/hooks/usePublicLatestReports";
 import { subscribePublicLive } from "@/lib/public-live-subscription";
-import { useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
+import { getRendererApiUrl, useLiteReportsByTabV2 } from "@/hooks/v2/useLiteReports";
+import {
+  applyReportTiles,
+  reloadReportTiles,
+  reportDotClick,
+  REPORT_TILE_LAYER,
+  REPORT_TILE_REFRESH_MS,
+} from "@/lib/report-tiles";
 import {
   getPublicLiveSocketUrl,
   resolvePublicDiscoveryToken,
@@ -431,9 +438,8 @@ export default function GlobeView() {
   } = usePublicLatestReports(selectedTab);
 
   const {
-    physicalReports: latestPhysicalReportsV2,
+    physicalHotspots,
     digitalReports: latestDigitalReportsV2,
-    appendPhysicalLite: appendPhysicalLiteV2,
     invalidateDigital: invalidateDigitalLiteV2,
   } = useLiteReportsByTabV2();
 
@@ -1919,9 +1925,10 @@ export default function GlobeView() {
     }
   }, [userLocation, mapLoaded, retryMapOperation, getSafeMap]);
 
-  // Add report pins to the map when reports are loaded
+  // Add brand pins to the map when summaries are loaded. Physical dots come
+  // from tiles (see the effect below), so on that tab this source is emptied.
   useEffect(() => {
-    if (mapLoaded && mapRef.current && latestReports.length > 0) {
+    if (mapLoaded && mapRef.current) {
       const map = mapRef.current.getMap();
       if (map) {
         const reportFeatures = latestReports.map((report, index) => {
@@ -2095,6 +2102,53 @@ export default function GlobeView() {
       }
     }
   }, [isPhysical, mapLoaded, latestReports, openResolvedPublicReport, selectedTab]);
+
+  // Physical report dots, loaded tile by tile (src/lib/report-tiles.ts).
+  useEffect(() => {
+    const map = mapRef.current && mapRef.current.getMap();
+    if (!map || !mapLoaded || !mapStyleLoaded) return;
+    applyReportTiles(map as never, getRendererApiUrl(), selectedTab === "physical");
+    if (!map.getLayer(REPORT_TILE_LAYER)) return;
+
+    const handleDotClick = (e: any) => {
+      const click = reportDotClick(e.features?.[0], map.getZoom());
+      if (!click) return;
+      if (click.action === "zoom") {
+        map.easeTo({ center: click.center, zoom: click.zoom, duration: 800 });
+        return;
+      }
+      void resolvePublicPhysicalPoint(click.latitude, click.longitude)
+        .then(openResolvedPublicReport)
+        .catch((error) => {
+          console.error("Failed to resolve physical map point:", error);
+        });
+    };
+    const setPointer = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+    const unsetPointer = () => {
+      map.getCanvas().style.cursor = "";
+    };
+    map.on("click", REPORT_TILE_LAYER, handleDotClick);
+    map.on("mouseenter", REPORT_TILE_LAYER, setPointer);
+    map.on("mouseleave", REPORT_TILE_LAYER, unsetPointer);
+    return () => {
+      map.off("click", REPORT_TILE_LAYER, handleDotClick);
+      map.off("mouseenter", REPORT_TILE_LAYER, setPointer);
+      map.off("mouseleave", REPORT_TILE_LAYER, unsetPointer);
+    };
+  }, [mapLoaded, mapStyleLoaded, openResolvedPublicReport, selectedTab]);
+
+  // A live report is not in the tiles already on screen. Reload them once,
+  // a little later, however many reports arrive in the meantime.
+  const tileReloadTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const refreshPhysicalTiles = useCallback(() => {
+    tileReloadTimerRef.current ??= setTimeout(() => {
+      tileReloadTimerRef.current = undefined;
+      reloadReportTiles(mapRef.current?.getMap());
+    }, REPORT_TILE_REFRESH_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(tileReloadTimerRef.current), []);
 
   const pickPublicLiveAnalysis = useCallback(
     (analyses: PublicLiveAnalysis[]) => {
@@ -2327,17 +2381,8 @@ export default function GlobeView() {
     if (!map || !mapLoaded || !mapStyleLoaded) return;
     let inputs: SpireInput[] = [];
     if (selectedTab === "physical") {
-      inputs = topHotspots(
-        binPoints(
-          latestReports
-            .filter((report) => report.classification === "physical")
-            .map((report) => ({
-              lon: (report as { longitude: number }).longitude,
-              lat: (report as { latitude: number }).latitude,
-            })),
-        ),
-        60,
-      );
+      // Already binned and ranked by the renderer.
+      inputs = topHotspots(physicalHotspots, 60);
     } else {
       inputs = topHotspots(
         (latestReports.filter((report) => report.classification === "digital") as DigitalReportResponse[]).map(
@@ -2354,7 +2399,7 @@ export default function GlobeView() {
     applyDigitalDeclutter(map as never);
     // Base radius in km. A cone needs a wider foot than a column to read at the same weight.
     applySpires(map as never, inputs, selectedTab === "physical" ? 46 : 85);
-  }, [latestReports, selectedTab, mapLoaded, mapStyleLoaded]);
+  }, [latestReports, physicalHotspots, selectedTab, mapLoaded, mapStyleLoaded]);
 
   // Digital layers logic
   useEffect(() => {
@@ -2600,12 +2645,9 @@ export default function GlobeView() {
   ]);
 
   useEffect(() => {
-    setLatestReports(
-      selectedTab === "physical"
-        ? latestPhysicalReportsV2
-        : latestDigitalReportsV2,
-    );
-  }, [selectedTab, latestPhysicalReportsV2, latestDigitalReportsV2]);
+    // Physical reports are not held in memory; the map draws them from tiles.
+    setLatestReports(selectedTab === "physical" ? [] : latestDigitalReportsV2);
+  }, [selectedTab, latestDigitalReportsV2]);
 
   useEffect(() => {
     return subscribePublicLive({
@@ -2649,14 +2691,7 @@ export default function GlobeView() {
               report.longitude,
             );
             if (classification === "physical" && physicalCoordinates) {
-              appendPhysicalLiteV2([
-                {
-                  classification: "physical",
-                  latitude: physicalCoordinates[1],
-                  longitude: physicalCoordinates[0],
-                  severity_level: selectedAnalysis.severity_level,
-                } as PhysicalReportResponse,
-              ]);
+              refreshPhysicalTiles();
             } else if (classification === "digital") {
               // Live previews have no total. Reload the authoritative summary.
               refreshDigital = true;
@@ -2692,7 +2727,7 @@ export default function GlobeView() {
   }, [
     animateLiveUpdate,
     invalidateDigitalLiteV2,
-    appendPhysicalLiteV2,
+    refreshPhysicalTiles,
     pickPublicLiveAnalysis,
     refreshPublicLatest,
     selectedTab,
