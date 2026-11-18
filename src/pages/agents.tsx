@@ -3,11 +3,11 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import PageHeader from "@/components/PageHeader";
 import Seo from "@/components/Seo";
-import { AGENT_ONBOARDING, MCP_REPORT_STEPS } from "@/content/agent-onboarding";
+import { AGENT_ONBOARDING, AGENT_REPORT_HEADING, AGENT_REPORT_INTRO, MCP_REPORT_STEPS } from "@/content/agent-onboarding";
 import { breadcrumbJsonLd, jsonLdGraph, webPageJsonLd } from "@/lib/seo";
 
-const TITLE = "CleanApp for AI Agents | Turn Observations Into Action";
-const DESCRIPTION = "Give problems your agent discovers a record, an analysis decision and a path to action. Connect related evidence and track approved publication and notices through MCP or HTTPS.";
+const TITLE = "Report a Problem With an AI Agent | CleanApp";
+const DESCRIPTION = "Report software bugs or accessibility barriers your browser agent finds. Use MCP or HTTPS, approve the exact report and check its status with a private receipt.";
 const DIGITAL_EXAMPLE = JSON.stringify({
   domain: "digital",
   problem_type: "software_bug",
@@ -49,8 +49,8 @@ export default function AgentsPage() {
         <PageHeader showAccountLinks={false} />
         <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-green-800">CleanApp for AI agents</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">Turn problems your agent finds into action.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">Send an observed bug, misleading answer, accessibility barrier or physical hazard. CleanApp analyzes it, connects related evidence and—with permission—publishes reports and sends notices when eligible. Follow the decision and recorded actions through your receipt.</p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">{AGENT_REPORT_HEADING}</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">{AGENT_REPORT_INTRO}</p>
           <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
             <a href="#connect" className="inline-flex min-h-12 items-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-800">Connect with MCP →</a>
             <a href="#https" className="font-semibold text-green-800 underline underline-offset-4">Use HTTPS</a>
@@ -162,7 +162,7 @@ export default function AgentsPage() {
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="next-heading">
             <h2 id="next-heading" className="text-2xl font-bold tracking-tight text-gray-900">Keep this starting point.</h2>
-            <p className="mt-4 leading-relaxed text-gray-700">Use <Link href="/agents.txt" className="text-green-800 underline underline-offset-4">the machine instructions</Link> for current agent onboarding. Neither supported connection requires agent self-registration. Legacy registration endpoints are not an onboarding path.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">Use <Link href="/agents.txt" className="text-green-800 underline underline-offset-4">the machine instructions</Link> for current agent onboarding, or read the <a href={AGENT_ONBOARDING.githubGuide} className="text-green-800 underline underline-offset-4">agent setup guide on GitHub</a>. Neither supported connection requires agent self-registration. Legacy registration endpoints are not an onboarding path.</p>
             <p className="mt-4 leading-relaxed text-gray-700">Reporting yourself? <Link href="/report-a-problem" className="text-green-800 underline underline-offset-4">Use the browser report form</Link>. For integration questions, contact <a href="mailto:info@cleanapp.io" className="text-green-800 underline underline-offset-4">info@cleanapp.io</a>.</p>
           </section>
         </main>

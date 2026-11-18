@@ -114,6 +114,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
       {
         heading: "One place to document a problem you encountered",
         paragraphs: ["CleanApp accepts digital observations as well as physical ones. AI helps structure the issue, identify the relevant brand and connect related reports, then CleanApp works to route the information to the right recipients."],
+        links: [{ label: "Report a software bug with an AI agent", href: "/agents" }],
       },
       WHAT_HAPPENS_NEXT,
     ],
@@ -409,6 +410,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
         heading: "Include enough context to investigate",
         paragraphs: ["Capture the error or broken state and add the page URL or app name. Explain the sequence in your own words; a screenshot cannot establish the steps by itself."],
         bullets: ["What you tried: for example, selecting delivery and pressing Continue.", "What you expected and what happened instead, including the exact error text if useful.", "When it happened and whether it happened more than once.", "Device, browser and app version when known; never include login credentials."],
+        links: [{ label: "Set up a browser agent to report a website problem", href: "/agents" }],
       },
       {
         heading: "Find the website or app's support channel",
@@ -451,6 +453,7 @@ export const LANDING_PAGES: LandingPageContent[] = [
       {
         heading: "For a website or app barrier",
         paragraphs: ["Include the affected page or screen, the task and the point where progress stops. Mention a keyboard, screen reader, zoom setting or other relevant setup if you choose to share it. A screenshot may need a written explanation when the problem is not visible."],
+        links: [{ label: "Report an accessibility barrier with an AI agent", href: "/agents" }],
       },
       {
         heading: "Tell the organization what task was blocked",

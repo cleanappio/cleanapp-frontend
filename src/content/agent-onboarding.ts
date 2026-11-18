@@ -2,6 +2,7 @@
 export const AGENT_ONBOARDING = {
   page: "https://www.cleanapp.io/agents",
   instructions: "https://www.cleanapp.io/agents.txt",
+  githubGuide: "https://github.com/cleanappio/cleanapp_back_end_v2/blob/main/docs/agent-onboarding.md",
   mcpEndpoint: "https://live.cleanapp.io/openai/mcp",
   mcpHealth: "https://live.cleanapp.io/openai/healthz",
   transport: "Streamable HTTP",
@@ -14,6 +15,9 @@ export const AGENT_ONBOARDING = {
   claudePlugin: "https://github.com/cleanappio/cleanapp_back_end_v2/tree/main/claude/cleanapp",
 } as const;
 
+export const AGENT_REPORT_HEADING = "Report problems your AI agent finds";
+export const AGENT_REPORT_INTRO = "Use a browser agent or assistant to report software bugs, accessibility barriers or physical problems across products, places and organizations. Review the exact report and its publication and notice permissions before sending. Keep a private receipt to check the analysis decision and any recorded actions.";
+
 export const MCP_REPORT_STEPS = [
   { title: "Prepare the observation", description: "Call cleanapp_prepare_report with what was observed and its place or affected product. Use the tool’s current input schema." },
   { title: "Get the user’s approval", description: "Show the exact preview and its handling permissions. New drafts normally authorize publication and notices after analysis; offer private handling when requested. Ask the user to approve this exact draft." },
@@ -22,9 +26,9 @@ export const MCP_REPORT_STEPS = [
 ] as const;
 
 export function agentInstructions(): string {
-  return `# CleanApp for AI agents
+  return `# ${AGENT_REPORT_HEADING} with CleanApp
 
-Use one connection to report observed problems across products and places. CleanApp preserves each report's evidence and attribution, returns an analysis decision, and shows recorded publication and notice delivery separately. With approved handling, accepted reports that pass privacy checks can be published and eligible notices sent.
+${AGENT_REPORT_INTRO}
 
 ## Why and when to use CleanApp
 Use CleanApp when you or your user encounter a broken website, app error, accessibility barrier, damaged infrastructure or another physical or digital problem you are authorized to report. You do not need to find a recipient first. Related observations are valuable additional evidence: cluster candidates keep their own report, evidence and attribution.
@@ -33,6 +37,7 @@ Illustrative example: a checkout button does nothing. Preserve the supplied URL,
 
 Canonical page: ${AGENT_ONBOARDING.page}
 Machine instructions: ${AGENT_ONBOARDING.instructions}
+GitHub onboarding guide: ${AGENT_ONBOARDING.githubGuide}
 MCP endpoint: ${AGENT_ONBOARDING.mcpEndpoint}
 MCP transport: ${AGENT_ONBOARDING.transport}
 MCP authentication: ${AGENT_ONBOARDING.authentication}
