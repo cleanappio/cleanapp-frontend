@@ -16,10 +16,10 @@ export const AGENT_ONBOARDING = {
 } as const;
 
 export const AGENT_REPORT_HEADING = "Report problems your AI agent finds";
-export const AGENT_REPORT_INTRO = "Use a browser agent or assistant to report software bugs, accessibility barriers or physical problems across products, places and organizations. Review the exact report and its publication and notice permissions before sending. Keep a private receipt to check the analysis decision and any recorded actions.";
+export const AGENT_REPORT_INTRO = "Use a browser agent or assistant to report software bugs, accessibility barriers or physical problems across products, places and organizations. Review the exact report and its publication and notice permissions before submitting. Keep a private receipt to check the analysis decision and any recorded actions.";
 
 export const MCP_REPORT_STEPS = [
-  { title: "Prepare the observation", description: "Call cleanapp_prepare_report with what was observed and its place or affected product. Use the tool’s current input schema." },
+  { title: "Prepare the observation", description: "Call cleanapp_prepare_report with what was observed and its place or affected product. Preparation shares draft fields with the MCP adapter. Include only details the operator has authorized sharing." },
   { title: "Get the user’s approval", description: "Show the exact preview and its handling permissions. New drafts normally authorize publication and notices after analysis; offer private handling when requested. Ask the user to approve this exact draft." },
   { title: "Submit the approved draft", description: "Call cleanapp_submit_report with the returned draft_token and confirmed: true. Keep the same draft token when retrying." },
   { title: "Keep the receipt", description: "Use cleanapp_report_status with the private tracking_token until analysis returns a decision and action outcomes. If submission times out, check status before retrying." },
