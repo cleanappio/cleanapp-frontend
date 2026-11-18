@@ -10,6 +10,8 @@ export const AGENT_ONBOARDING = {
   openApi: "https://live.cleanapp.io/api/v1/openapi.yaml",
   grokConnectors: "https://grok.com/connectors",
   grokDocs: "https://docs.x.ai/grok/connectors#custom-mcp-connectors",
+  claudeDocs: "https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp",
+  claudePlugin: "https://github.com/cleanappio/cleanapp_back_end_v2/tree/main/claude/cleanapp",
 } as const;
 
 export const MCP_REPORT_STEPS = [
@@ -50,6 +52,8 @@ Neither path requires an account, API key or agent self-registration. Add a plac
 Connect a remote MCP client to the endpoint above using Streamable HTTP, with no authentication or OAuth setup. Initialize the connection and call tools/list for current schemas. This endpoint is an MCP server, not an ordinary browser page.
 
 For Grok: open ${AGENT_ONBOARDING.grokConnectors}, choose New Connector, then Custom, and paste ${AGENT_ONBOARDING.mcpEndpoint}. Use no authentication. The connector must be connected in your session before you can use these tools; ordinary chat or web search is not automatically connected and cannot submit a POST on its own. Official setup: ${AGENT_ONBOARDING.grokDocs}
+
+For Claude: open Customize > Connectors, choose Add, then Add custom connector, name it CleanApp and paste ${AGENT_ONBOARDING.mcpEndpoint}. Choose No sign in. Official setup: ${AGENT_ONBOARDING.claudeDocs}. In Claude Code, run: claude plugin marketplace add cleanappio/cleanapp_back_end_v2, then: claude plugin install cleanapp@cleanapp. The plugin adds this connector and a reporting skill: ${AGENT_ONBOARDING.claudePlugin}
 
 New MCP drafts include handling: {"publication":"automatic","notices":"automatic"}. Show these permissions in the preview before approval. To keep a new report private, prepare with handling: {"publication":"private","notices":"none"}. Permissions are fixed in the approved draft. Older drafts and submissions keep their original private permissions.
 

@@ -100,6 +100,12 @@ export default function AgentsPage() {
             <p className="mt-3 leading-relaxed text-gray-700">Open <a href={AGENT_ONBOARDING.grokConnectors} className="text-green-800 underline underline-offset-4">Grok connectors</a>, choose <strong>New Connector → Custom</strong>, and paste the MCP server URL above. Use no authentication. See <a href={AGENT_ONBOARDING.grokDocs} className="text-green-800 underline underline-offset-4">Grok’s official setup instructions</a>.</p>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">The connector must be connected in your session to use these tools. Ordinary chat or web search does not add it automatically and cannot submit a POST on its own.</p>
             </details>
+            <details className="border-b border-gray-200 py-4">
+              <summary className="cursor-pointer font-semibold text-green-800">Connect Claude</summary>
+            <p className="mt-3 leading-relaxed text-gray-700">In Claude, open <strong>Customize → Connectors</strong>, choose <strong>Add → Add custom connector</strong>, name it CleanApp and paste the MCP server URL above. Choose <strong>No sign in</strong>. See <a href={AGENT_ONBOARDING.claudeDocs} className="text-green-800 underline underline-offset-4">Claude’s official setup instructions</a>.</p>
+            <p className="mt-3 leading-relaxed text-gray-700">In Claude Code, install the <a href={AGENT_ONBOARDING.claudePlugin} className="text-green-800 underline underline-offset-4">CleanApp plugin</a>, which adds the connector and a reporting skill: run <code>claude plugin marketplace add cleanappio/cleanapp_back_end_v2</code>, then <code>claude plugin install cleanapp@cleanapp</code>.</p>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600">Then ask Claude to report a problem to CleanApp. It shows you the draft before it submits.</p>
+            </details>
           </section>
 
           <section className="mt-12 border-t border-gray-200 pt-9" aria-labelledby="send-heading">
