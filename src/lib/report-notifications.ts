@@ -1,5 +1,10 @@
 export type NotificationContentKind = "brand_digest" | "report_email" | "notification";
 
+type ReportExternalNotice = {
+  channel: "linkedin_dm";
+  sent_at: string;
+};
+
 export type ReportNotificationSummary = {
   state: "sent" | "none_recorded" | "unavailable";
   email_count: number;
@@ -15,6 +20,7 @@ export type ReportNotificationSummary = {
     email_count: number;
     content_kind: NotificationContentKind;
   }[];
+  external_notices?: ReportExternalNotice[];
   /** What came back after sending, oldest first. Absent on older backends. */
   timeline?: ReportOutcomeEvent[];
 };
@@ -93,6 +99,22 @@ export function notificationContentLabel(kind: NotificationContentKind): string 
   return "Notification email";
 }
 
+export function publicReportExternalNotices(value: unknown): ReportExternalNotice[] {
+  if (!Array.isArray(value)) return [];
+
+  const notices: ReportExternalNotice[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const { channel, sent_at } = entry as Record<string, unknown>;
+    if (channel !== "linkedin_dm" || typeof sent_at !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(sent_at) ||
+      !Number.isFinite(Date.parse(sent_at))) continue;
+
+    notices.push({ channel, sent_at });
+  }
+  return notices;
+}
+
 /** Keep the public proxy response separate from subscriber-only recipient records. */
 export function publicNotificationSummary(data: ReportNotificationSummary): ReportNotificationSummary {
   return {
@@ -106,6 +128,7 @@ export function publicNotificationSummary(data: ReportNotificationSummary): Repo
     full_log_requires_subscription: true,
     content_kind: data.content_kind,
     events: (data.events || []).map(({ sent_at, email_count, content_kind }) => ({ sent_at, email_count, content_kind })),
+    external_notices: publicReportExternalNotices(data.external_notices),
     // Outcomes are free for everyone; only known fields are passed through.
     timeline: (data.timeline || []).map(({ type, at, count, ticket_ref }) => ({ type, at, count, ...(ticket_ref ? { ticket_ref } : {}) })),
   };
