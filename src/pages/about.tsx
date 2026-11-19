@@ -41,7 +41,7 @@ export default function AboutPage() {
               <li><strong>Analysis.</strong> AI structures the observation, identifies relevant brands or places and connects related reports.</li>
               <li><strong>Routing.</strong> CleanApp looks for relevant contacts for each issue, such as a site operator for a broken entrance or a product team for a failed checkout.</li>
             </ol>
-            <p className="mt-5 leading-relaxed text-gray-700">CleanApp uses email and is testing targeted LinkedIn direct messages sent by hand. The two channels can be used in parallel when both are useful. Our approach is to space out follow-ups, widen outreach only when needed and stop escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned.</p>
+            <p className="mt-5 leading-relaxed text-gray-700">CleanApp uses email and is piloting targeted LinkedIn direct messages. We can use both channels in parallel for the same report when each offers a useful route. We space out follow-ups, widen outreach only when needed and stop escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned.</p>
             <p className="mt-4 leading-relaxed text-gray-700">A sent notice, a recipient acknowledgment and a confirmed fix each require their own evidence.</p>
             <p className="mt-5 leading-relaxed text-gray-700">Keep your submission receipt to check the status available for your report. You can also explore public observations on the map.</p>
           </section>

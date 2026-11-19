@@ -34,7 +34,7 @@ export default function CompanyPage() {
           <section className="mt-14">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">The product</h2>
             <p className="mt-4 leading-relaxed text-gray-700">A reporter sends a message, a photo or a screenshot about a physical or digital problem. AI structures the observation, identifies relevant brands or places and connects related reports.</p>
-            <p className="mt-4 leading-relaxed text-gray-700">CleanApp uses email for notices and is testing targeted LinkedIn direct messages sent by hand as a parallel route to relevant teams. Our approach is to space out follow-ups and stop escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">CleanApp uses email for notices and is piloting targeted LinkedIn direct messages as a parallel route to relevant teams. We space out follow-ups and stop escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned.</p>
             <p className="mt-4 leading-relaxed text-gray-700">One report can show a broken entrance or failed checkout. Related reports can reveal a recurring problem across a place, product or brand. Public maps and report views make that evidence explorable; organization accounts give teams a way to work with observations about the things they look after.</p>
           </section>
           <section className="mt-12">
