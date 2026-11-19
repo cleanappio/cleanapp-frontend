@@ -70,6 +70,10 @@ def main():
     assert any(urllib.parse.urlsplit(href).path == "/agents" for href, _ in home.links), "Homepage HTML does not expose agent onboarding"
     page = page_at("/agents")
     assert any(urllib.parse.urlsplit(href).path == "/agents.txt" for href, _ in page.links), "Agent page does not link machine instructions"
+    assert (
+        "https://chatgpt.com/plugins/plugin_asdk_app_6ac34b4d108081918637006965cec037",
+        "Open CleanApp in ChatGPT",
+    ) in page.links, "Agent page does not link the published ChatGPT plugin"
     for anchor, label in {"find-reports": "Find public reports", "public-record": "Add to the public record"}.items():
         assert anchor in page.anchors and (f"#{anchor}", label) in [
             (href, text.removesuffix("→").strip()) for href, text in page.links

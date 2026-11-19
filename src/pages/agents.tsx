@@ -8,6 +8,7 @@ import { breadcrumbJsonLd, jsonLdGraph, webPageJsonLd } from "@/lib/seo";
 
 const TITLE = "Find and Report Problems With an AI Agent | CleanApp";
 const DESCRIPTION = "Check whether others reported a software bug, accessibility barrier or physical problem. Use MCP to search public reports or add your own observation with approval.";
+const CHATGPT_PLUGIN_URL = "https://chatgpt.com/plugins/plugin_asdk_app_6ac34b4d108081918637006965cec037";
 const DIGITAL_EXAMPLE = JSON.stringify({
   domain: "digital",
   problem_type: "software_bug",
@@ -58,7 +59,11 @@ export default function AgentsPage() {
             <a href="#https" className="font-semibold text-green-800 underline underline-offset-4">Use HTTPS</a>
             <Link href="/agents.txt" className="font-semibold text-green-800 underline underline-offset-4">Agent instructions</Link>
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">No account, API key or agent registration required. <a href="#choose" className="text-green-800 underline underline-offset-4">Find the connection your agent supports.</a></p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-700">
+            <a href={CHATGPT_PLUGIN_URL} className="font-semibold text-green-800 underline underline-offset-4">Open CleanApp in ChatGPT</a>
+            {" and try “Find public reports about potholes.”"}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">No CleanApp account, API key or agent registration required. <a href="#choose" className="text-green-800 underline underline-offset-4">Find the connection your agent supports.</a></p>
 
           <section id={REPORT_LOOKUP.sectionId} className="mt-12 scroll-mt-6 border-t border-gray-200 pt-9" aria-labelledby="lookup-heading">
             <h2 id="lookup-heading" className="text-2xl font-bold tracking-tight text-gray-900">{REPORT_LOOKUP.heading}</h2>
