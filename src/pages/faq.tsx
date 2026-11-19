@@ -20,6 +20,7 @@ const FAQ_GROUPS = [
   {
     heading: "What happens to a report",
     items: [
+      { question: "How does CleanApp notify people who can act?", answer: "CleanApp uses email and is testing targeted direct messages sent by hand when they offer a useful parallel route. The outreach plan spaces out follow-ups and stops escalation once the responsible team acknowledges the report. A sent notice, a recipient acknowledgment and a confirmed fix each require their own evidence." },
       { question: "What does a submission receipt confirm?", answer: "The receipt confirms the status available for your submission. It is not a confirmation that an organization has received the report or fixed the problem. Keep it to check available updates and a public report link when one is available." },
       { question: "Will every report appear on the public map immediately?", answer: "Reports go through processing and publication checks. Your receipt shows the status available and links to a public report when one is available." },
       { question: "Can AI identify the cause of a problem?", answer: "AI helps describe and classify observations. Your own context matters: explain what happened, where or in which product, and what you expected. That makes the report more useful to someone investigating it." },
