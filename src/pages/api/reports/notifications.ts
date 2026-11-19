@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { publicNotificationSummary } from "@/lib/report-notifications";
+import { publicNotificationSummary, publicReportExternalNotices } from "@/lib/report-notifications";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Both the public preview and private history must reflect current access and sends.
@@ -27,7 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? "Sign in required" : response.status === 403 ? "Subscription required" : "Notification history unavailable" });
     }
     const data = await response.json();
-    return res.status(200).json(full ? data : publicNotificationSummary(data));
+    return res.status(200).json(full
+      ? { ...data, external_notices: publicReportExternalNotices(data.external_notices) }
+      : publicNotificationSummary(data));
   } catch {
     return res.status(503).json({ error: "Notification history unavailable" });
   }

@@ -107,6 +107,29 @@ function apiHarness(fetch, route = 'notifications') {
   };
 }
 
+test('public LinkedIn notices survive the proxy and render when no emails were sent', async () => {
+  const sentAt = '2026-11-19T13:52:48.123456Z';
+  const run = apiHarness(async () => response(200, {
+    ...summary, state: 'none_recorded', email_count: 0, recipient_count: 0,
+    latest_sent_at: null, preview_recipients: [], hidden_recipient_count: 0, events: [],
+    external_notices: [
+      { channel: 'linkedin_dm', sent_at: sentAt, message: 'private message', recipient: 'private recipient' },
+      { channel: 'unknown', sent_at: sentAt },
+      { channel: 'linkedin_dm', sent_at: '2026-11-19' },
+      { channel: 'linkedin_dm', sent_at: '2026-44-19T13:52:48Z' },
+      null,
+    ],
+  }));
+  const result = await run();
+  assert.equal(result.status, 200);
+  assert.equal(result.body.email_count, 0);
+  assert.equal(JSON.stringify(result.body.external_notices), JSON.stringify([{ channel: 'linkedin_dm', sent_at: sentAt }]));
+  const html = render({ summary: result.body });
+  assert.match(html, /LinkedIn DM sent/);
+  assert.match(html, /dateTime="2026-11-19T13:52:48\.123456Z"/);
+  assert.doesNotMatch(html, /notification email|view full history|Delivered|Acknowledged|private/);
+});
+
 test('public proxy never forwards credentials or leaks private recipients/provider fields', async () => {
   const calls = [];
   const run = apiHarness(async (url, options) => {

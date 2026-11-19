@@ -34,6 +34,7 @@ export function ReportNotificationsView({
   const sectionId = useId();
   const latestSent = notificationDate(summary?.latest_sent_at || null, locale);
   const preview = summary?.preview_recipients?.slice(0, 1) || [];
+  const externalNotices = summary?.external_notices ?? [];
   const unavailable = error || !summary || summary.state === "unavailable";
 
   return (
@@ -45,11 +46,23 @@ export function ReportNotificationsView({
       ) : null}
       {!loading && !unavailable && summary ? (
         <>
-          <p className={`mt-2 font-medium ${summary.email_count > 0 ? "text-green-800" : "text-gray-700"}`}>
-            {summary.email_count > 0
-              ? `${summary.email_count.toLocaleString(locale)} notification ${summary.email_count === 1 ? "email" : "emails"} sent`
-              : "No notification emails recorded yet."}
-          </p>
+          {externalNotices.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {externalNotices.map((notice, index) => (
+                <li key={`${notice.channel}-${notice.sent_at}-${index}`} className="flex flex-wrap gap-x-2 gap-y-1">
+                  <span className="font-medium text-green-800">LinkedIn DM sent</span>
+                  <time dateTime={notice.sent_at} className="text-gray-600">{notificationDate(notice.sent_at, locale)}</time>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {summary.email_count > 0 || externalNotices.length === 0 ? (
+            <p className={`mt-2 font-medium ${summary.email_count > 0 ? "text-green-800" : "text-gray-700"}`}>
+              {summary.email_count > 0
+                ? `${summary.email_count.toLocaleString(locale)} notification ${summary.email_count === 1 ? "email" : "emails"} sent`
+                : "No notification emails recorded yet."}
+            </p>
+          ) : null}
           {summary.email_count > 0 ? (
             <>
               <p className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-sm text-gray-600">
