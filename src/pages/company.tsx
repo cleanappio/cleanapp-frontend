@@ -5,7 +5,7 @@ import Seo from "@/components/Seo";
 import { ANDROID_APP_URL, IOS_APP_URL, breadcrumbJsonLd, jsonLdGraph, organizationJsonLd, webPageJsonLd } from "@/lib/seo";
 
 const TITLE = "CleanApp Company | Product, Business Model & Investor Inquiries";
-const DESCRIPTION = "Research CleanApp's physical and digital reporting platform, organization business model and public product sources. Contact the team for partnerships or investor inquiries.";
+const DESCRIPTION = "Learn how CleanApp turns physical and digital reports into evidence and coordinates outreach. Explore organization plans, public product sources and investor contacts.";
 const SOURCES = [
   { title: "Public product", href: "/", detail: "Explore the map and available report views." },
   { title: "Organization plans", href: "/pricing", detail: "Review current scope, features and commercial terms." },
@@ -26,14 +26,15 @@ export default function CompanyPage() {
         <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <p className="text-sm font-semibold uppercase tracking-widest text-green-800">CleanApp · Company</p>
           <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight leading-tight text-gray-900">A common starting point for the problems people notice.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">People notice problems everywhere. CleanApp turns those observations into structured reports, connects related issues and works to get the information to the people who can act.</p>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-700">People notice problems everywhere. CleanApp turns those observations into structured reports, connects related issues and coordinates outreach to the people who can act.</p>
           <div className="mt-7 flex flex-wrap gap-5 items-center">
             <a href="mailto:info@cleanapp.io?subject=CleanApp%20company%20inquiry" className="inline-flex min-h-12 items-center rounded-md bg-green-700 px-6 py-3 font-semibold text-white hover:bg-green-800">Contact the team</a>
             <Link href="/report-a-problem" className="font-semibold text-green-800 hover:underline underline-offset-4">Try reporting a problem →</Link>
           </div>
           <section className="mt-14">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">The product</h2>
-            <p className="mt-4 leading-relaxed text-gray-700">A reporter sends a message, a photo or a screenshot about a physical or digital problem. AI structures the observation into a description, classification and relevant brand or place. CleanApp connects related reports and works to route useful information to relevant recipients.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">A reporter sends a message, a photo or a screenshot about a physical or digital problem. AI structures the observation, identifies relevant brands or places and connects related reports.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">CleanApp uses email for notices and is piloting targeted LinkedIn direct messages as a parallel route to relevant teams. We space out follow-ups and stop escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned.</p>
             <p className="mt-4 leading-relaxed text-gray-700">One report can show a broken entrance or failed checkout. Related reports can reveal a recurring problem across a place, product or brand. Public maps and report views make that evidence explorable; organization accounts give teams a way to work with observations about the things they look after.</p>
           </section>
           <section className="mt-12">
@@ -51,7 +52,7 @@ export default function CompanyPage() {
           <section className="mt-12">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">Inspect the evidence</h2>
             <p className="mt-4 leading-relaxed text-gray-700">Explore <Link href="/?tab=physical" className="text-green-800 underline underline-offset-4">physical observations on the public map</Link> and <Link href="/digital/openai" className="text-green-800 underline underline-offset-4">public reports associated with OpenAI</Link>. Open a report to compare the original evidence with CleanApp&apos;s AI-assisted interpretation, source type and known status. These are product examples, not customer or endorsement claims.</p>
-            <p className="mt-4 leading-relaxed text-gray-700">The useful question is what a recipient can investigate from the observation. A report&apos;s presence does not establish that a recipient received it or that the problem was resolved; those outcomes require their own evidence.</p>
+            <p className="mt-4 leading-relaxed text-gray-700">A sent notice, a recipient acknowledgment and a confirmed fix each require their own evidence.</p>
           </section>
           <section className="mt-12">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">Partners & investors</h2>

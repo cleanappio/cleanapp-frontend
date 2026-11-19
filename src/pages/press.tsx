@@ -10,10 +10,10 @@ const DESCRIPTION =
   "Official CleanApp logos, product images, company boilerplate and facts for journalists, partners and anyone writing about CleanApp.";
 
 const BOILERPLATE_SHORT =
-  "CleanApp helps people report physical and digital problems with a message, photo or screenshot, using AI to structure observations, connect related reports and help route useful information.";
+  "CleanApp turns observations about physical and digital problems into structured reports and coordinates outreach across channels to reach the people who can act.";
 
 const BOILERPLATE_LONG =
-  "CleanApp is a reporting platform for physical places and digital products. People can describe a hazard, damaged place, product issue or software bug in their browser, adding a photo or screenshot if it helps. AI structures the observation, connects related reports and helps identify relevant brands, places and recipients. Reporting is free. Organization plans offer tools for teams working with reports about their brands and places. CleanApp is available on iOS, Android and the web at cleanapp.io; current organization plans are listed at cleanapp.io/pricing.";
+  "CleanApp is a reporting platform for physical places and digital products. People can describe a hazard, damaged place, product issue or software bug and add a photo or screenshot. AI structures observations and connects related reports. CleanApp uses email for notices and is piloting targeted LinkedIn direct messages as a parallel route to relevant teams. CleanApp spaces out follow-ups and stops escalating once the responsible team acknowledges the report. Agent-assisted phone calls are planned. A sent notice, a recipient acknowledgment and a confirmed fix each require their own evidence. Reporting is free. CleanApp is available on iOS, Android and the web at cleanapp.io. Organization plans are listed at cleanapp.io/pricing.";
 
 const ASSETS = [
   { label: "Primary logo (PNG, 1200×1200, white background)", href: "/cleanapp-logo-1200.png" },
